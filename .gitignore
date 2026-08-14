@@ -1,0 +1,87 @@
+# 依赖目录
+node_modules/
+*/node_modules/
+
+# 环境变量文件（包含敏感信息）
+.env
+*/.env
+.env.local
+.env.*.local
+
+# 日志文件
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# 编辑器和IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 微信小程序
+小程序前端/.DS_Store
+小程序前端/node_modules/
+小程序前端/miniprogram_npm/
+
+# 构建输出
+dist/
+build/
+*.tgz
+
+# 测试覆盖率
+coverage/
+.nyc_output/
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# 数据库文件
+*.db
+*.sqlite
+*.sqlite3
+
+# 上传文件目录（如果有）
+uploads/
+public/uploads/
+
+# 缓存
+.cache/
+.parcel-cache/
+
+# 系统文件
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Windows
+*.lnk
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon
+._*
+
+# 备份文件
+*.bak
+*.backup
+*~
+
+# 压缩文件
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# 其他
+.env.example.backup

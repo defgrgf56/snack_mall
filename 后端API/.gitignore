@@ -1,0 +1,31 @@
+# 依赖
+node_modules/
+package-lock.json
+
+# 环境变量
+.env
+
+# 日志文件
+logs/
+*.log
+
+# 上传文件
+uploads/
+
+# 证书文件
+cert/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 临时文件
+tmp/
+temp/

@@ -1,0 +1,86 @@
+<!--pages/search/search.wxml-->
+<view class="search-container">
+  <!-- 搜索框 -->
+  <view class="search-header">
+    <view class="search-box">
+      <image class="search-icon" src="/images/icon-search.png" mode="aspectFit" />
+      <input 
+        class="search-input" 
+        placeholder="搜索商品"
+        value="{{keyword}}"
+        confirm-type="search"
+        bindinput="onKeywordInput"
+        bindconfirm="onSearch"
+      />
+      <text class="cancel-btn" bindtap="onCancel">取消</text>
+    </view>
+  </view>
+
+  <!-- 搜索历史 -->
+  <view class="search-history" wx:if="{{!searching && history.length > 0}}">
+    <view class="history-header">
+      <text class="history-title">搜索历史</text>
+      <text class="clear-btn" bindtap="onClearHistory">清空</text>
+    </view>
+    <view class="history-list">
+      <view 
+        class="history-item"
+        wx:for="{{history}}"
+        wx:key="index"
+        data-keyword="{{item}}"
+        bindtap="onHistoryTap"
+      >
+        {{item}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 热门搜索 -->
+  <view class="hot-search" wx:if="{{!searching && hotKeywords.length > 0}}">
+    <view class="hot-title">热门搜索</view>
+    <view class="hot-list">
+      <view 
+        class="hot-item"
+        wx:for="{{hotKeywords}}"
+        wx:key="index"
+        data-keyword="{{item}}"
+        bindtap="onHistoryTap"
+      >
+        {{item}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 搜索结果 -->
+  <scroll-view class="search-results" scroll-y wx:if="{{searching}}">
+    <view class="result-header" wx:if="{{products.length > 0}}">
+      找到 {{products.length}} 个商品
+    </view>
+
+    <view class="product-list">
+      <view 
+        class="product-item"
+        wx:for="{{products}}"
+        wx:key="id"
+        data-id="{{item.id}}"
+        bindtap="onProductTap"
+      >
+        <image class="product-image" src="{{item.cover}}" mode="aspectFill" />
+        <view class="product-info">
+          <text class="product-name">{{item.name}}</text>
+          <text class="product-desc" wx:if="{{item.description}}">{{item.description}}</text>
+          <view class="product-footer">
+            <text class="product-price">¥{{item.price}}</text>
+            <text class="product-sales">已售{{item.sales}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-result" wx:if="{{products.length === 0 && searched}}">
+      <image class="empty-image" src="/images/empty.png" mode="aspectFit" />
+      <text class="empty-text">没有找到相关商品</text>
+    </view>
+  </scroll-view>
+</view>

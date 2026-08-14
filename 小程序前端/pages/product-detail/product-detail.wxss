@@ -1,0 +1,428 @@
+/* pages/product-detail/product-detail.wxss */
+.detail-container {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding-bottom: 120rpx;
+}
+
+.detail-content {
+  height: calc(100vh - 120rpx);
+}
+
+/* 商品轮播 */
+.product-swiper {
+  width: 100%;
+  height: 750rpx;
+  background-color: #fff;
+}
+
+.swiper-image {
+  width: 100%;
+  height: 100%;
+}
+
+/* 商品信息 */
+.product-info {
+  background-color: #fff;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.price-section {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: 20rpx;
+}
+
+.price {
+  font-size: 48rpx;
+  color: #ff6b35;
+  font-weight: bold;
+  margin-right: 20rpx;
+}
+
+.original-price {
+  font-size: 28rpx;
+  color: #999;
+  text-decoration: line-through;
+  margin-right: 20rpx;
+}
+
+.sales-info {
+  flex: 1;
+  text-align: right;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.product-name {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: bold;
+  line-height: 1.5;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.product-desc {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+  display: block;
+}
+
+/* 优惠信息 */
+.promotion-section {
+  margin-top: 20rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #f5f5f5;
+}
+
+.promotion-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.promotion-tag {
+  padding: 4rpx 8rpx;
+  background-color: #ff6b35;
+  color: #fff;
+  font-size: 20rpx;
+  border-radius: 4rpx;
+  margin-right: 12rpx;
+}
+
+.promotion-text {
+  font-size: 24rpx;
+  color: #ff6b35;
+}
+
+/* 规格选择 */
+.spec-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fff;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.spec-label {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.spec-value {
+  flex: 1;
+  font-size: 28rpx;
+  color: #999;
+  text-align: right;
+  margin-right: 16rpx;
+}
+
+.arrow-icon {
+  width: 24rpx;
+  height: 24rpx;
+}
+
+/* 配送方式 */
+.delivery-section {
+  background-color: #fff;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+}
+
+.delivery-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+}
+
+.delivery-item:last-child {
+  margin-bottom: 0;
+}
+
+.delivery-label {
+  font-size: 28rpx;
+  color: #333;
+  width: 100rpx;
+}
+
+.delivery-value {
+  font-size: 28rpx;
+  color: #666;
+}
+
+/* 商品详情 */
+.detail-section {
+  background-color: #fff;
+  padding: 30rpx;
+}
+
+.detail-header {
+  margin-bottom: 30rpx;
+}
+
+.detail-title {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: bold;
+}
+
+.detail-info {
+  margin-bottom: 40rpx;
+}
+
+.info-item {
+  display: flex;
+  margin-bottom: 20rpx;
+  font-size: 28rpx;
+}
+
+.info-label {
+  color: #999;
+  width: 140rpx;
+}
+
+.info-value {
+  flex: 1;
+  color: #333;
+}
+
+.detail-images {
+  width: 100%;
+}
+
+.detail-image {
+  width: 100%;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+/* 底部操作栏 */
+.footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120rpx;
+  background-color: #fff;
+  display: flex;
+  align-items: center;
+  padding: 0 30rpx;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+
+.footer-left {
+  display: flex;
+  margin-right: 20rpx;
+}
+
+.footer-icon-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 40rpx;
+  font-size: 20rpx;
+  color: #666;
+  position: relative;
+}
+
+.footer-icon {
+  width: 48rpx;
+  height: 48rpx;
+  margin-bottom: 8rpx;
+}
+
+.cart-badge {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  line-height: 32rpx;
+  padding: 0 8rpx;
+  background-color: #ff6b35;
+  color: #fff;
+  font-size: 20rpx;
+  border-radius: 16rpx;
+  text-align: center;
+}
+
+.footer-right {
+  flex: 1;
+  display: flex;
+}
+
+.add-cart-btn,
+.buy-now-btn {
+  flex: 1;
+  height: 80rpx;
+  line-height: 80rpx;
+  font-size: 28rpx;
+  border-radius: 40rpx;
+  border: none;
+}
+
+.add-cart-btn {
+  background: linear-gradient(135deg, #ffa500 0%, #ff8c00 100%);
+  color: #fff;
+  margin-right: 20rpx;
+}
+
+.buy-now-btn {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
+  color: #fff;
+}
+
+/* 规格弹窗 */
+.spec-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: none;
+}
+
+.spec-popup.show {
+  display: block;
+}
+
+.spec-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 80vh;
+  background-color: #fff;
+  border-radius: 32rpx 32rpx 0 0;
+  padding: 40rpx 30rpx;
+}
+
+.spec-header {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 40rpx;
+  position: relative;
+}
+
+.spec-image {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  margin-right: 20rpx;
+}
+
+.spec-info {
+  flex: 1;
+}
+
+.spec-price {
+  font-size: 40rpx;
+  color: #ff6b35;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 16rpx;
+}
+
+.spec-stock {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.close-icon {
+  width: 48rpx;
+  height: 48rpx;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.spec-list {
+  margin-bottom: 40rpx;
+}
+
+.spec-title {
+  font-size: 28rpx;
+  color: #333;
+  display: block;
+  margin-bottom: 20rpx;
+}
+
+.spec-options {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.spec-option {
+  padding: 16rpx 32rpx;
+  background-color: #f5f5f5;
+  border: 2rpx solid #f5f5f5;
+  border-radius: 8rpx;
+  margin-right: 20rpx;
+  margin-bottom: 20rpx;
+  font-size: 26rpx;
+  color: #333;
+}
+
+.spec-option.active {
+  background-color: #fff;
+  border-color: #ff6b35;
+  color: #ff6b35;
+}
+
+.quantity-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 40rpx;
+}
+
+.quantity-title {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.quantity-control {
+  display: flex;
+  align-items: center;
+  border: 1rpx solid #eee;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.quantity-btn {
+  width: 70rpx;
+  height: 60rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f5f5;
+  font-size: 36rpx;
+  color: #333;
+}
+
+.quantity-input {
+  width: 100rpx;
+  height: 60rpx;
+  text-align: center;
+  font-size: 28rpx;
+  border-left: 1rpx solid #eee;
+  border-right: 1rpx solid #eee;
+}
+
+.spec-confirm-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
+  color: #fff;
+  border-radius: 44rpx;
+  font-size: 28rpx;
+  border: none;
+}
