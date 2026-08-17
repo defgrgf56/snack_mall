@@ -225,8 +225,7 @@ Page({
   async handleAddToCart(e) {
     const { id } = e.currentTarget.dataset
     
-    // 阻止冒泡到商品详情
-    e.stopPropagation()
+    // catchtap 会自动阻止冒泡，不需要手动调用 stopPropagation
     
     const success = await addToCart(id, 1)
     if (success) {
