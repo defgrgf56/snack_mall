@@ -1,7 +1,12 @@
 <!--pages/cart/cart.wxml-->
 <view class="cart-container">
+  <!-- 加载中 -->
+  <view class="loading-container" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
   <!-- 购物车列表 -->
-  <scroll-view class="cart-list" scroll-y wx:if="{{cartItems.length > 0}}">
+  <scroll-view class="cart-list" scroll-y wx:if="{{!loading && cartItems.length > 0}}">
     <view 
       class="cart-item"
       wx:for="{{cartItems}}"
@@ -9,19 +14,16 @@
     >
       <!-- 选择框 -->
       <view class="item-checkbox" bindtap="onSelectItem" data-id="{{item.id}}">
-        <image 
-          class="checkbox-icon" 
-          src="{{item.selected ? '/images/checkbox-selected.png' : '/images/checkbox.png'}}" 
-          mode="aspectFit"
-        />
+        <view class="checkbox {{item.selected ? 'checked' : ''}}">
+          <text wx:if="{{item.selected}}">✓</text>
+        </view>
       </view>
 
       <!-- 商品信息 -->
-      <image class="item-image" src="{{item.product.image}}" mode="aspectFill" />
+      <image class="item-image" src="{{item.product.cover}}" mode="aspectFill" />
       
       <view class="item-info">
         <text class="item-name">{{item.product.name}}</text>
-        <text class="item-spec" wx:if="{{item.product.spec}}">{{item.product.spec}}</text>
         
         <view class="item-footer">
           <text class="item-price">¥{{item.product.price}}</text>
@@ -35,14 +37,9 @@
             >
               <text>-</text>
             </view>
-            <input 
-              class="quantity-input" 
-              type="number" 
-              value="{{item.quantity}}"
-              disabled
-            />
+            <text class="quantity-value">{{item.quantity}}</text>
             <view 
-              class="quantity-btn"
+              class="quantity-btn {{item.quantity >= item.product.stock ? 'disabled' : ''}}"
               bindtap="onIncreaseQuantity"
               data-id="{{item.id}}"
             >
@@ -54,28 +51,26 @@
 
       <!-- 删除按钮 -->
       <view class="item-delete" bindtap="onDeleteItem" data-id="{{item.id}}">
-        <image class="delete-icon" src="/images/delete.png" mode="aspectFit" />
+        <text>删除</text>
       </view>
     </view>
   </scroll-view>
 
   <!-- 空购物车 -->
-  <view class="empty-cart" wx:else>
-    <image class="empty-image" src="/images/empty-cart.png" mode="aspectFit" />
+  <view class="empty-cart" wx:if="{{!loading && cartItems.length === 0}}">
+    <text class="empty-icon">🛒</text>
     <text class="empty-text">购物车还是空的</text>
     <button class="go-shopping-btn" bindtap="onGoShopping">去逛逛</button>
   </view>
 
   <!-- 底部结算栏 -->
-  <view class="cart-footer" wx:if="{{cartItems.length > 0}}">
+  <view class="cart-footer" wx:if="{{!loading && cartItems.length > 0}}">
     <view class="footer-left">
       <view class="select-all" bindtap="onSelectAll">
-        <image 
-          class="checkbox-icon" 
-          src="{{allSelected ? '/images/checkbox-selected.png' : '/images/checkbox.png'}}" 
-          mode="aspectFit"
-        />
-        <text>全选</text>
+        <view class="checkbox {{allSelected ? 'checked' : ''}}">
+          <text wx:if="{{allSelected}}">✓</text>
+        </view>
+        <text class="select-text">全选</text>
       </view>
       
       <view class="total-info">

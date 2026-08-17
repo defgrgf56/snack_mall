@@ -2,7 +2,8 @@
 .user-container {
   min-height: 100vh;
   background-color: #f5f5f5;
-  padding-bottom: 40rpx;
+  padding-bottom: calc(100rpx + env(safe-area-inset-bottom)); /* TabBar高度 + 安全区 */
+  box-sizing: border-box;
 }
 
 /* 用户头部 */
@@ -25,6 +26,14 @@
   border-radius: 60rpx;
   border: 4rpx solid rgba(255, 255, 255, 0.3);
   margin-right: 30rpx;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-emoji {
+  font-size: 60rpx;
 }
 
 .info-right {
@@ -109,8 +118,8 @@
 }
 
 .arrow-icon {
-  width: 24rpx;
-  height: 24rpx;
+  font-size: 32rpx;
+  color: #999;
   margin-left: 8rpx;
 }
 
@@ -127,8 +136,7 @@
 }
 
 .order-icon {
-  width: 60rpx;
-  height: 60rpx;
+  font-size: 60rpx;
   margin-bottom: 16rpx;
 }
 
@@ -177,8 +185,7 @@
 }
 
 .menu-icon {
-  width: 48rpx;
-  height: 48rpx;
+  font-size: 48rpx;
   margin-right: 20rpx;
 }
 
@@ -191,15 +198,61 @@
 .logout-section {
   padding: 0 30rpx;
   margin-top: 40rpx;
+  margin-bottom: 40rpx;
 }
 
 .logout-btn {
   width: 100%;
   height: 88rpx;
-  line-height: 88rpx;
   background-color: #fff;
   color: #ff6b35;
   border: 1rpx solid #ff6b35;
   border-radius: 44rpx;
   font-size: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  text-align: center;
+  box-sizing: border-box;
+  line-height: 1;
+}
+
+.logout-btn::after {
+  border: none;
+}
+
+/* 小屏幕适配 */
+@media screen and (max-width: 640rpx) {
+  .logout-btn {
+    height: 80rpx;
+    font-size: 26rpx;
+  }
+}
+
+/* 大屏幕适配 */
+@media screen and (min-width: 768rpx) {
+  .logout-section {
+    padding: 0 60rpx;
+  }
+  
+  .logout-btn {
+    height: 96rpx;
+    font-size: 30rpx;
+  }
+}
+
+/* 测试入口样式 */
+.menu-icon-emoji {
+  font-size: 40rpx;
+  margin-right: 20rpx;
+}
+
+.menu-tag {
+  margin-left: 10rpx;
+  padding: 2rpx 12rpx;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 20rpx;
+  border-radius: 8rpx;
 }

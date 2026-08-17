@@ -2,17 +2,64 @@
 .address-container {
   min-height: 100vh;
   background-color: #f5f5f5;
-  padding-bottom: 120rpx;
+  padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+@media screen and (max-width: 640rpx) {
+  .address-container {
+    padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
+  }
+}
+
+@media screen and (min-width: 768rpx) {
+  .address-container {
+    padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
+  }
 }
 
 .address-list {
-  height: calc(100vh - 120rpx);
+  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .address-item {
   background-color: #fff;
-  margin-bottom: 20rpx;
+  margin: 0 20rpx 20rpx 20rpx;
   padding: 30rpx;
+  border-radius: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.08);
+  position: relative;
+  box-sizing: border-box;
+}
+
+.address-item:first-child {
+  margin-top: 20rpx;
+}
+
+@media screen and (max-width: 640rpx) {
+  .address-item {
+    margin: 0 15rpx 15rpx 15rpx;
+    padding: 25rpx;
+  }
+  
+  .address-item:first-child {
+    margin-top: 15rpx;
+  }
+}
+
+@media screen and (min-width: 768rpx) {
+  .address-item {
+    margin: 0 30rpx 30rpx 30rpx;
+    padding: 40rpx;
+  }
+  
+  .address-item:first-child {
+    margin-top: 30rpx;
+  }
 }
 
 .address-info {
@@ -23,50 +70,117 @@
   display: flex;
   align-items: center;
   margin-bottom: 20rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  flex-wrap: wrap;
+  gap: 10rpx;
 }
 
 .consignee {
   font-size: 32rpx;
   color: #333;
   font-weight: bold;
-  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+@media screen and (max-width: 640rpx) {
+  .consignee {
+    font-size: 30rpx;
+  }
 }
 
 .phone {
   font-size: 28rpx;
   color: #666;
-  margin-right: 20rpx;
+  flex: 1;
+  min-width: 0;
+  word-break: break-all;
+}
+
+@media screen and (max-width: 640rpx) {
+  .phone {
+    font-size: 26rpx;
+  }
 }
 
 .default-tag {
-  padding: 4rpx 12rpx;
-  background-color: #ff6b35;
+  padding: 4rpx 16rpx;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
   color: #fff;
-  font-size: 20rpx;
-  border-radius: 4rpx;
+  font-size: 22rpx;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .address-detail {
   font-size: 26rpx;
   color: #666;
   line-height: 1.6;
+  display: block;
+  padding-left: 40rpx;
+  padding-right: 40rpx;
+  position: relative;
+  word-break: break-all;
+}
+
+@media screen and (max-width: 640rpx) {
+  .address-detail {
+    font-size: 24rpx;
+    padding-left: 35rpx;
+    padding-right: 10rpx;
+  }
+}
+
+.address-detail::before {
+  content: '📍';
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 28rpx;
 }
 
 .address-actions {
   display: flex;
   justify-content: flex-end;
   padding-top: 20rpx;
-  border-top: 1rpx solid #f5f5f5;
+  border-top: 1rpx solid #f0f0f0;
+  gap: 20rpx;
+  flex-wrap: wrap;
+}
+
+@media screen and (max-width: 640rpx) {
+  .address-actions {
+    gap: 15rpx;
+  }
 }
 
 .action-btn {
-  margin-left: 40rpx;
+  padding: 8rpx 24rpx;
   font-size: 26rpx;
   color: #666;
+  border: 1rpx solid #ddd;
+  border-radius: 20rpx;
+  background-color: #fff;
+  transition: all 0.3s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media screen and (max-width: 640rpx) {
+  .action-btn {
+    padding: 6rpx 20rpx;
+    font-size: 24rpx;
+  }
+}
+
+.action-btn:active {
+  background-color: #f5f5f5;
 }
 
 .action-btn.delete {
   color: #ff6b35;
+  border-color: #ff6b35;
 }
 
 /* 空状态 */
@@ -74,13 +188,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 200rpx 0;
+  justify-content: center;
+  padding: 100rpx 40rpx;
+  min-height: 60vh;
 }
 
 .empty-image {
   width: 400rpx;
   height: 400rpx;
   margin-bottom: 40rpx;
+  opacity: 0.6;
+  max-width: 80%;
 }
 
 .empty-text {
@@ -91,15 +209,148 @@
 /* 添加按钮 */
 .add-address-btn {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: calc(20rpx + env(safe-area-inset-bottom));
+  left: 20rpx;
+  right: 20rpx;
   height: 100rpx;
   background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 20rpx;
+  box-shadow: 0 8rpx 32rpx rgba(255, 107, 53, 0.4);
+  z-index: 100;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  border-radius: 50rpx;
+}
+
+@media screen and (max-width: 640rpx) {
+  .add-address-btn {
+    bottom: calc(15rpx + env(safe-area-inset-bottom));
+    left: 15rpx;
+    right: 15rpx;
+    height: 90rpx;
+    gap: 15rpx;
+    border-radius: 45rpx;
+  }
+}
+
+@media screen and (min-width: 768rpx) {
+  .add-address-btn {
+    bottom: calc(30rpx + env(safe-area-inset-bottom));
+    left: 30rpx;
+    right: 30rpx;
+    height: 110rpx;
+    gap: 24rpx;
+    border-radius: 55rpx;
+  }
+}
+
+/* 按钮光泽效果 */
+.add-address-btn::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    45deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+.add-icon-circle {
+  width: 56rpx;
+  height: 56rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2rpx solid rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10rpx);
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.add-icon {
+  font-size: 48rpx;
+  line-height: 1;
+  font-weight: 200;
+  color: #fff;
+  display: block;
+  text-align: center;
+  margin-top: -4rpx; /* 微调垂直居中 */
+}
+
+.add-text {
   font-size: 32rpx;
-  font-weight: bold;
+  font-weight: 600;
+  letter-spacing: 2rpx;
+}
+
+@media screen and (max-width: 640rpx) {
+  .add-address-btn {
+    height: 100rpx;
+    gap: 15rpx;
+  }
+  
+  .add-icon-circle {
+    width: 48rpx;
+    height: 48rpx;
+  }
+  
+  .add-icon {
+    font-size: 40rpx;
+  }
+  
+  .add-text {
+    font-size: 28rpx;
+  }
+}
+
+@media screen and (min-width: 768rpx) {
+  .add-address-btn {
+    height: 130rpx;
+    gap: 24rpx;
+  }
+  
+  .add-icon-circle {
+    width: 64rpx;
+    height: 64rpx;
+  }
+  
+  .add-icon {
+    font-size: 52rpx;
+  }
+  
+  .add-text {
+    font-size: 34rpx;
+  }
+}
+
+.add-address-btn:active {
+  transform: scale(0.98);
+}
+
+.add-address-btn:active .add-icon-circle {
+  transform: scale(0.9);
+  background: rgba(255, 255, 255, 0.3);
 }

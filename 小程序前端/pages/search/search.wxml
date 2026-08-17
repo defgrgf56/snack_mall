@@ -1,86 +1,103 @@
 <!--pages/search/search.wxml-->
 <view class="search-container">
   <!-- 搜索框 -->
-  <view class="search-header">
+  <view class="search-header" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
     <view class="search-box">
       <image class="search-icon" src="/images/icon-search.png" mode="aspectFit" />
       <input 
         class="search-input" 
         placeholder="搜索商品"
+        placeholder-class="search-placeholder"
         value="{{keyword}}"
         confirm-type="search"
         bindinput="onKeywordInput"
         bindconfirm="onSearch"
+        focus="{{autoFocus}}"
       />
-      <text class="cancel-btn" bindtap="onCancel">取消</text>
+      <text class="clear-input" wx:if="{{keyword}}" bindtap="onClearInput">×</text>
     </view>
+    <text class="cancel-btn" bindtap="onCancel">取消</text>
   </view>
 
-  <!-- 搜索历史 -->
-  <view class="search-history" wx:if="{{!searching && history.length > 0}}">
-    <view class="history-header">
-      <text class="history-title">搜索历史</text>
-      <text class="clear-btn" bindtap="onClearHistory">清空</text>
-    </view>
-    <view class="history-list">
-      <view 
-        class="history-item"
-        wx:for="{{history}}"
-        wx:key="index"
-        data-keyword="{{item}}"
-        bindtap="onHistoryTap"
-      >
-        {{item}}
+  <!-- 搜索内容区域 -->
+  <view class="search-content">
+    <!-- 搜索历史 -->
+    <view class="search-section" wx:if="{{!searching && history.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">搜索历史</text>
+        <text class="clear-btn" bindtap="onClearHistory">
+          <text class="icon">🗑</text> 清空
+        </text>
       </view>
-    </view>
-  </view>
-
-  <!-- 热门搜索 -->
-  <view class="hot-search" wx:if="{{!searching && hotKeywords.length > 0}}">
-    <view class="hot-title">热门搜索</view>
-    <view class="hot-list">
-      <view 
-        class="hot-item"
-        wx:for="{{hotKeywords}}"
-        wx:key="index"
-        data-keyword="{{item}}"
-        bindtap="onHistoryTap"
-      >
-        {{item}}
-      </view>
-    </view>
-  </view>
-
-  <!-- 搜索结果 -->
-  <scroll-view class="search-results" scroll-y wx:if="{{searching}}">
-    <view class="result-header" wx:if="{{products.length > 0}}">
-      找到 {{products.length}} 个商品
-    </view>
-
-    <view class="product-list">
-      <view 
-        class="product-item"
-        wx:for="{{products}}"
-        wx:key="id"
-        data-id="{{item.id}}"
-        bindtap="onProductTap"
-      >
-        <image class="product-image" src="{{item.cover}}" mode="aspectFill" />
-        <view class="product-info">
-          <text class="product-name">{{item.name}}</text>
-          <text class="product-desc" wx:if="{{item.description}}">{{item.description}}</text>
-          <view class="product-footer">
-            <text class="product-price">¥{{item.price}}</text>
-            <text class="product-sales">已售{{item.sales}}</text>
-          </view>
+      <view class="tag-list">
+        <view 
+          class="tag-item history-tag"
+          wx:for="{{history}}"
+          wx:key="index"
+          data-keyword="{{item}}"
+          bindtap="onHistoryTap"
+        >
+          <text class="tag-icon">🕐</text>
+          <text class="tag-text">{{item}}</text>
         </view>
       </view>
     </view>
 
-    <!-- 空状态 -->
-    <view class="empty-result" wx:if="{{products.length === 0 && searched}}">
-      <image class="empty-image" src="/images/empty.png" mode="aspectFit" />
-      <text class="empty-text">没有找到相关商品</text>
+    <!-- 热门搜索 -->
+    <view class="search-section" wx:if="{{!searching && hotKeywords.length > 0}}">
+      <view class="section-header">
+        <text class="section-title">热门搜索</text>
+        <text class="hot-badge">HOT</text>
+      </view>
+      <view class="tag-list">
+        <view 
+          class="tag-item hot-tag"
+          wx:for="{{hotKeywords}}"
+          wx:key="index"
+          data-keyword="{{item}}"
+          bindtap="onHistoryTap"
+        >
+          <text class="tag-icon">🔥</text>
+          <text class="tag-text">{{item}}</text>
+        </view>
+      </view>
     </view>
-  </scroll-view>
+
+    <!-- 搜索结果 -->
+    <view class="search-results" wx:if="{{searching}}">
+      <view class="result-header" wx:if="{{products.length > 0}}">
+        <text class="result-count">找到 <text class="count-num">{{products.length}}</text> 个相关商品</text>
+      </view>
+
+      <view class="product-list">
+        <view 
+          class="product-item"
+          wx:for="{{products}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="onProductTap"
+        >
+          <image class="product-image" src="{{item.cover}}" mode="aspectFill" />
+          <view class="product-info">
+            <text class="product-name">{{item.name}}</text>
+            <text class="product-desc" wx:if="{{item.description}}">{{item.description}}</text>
+            <view class="product-footer">
+              <view class="price-box">
+                <text class="price-symbol">¥</text>
+                <text class="product-price">{{item.price}}</text>
+              </view>
+              <text class="product-sales">已售 {{item.sales}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view class="empty-result" wx:if="{{products.length === 0 && searched}}">
+        <view class="empty-icon">🔍</view>
+        <text class="empty-text">没有找到"{{keyword}}"相关商品</text>
+        <text class="empty-tip">换个关键词试试吧</text>
+      </view>
+    </view>
+  </view>
 </view>

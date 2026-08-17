@@ -1,51 +1,146 @@
 <!--pages/category/category.wxml-->
-<view class="category-container">
-  <!-- 左侧分类列表 -->
-  <scroll-view class="category-left" scroll-y>
-    <view 
-      class="category-item {{currentIndex === index ? 'active' : ''}}"
-      wx:for="{{categories}}"
-      wx:key="id"
-      data-index="{{index}}"
-      bindtap="onCategoryTap"
-    >
-      <text>{{item.name}}</text>
+<view class="category-page" style="height: {{windowHeight}}px;">
+  <!-- 顶部搜索栏 -->
+  <view class="search-bar">
+    <view class="search-input" bindtap="onSearch">
+      <text class="search-icon">🔍</text>
+      <text class="search-placeholder">请输入搜索关键词</text>
+    </view>
+  </view>
+
+  <!-- 圆形分类导航 -->
+  <scroll-view class="circle-categories" scroll-x>
+    <view class="circle-category-list">
+      <view 
+        class="circle-category-item {{currentIndex === index ? 'active' : ''}}"
+        wx:for="{{categories}}"
+        wx:key="id"
+        data-index="{{index}}"
+        bindtap="onCategoryTap"
+      >
+        <view class="circle-icon">
+          <image src="{{item.icon}}" mode="aspectFill" wx:if="{{item.icon}}" />
+          <text wx:else>{{item.name.substring(0,2)}}</text>
+        </view>
+        <text class="circle-name">{{item.name}}</text>
+      </view>
     </view>
   </scroll-view>
 
-  <!-- 右侧商品列表 -->
-  <scroll-view class="category-right" scroll-y>
-    <view class="products-container">
-      <view 
-        class="product-item"
-        wx:for="{{products}}"
-        wx:key="id"
-        data-id="{{item.id}}"
-        bindtap="onProductTap"
-      >
-        <image class="product-image" src="{{item.image}}" mode="aspectFill" />
-        <view class="product-info">
-          <text class="product-name">{{item.name}}</text>
-          <view class="product-footer">
-            <text class="product-price">¥{{item.price}}</text>
-            <view class="product-actions">
-              <image 
-                class="cart-icon" 
-                src="/images/cart-add.png" 
-                mode="aspectFit"
-                catchtap="onAddToCart"
-                data-id="{{item.id}}"
-              />
+  <!-- 主内容区 -->
+  <view class="main-content" style="height: {{mainContentHeight}}px;">
+    <!-- 左侧分类列表 -->
+    <scroll-view class="category-left" scroll-y scroll-into-view="category-{{currentIndex}}">
+      <!-- 有分类数据 -->
+      <block wx:if="{{categories.length > 0}}">
+        <view 
+          id="category-{{index}}"
+          class="category-item {{currentIndex === index ? 'active' : ''}}"
+          wx:for="{{categories}}"
+          wx:key="id"
+          data-index="{{index}}"
+          bindtap="onCategoryTap"
+        >
+          <text class="category-text">{{item.name}}</text>
+        </view>
+      </block>
+      
+      <!-- 无分类数据提示 -->
+      <view class="no-category" wx:else>
+        <text class="no-category-text">暂无分类</text>
+      </view>
+    </scroll-view>
+
+    <!-- 右侧商品区 -->
+    <view class="category-right">
+      <!-- 筛选栏 -->
+      <view class="filter-bar">
+        <view 
+          class="filter-item {{sortType === 'default' ? 'active' : ''}}"
+          bindtap="onSortChange"
+          data-type="default"
+        >
+          <text>综合</text>
+        </view>
+        <view 
+          class="filter-item {{sortType === 'sales' ? 'active' : ''}}"
+          bindtap="onSortChange"
+          data-type="sales"
+        >
+          <text>销量</text>
+        </view>
+        <view 
+          class="filter-item {{sortType === 'price' ? 'active' : ''}}"
+          bindtap="onSortChange"
+          data-type="price"
+        >
+          <text>价格</text>
+          <text class="arrow {{priceOrder === 'asc' ? 'up' : 'down'}}">{{priceOrder === 'asc' ? '↑' : '↓'}}</text>
+        </view>
+        <view 
+          class="filter-item {{sortType === 'new' ? 'active' : ''}}"
+          bindtap="onSortChange"
+          data-type="new"
+        >
+          <text>上新</text>
+        </view>
+      </view>
+
+      <!-- 商品列表容器 -->
+      <view class="products-container" style="height: {{productsScrollHeight}}px;">
+        <scroll-view class="products-scroll" scroll-y wx:if="{{products.length > 0}}">
+          <view class="products-list">
+            <view 
+              class="product-card"
+              wx:for="{{products}}"
+              wx:key="id"
+              data-id="{{item.id}}"
+              bindtap="onProductTap"
+            >
+              <image class="product-image" src="{{item.cover || item.image}}" mode="aspectFill" />
+              
+              <!-- 标签 -->
+              <view class="product-tags" wx:if="{{item.is_hot || item.is_new}}">
+                <text class="tag tag-hot" wx:if="{{item.is_hot}}">热</text>
+                <text class="tag tag-new" wx:if="{{item.is_new}}">新</text>
+              </view>
+
+              <view class="product-info">
+                <text class="product-name">{{item.name}}</text>
+                <text class="product-desc" wx:if="{{item.subtitle}}">{{item.subtitle}}</text>
+                
+                <view class="product-footer">
+                  <view class="price-box">
+                    <text class="price-symbol">¥</text>
+                    <text class="price-value">{{item.price}}</text>
+                  </view>
+                  <view class="sales-box" wx:if="{{item.sales}}">
+                    <text class="sales-icon">🔥</text>
+                    <text class="sales-text">¥{{item.sales}}</text>
+                  </view>
+                </view>
+
+                <!-- 热卖榜 -->
+                <view class="hot-rank" wx:if="{{item.rank}}">
+                  <text class="rank-icon">🏆</text>
+                  <text class="rank-text">{{item.rank_text}}</text>
+                </view>
+              </view>
+
+              <!-- 购物车按钮 -->
+              <view class="cart-btn" catchtap="onAddToCart" data-id="{{item.id}}">
+                <text>🛒</text>
+              </view>
             </view>
           </view>
+        </scroll-view>
+
+        <!-- 空状态 -->
+        <view class="empty-state" wx:else>
+          <image class="empty-image" src="/images/empty.png" mode="aspectFit" />
+          <text class="empty-text">暂无商品</text>
         </view>
       </view>
     </view>
-
-    <!-- 空状态 -->
-    <view class="empty-container" wx:if="{{products.length === 0}}">
-      <image class="empty-image" src="/images/empty.png" mode="aspectFit" />
-      <text class="empty-text">暂无商品</text>
-    </view>
-  </scroll-view>
+  </view>
 </view>

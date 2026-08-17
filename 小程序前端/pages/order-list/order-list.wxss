@@ -2,6 +2,7 @@
 .order-list-container {
   min-height: 100vh;
   background-color: #f5f5f5;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Tab栏 */
@@ -204,7 +205,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 200rpx 0;
+  justify-content: center;
 }
 
 .empty-image {

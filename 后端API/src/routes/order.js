@@ -5,6 +5,49 @@ const { Order, OrderItem, Product, Address, Cart, sequelize } = require('../mode
 const { authenticateToken } = require('../middleware/auth');
 
 /**
+ * 获取订单统计
+ * GET /api/orders/stats
+ * 注意：此路由必须在 /:id 路由之前定义，否则 Express 会将 'stats' 当作 id 参数
+ */
+router.get('/stats', authenticateToken, async (req, res) => {
+  try {
+    const pending = await Order.count({
+      where: { user_id: req.userId, status: 1 }
+    });
+    
+    const paid = await Order.count({
+      where: { user_id: req.userId, status: 2 }
+    });
+    
+    const shipped = await Order.count({
+      where: { user_id: req.userId, status: 3 }
+    });
+    
+    const uncommented = await Order.count({
+      where: { user_id: req.userId, status: 4 }
+    });
+    
+    res.json({
+      code: 200,
+      message: 'success',
+      data: {
+        pending,    // 待付款
+        paid,       // 待发货
+        shipped,    // 待收货
+        uncommented // 待评价
+      }
+    });
+  } catch (error) {
+    console.error('获取订单统计失败:', error);
+    res.json({
+      code: 500,
+      message: '获取失败',
+      data: null
+    });
+  }
+});
+
+/**
  * 创建订单
  * POST /api/orders
  * Body: { address_id, delivery_type, remark, coupon_id, points_used, items: [{ product_id, quantity, spec }] }
@@ -429,48 +472,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     res.json({
       code: 500,
       message: '删除失败',
-      data: null
-    });
-  }
-});
-
-/**
- * 获取订单统计
- * GET /api/orders/stats
- */
-router.get('/stats', authenticateToken, async (req, res) => {
-  try {
-    const pending = await Order.count({
-      where: { user_id: req.userId, status: 1 }
-    });
-    
-    const paid = await Order.count({
-      where: { user_id: req.userId, status: 2 }
-    });
-    
-    const shipped = await Order.count({
-      where: { user_id: req.userId, status: 3 }
-    });
-    
-    const uncommented = await Order.count({
-      where: { user_id: req.userId, status: 4 }
-    });
-    
-    res.json({
-      code: 200,
-      message: 'success',
-      data: {
-        pending,    // 待付款
-        paid,       // 待发货
-        shipped,    // 待收货
-        uncommented // 待评价
-      }
-    });
-  } catch (error) {
-    console.error('获取订单统计失败:', error);
-    res.json({
-      code: 500,
-      message: '获取失败',
       data: null
     });
   }

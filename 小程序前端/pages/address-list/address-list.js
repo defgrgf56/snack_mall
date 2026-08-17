@@ -5,10 +5,12 @@ Page({
   data: {
     addresses: [],
     selectMode: false, // 是否为选择地址模式
-    selectedId: null
+    selectedId: null,
+    windowHeight: 0
   },
 
   onLoad(options) {
+    this.setWindowHeight();
     // 如果传入了 select 参数，表示选择地址模式
     if (options.select) {
       this.setData({
@@ -16,6 +18,14 @@ Page({
       });
     }
     this.loadAddresses();
+  },
+
+  // 设置窗口高度
+  setWindowHeight() {
+    const systemInfo = wx.getSystemInfoSync();
+    this.setData({
+      windowHeight: systemInfo.windowHeight - 50 // 减去底部按钮高度
+    });
   },
 
   onShow() {
@@ -32,13 +42,26 @@ Page({
   async loadAddresses() {
     try {
       const res = await api.get('/addresses', {}, false);
+      console.log('=== 地址列表原始数据 ===', res);
+      
+      // 处理地址数据，确保字段正确
+      const addresses = (res || []).map(item => ({
+        ...item,
+        detail: item.detail || item.address || '',
+        consignee: item.consignee || item.name || '收货人',
+        phone: item.phone || item.mobile || ''
+      }));
+      
+      console.log('=== 处理后的地址数据 ===', addresses);
+      
       this.setData({
-        addresses: res || []
+        addresses: addresses
       });
     } catch (error) {
       console.error('加载地址失败:', error);
-      // 使用模拟数据
-      this.useMockData();
+      this.setData({
+        addresses: []
+      });
     }
   },
 
@@ -124,36 +147,6 @@ Page({
   onAddAddress() {
     wx.navigateTo({
       url: '/pages/address-edit/address-edit'
-    });
-  },
-
-  // 使用模拟数据
-  useMockData() {
-    const mockAddresses = [
-      {
-        id: 1,
-        consignee: '张三',
-        phone: '138****8888',
-        province: '广东省',
-        city: '深圳市',
-        district: '南山区',
-        detail: '科技园科技大厦A座1001',
-        is_default: 1
-      },
-      {
-        id: 2,
-        consignee: '李四',
-        phone: '139****9999',
-        province: '广东省',
-        city: '广州市',
-        district: '天河区',
-        detail: '天河路123号',
-        is_default: 0
-      }
-    ];
-    
-    this.setData({
-      addresses: mockAddresses
     });
   }
 });

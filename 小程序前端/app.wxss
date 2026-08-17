@@ -2,6 +2,24 @@
 page {
   background-color: #f5f5f5;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  /* 全局自适应高度 */
+  height: 100%;
+}
+
+/* 页面安全区域适配 */
+.page-container {
+  min-height: 100vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 有TabBar的页面底部安全区 */
+.page-with-tabbar {
+  padding-bottom: calc(100rpx + env(safe-area-inset-bottom));
+}
+
+/* 有固定底部栏的页面 */
+.page-with-bottom-bar {
+  padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
 }
 
 /* 容器 */

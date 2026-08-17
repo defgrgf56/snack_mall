@@ -1,8 +1,8 @@
 // config/dev.config.js - 开发环境配置
 
 module.exports = {
-  // 开发模式：mock（模拟数据） | api（真实接口）
-  mode: 'mock',
+  // 开发模式：api（真实接口）
+  mode: 'api',
   
   // API地址配置
   apiBase: {
@@ -18,7 +18,7 @@ module.exports = {
   currentEnv: 'local',
   
   // 是否显示网络错误提示
-  showNetworkError: false,
+  showNetworkError: true,
   
   // 是否显示调试日志
   enableDebugLog: true

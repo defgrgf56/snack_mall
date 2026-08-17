@@ -1,144 +1,219 @@
 /* pages/search/search.wxss */
 .search-container {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: #f7f8fa;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* 搜索头部 */
 .search-header {
+  display: flex;
+  align-items: center;
   background-color: #fff;
-  padding: 20rpx;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  padding: 16rpx 24rpx;
+  padding-bottom: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+/* 保证搜索框在胶囊下方 */
+.search-box {
+  margin-top: 8rpx;
 }
 
 .search-box {
+  flex: 1;
   display: flex;
   align-items: center;
   background-color: #f5f5f5;
-  border-radius: 40rpx;
-  padding: 0 30rpx;
-  height: 70rpx;
+  border-radius: 32rpx;
+  padding: 0 24rpx;
+  height: 64rpx;
 }
 
 .search-icon {
-  width: 36rpx;
-  height: 36rpx;
-  margin-right: 20rpx;
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 16rpx;
+  opacity: 0.6;
 }
 
 .search-input {
   flex: 1;
   font-size: 28rpx;
+  color: #333;
+}
+
+.search-placeholder {
+  color: #999;
+}
+
+.clear-input {
+  width: 36rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  text-align: center;
+  font-size: 40rpx;
+  color: #999;
+  margin-left: 16rpx;
 }
 
 .cancel-btn {
   font-size: 28rpx;
-  color: #666;
-  margin-left: 20rpx;
+  color: #333;
+  margin-left: 24rpx;
+  padding: 8rpx 0;
 }
 
-/* 搜索历史 */
-.search-history {
+/* 搜索内容区域 */
+.search-content {
+  padding: 24rpx;
+}
+
+/* 搜索区块 */
+.search-section {
   background-color: #fff;
-  margin-top: 20rpx;
-  padding: 30rpx;
+  border-radius: 16rpx;
+  padding: 32rpx 24rpx;
+  margin-bottom: 24rpx;
 }
 
-.history-header {
+.section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30rpx;
+  margin-bottom: 24rpx;
 }
 
-.history-title {
+.section-title {
   font-size: 32rpx;
   color: #333;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .clear-btn {
+  display: flex;
+  align-items: center;
   font-size: 24rpx;
   color: #999;
-}
-
-.history-list {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.history-item {
-  padding: 16rpx 32rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 32rpx;
   background-color: #f5f5f5;
-  border-radius: 40rpx;
-  font-size: 26rpx;
-  color: #666;
-  margin-right: 20rpx;
-  margin-bottom: 20rpx;
 }
 
-/* 热门搜索 */
-.hot-search {
-  background-color: #fff;
-  margin-top: 20rpx;
-  padding: 30rpx;
+.clear-btn .icon {
+  margin-right: 4rpx;
 }
 
-.hot-title {
-  font-size: 32rpx;
-  color: #333;
+.hot-badge {
+  background: linear-gradient(135deg, #FF6B00 0%, #FF8F3C 100%);
+  color: #fff;
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
   font-weight: bold;
-  margin-bottom: 30rpx;
 }
 
-.hot-list {
+/* 标签列表 */
+.tag-list {
   display: flex;
   flex-wrap: wrap;
+  gap: 16rpx;
 }
 
-.hot-item {
-  padding: 16rpx 32rpx;
-  background-color: #fff5f0;
-  border: 1rpx solid #ff6b35;
-  color: #ff6b35;
-  border-radius: 40rpx;
+.tag-item {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 24rpx;
+  border-radius: 32rpx;
   font-size: 26rpx;
-  margin-right: 20rpx;
-  margin-bottom: 20rpx;
+  transition: all 0.3s;
+}
+
+.tag-icon {
+  margin-right: 8rpx;
+  font-size: 28rpx;
+}
+
+.tag-text {
+  max-width: 200rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 历史标签 */
+.history-tag {
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1rpx solid #eee;
+}
+
+.history-tag:active {
+  background-color: #e8e8e8;
+}
+
+/* 热门标签 */
+.hot-tag {
+  background: linear-gradient(135deg, #FFF5F0 0%, #FFE8DC 100%);
+  color: #FF6B00;
+  border: 1rpx solid #FFD4B8;
+}
+
+.hot-tag:active {
+  background: linear-gradient(135deg, #FFE8DC 0%, #FFD4B8 100%);
 }
 
 /* 搜索结果 */
 .search-results {
-  height: calc(100vh - 110rpx);
+  padding-bottom: 40rpx;
 }
 
 .result-header {
-  padding: 30rpx;
-  font-size: 28rpx;
-  color: #666;
+  padding: 24rpx;
   background-color: #fff;
+  border-radius: 16rpx;
+  margin-bottom: 24rpx;
 }
 
+.result-count {
+  font-size: 28rpx;
+  color: #666;
+}
+
+.count-num {
+  color: #FF6B00;
+  font-weight: bold;
+  margin: 0 4rpx;
+}
+
+/* 商品列表 */
 .product-list {
-  padding: 0 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
 }
 
 .product-item {
   display: flex;
   background-color: #fff;
   border-radius: 16rpx;
-  padding: 20rpx;
-  margin-bottom: 20rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
+}
+
+.product-item:active {
+  transform: scale(0.98);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
 }
 
 .product-image {
-  width: 180rpx;
-  height: 180rpx;
+  width: 160rpx;
+  height: 160rpx;
   border-radius: 12rpx;
-  margin-right: 20rpx;
+  margin-right: 24rpx;
   flex-shrink: 0;
+  background-color: #f5f5f5;
 }
 
 .product-info {
@@ -146,22 +221,26 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .product-name {
   font-size: 28rpx;
   color: #333;
-  font-weight: bold;
+  font-weight: 500;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+  word-break: break-all;
 }
 
 .product-desc {
   font-size: 24rpx;
   color: #999;
-  margin-top: 10rpx;
+  margin-top: 8rpx;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 1;
@@ -171,14 +250,27 @@
 .product-footer {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-top: 10rpx;
+  align-items: flex-end;
+  margin-top: 16rpx;
+}
+
+.price-box {
+  display: flex;
+  align-items: baseline;
+}
+
+.price-symbol {
+  font-size: 24rpx;
+  color: #FF6B00;
+  font-weight: bold;
+  margin-right: 2rpx;
 }
 
 .product-price {
-  font-size: 32rpx;
-  color: #ff6b35;
+  font-size: 36rpx;
+  color: #FF6B00;
   font-weight: bold;
+  line-height: 1;
 }
 
 .product-sales {
@@ -191,16 +283,24 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 200rpx 0;
+  padding: 120rpx 40rpx;
+  background-color: #fff;
+  border-radius: 16rpx;
 }
 
-.empty-image {
-  width: 400rpx;
-  height: 400rpx;
-  margin-bottom: 40rpx;
+.empty-icon {
+  font-size: 120rpx;
+  margin-bottom: 32rpx;
+  opacity: 0.5;
 }
 
 .empty-text {
   font-size: 28rpx;
+  color: #666;
+  margin-bottom: 16rpx;
+}
+
+.empty-tip {
+  font-size: 24rpx;
   color: #999;
 }

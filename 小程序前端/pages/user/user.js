@@ -1,6 +1,6 @@
 // pages/user/user.js
-const api = require('../../utils/request');
-const util = require('../../utils/util');
+const { api } = require('../../config/api.js')
+const { quickLogin, logout } = require('../../utils/auth.js')
 
 Page({
   data: {
@@ -9,56 +9,70 @@ Page({
       pending: 0,
       paid: 0,
       shipped: 0,
-      uncommented: 0
-    }
+      completed: 0
+    },
+    safeAreaBottom: 0,
+    tabBarHeight: 50
   },
 
-  onLoad(options) {
-    this.loadUserData();
+  onLoad() {
+    this.setSafeArea();
+  },
+
+  /**
+   * 设置安全区域
+   */
+  setSafeArea() {
+    const systemInfo = wx.getSystemInfoSync();
+    const safeAreaBottom = systemInfo.safeArea ? 
+      systemInfo.screenHeight - systemInfo.safeArea.bottom : 0;
+    
+    this.setData({
+      safeAreaBottom: safeAreaBottom,
+      tabBarHeight: 80 // TabBar高度约80px（增加到80）
+    });
   },
 
   onShow() {
-    this.loadUserData();
+    this.loadUserData()
+    
+    // 设置TabBar选中状态
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({
+        selected: 3
+      })
+    }
   },
 
-  // 加载用户数据
+  /**
+   * 加载用户数据
+   */
   async loadUserData() {
-    const token = wx.getStorageSync('token');
+    const app = getApp()
     
-    if (!token) {
+    if (!app.globalData.token) {
       this.setData({
         userInfo: null
-      });
-      return;
+      })
+      return
     }
     
     try {
       // 加载用户信息
-      const userRes = await api.get('/user/info')
-      const statsRes = await api.get('/orders/stats')
+      const userRes = await api.getUserInfo()
+      const statsRes = await api.getOrderStats()
 
       this.setData({
-        userInfo: userRes,
-        orderStats: {
-          pending: statsRes.pending || 0,
-          paid: statsRes.paid || 0,
-          shipped: statsRes.shipped || 0,
-          uncommented: statsRes.uncommented || 0
+        userInfo: userRes.data,
+        orderStats: statsRes.data || {
+          pending: 0,
+          paid: 0,
+          shipped: 0,
+          completed: 0
         }
-      });
+      })
     } catch (error) {
-      console.error('加载用户数据失败:', error);
-      
-      // 如果是401错误，清除token
-      if (error.statusCode === 401) {
-        wx.removeStorageSync('token');
-        this.setData({
-          userInfo: null
-        });
-      } else {
-        // 使用模拟数据
-        this.useMockData();
-      }
+      console.error('加载用户数据失败:', error)
     }
   },
 
@@ -67,234 +81,97 @@ Page({
    */
   async onLogin() {
     try {
-      const app = getApp()
-      
-      // 检查是否为真实AppID（非游客模式）
-      const accountInfo = wx.getAccountInfoSync()
-      const isRealAppId = accountInfo.miniProgram.appId && 
-                         !accountInfo.miniProgram.appId.startsWith('wx')
-      
-      // 游客模式或开发环境：简化登录流程
-      if (!isRealAppId || accountInfo.miniProgram.envVersion === 'develop') {
-        wx.showLoading({ title: '登录中...' })
-        
-        // 直接调用后端登录（不需要getUserProfile）
-        await app.login()
-        
-        // 模拟用户信息
-        app.globalData.userInfo = {
-          nickname: '测试用户',
-          avatar: 'https://img.yzcdn.cn/vant/cat.jpeg',
-          ...app.globalData.userInfo
-        }
-        
-        wx.hideLoading()
-        
-        // 刷新页面数据
-        this.loadUserData()
-        
-        wx.showToast({
-          title: '登录成功',
-          icon: 'success'
-        })
-        
-        return
-      }
-      
-      // 真实环境：使用 getUserProfile 获取用户信息授权
-      const profileRes = await wx.getUserProfile({
-        desc: '用于完善用户资料'
-      })
-      
-      // 调用app.js的登录方法
-      await app.login()
-      
-      // 更新用户资料
-      if (profileRes.userInfo) {
-        await this.updateUserProfile(profileRes.userInfo)
-      }
+      const userInfo = await quickLogin()
       
       // 刷新页面数据
       this.loadUserData()
-      
     } catch (error) {
       console.error('登录失败:', error)
-      
-      if (error.errMsg && error.errMsg.includes('getUserProfile:fail auth deny')) {
-        wx.showToast({
-          title: '您取消了授权',
-          icon: 'none'
-        })
-      } else if (error.errMsg && error.errMsg.includes('getUserProfile:fail')) {
-        // 游客模式下getUserProfile失败，使用简化登录
-        wx.showModal({
-          title: '提示',
-          content: '当前为开发模式，将使用测试账号登录',
-          showCancel: false,
-          success: async () => {
-            try {
-              const app = getApp()
-              await app.login()
-              
-              // 使用默认用户信息
-              app.globalData.userInfo = {
-                nickname: '测试用户',
-                avatar: 'https://img.yzcdn.cn/vant/cat.jpeg',
-                ...app.globalData.userInfo
-              }
-              
-              this.loadUserData()
-              
-              wx.showToast({
-                title: '登录成功',
-                icon: 'success'
-              })
-            } catch (e) {
-              wx.showToast({
-                title: '登录失败，请重试',
-                icon: 'none'
-              })
-            }
-          }
-        })
-      } else {
-        wx.showToast({
-          title: '登录失败，请重试',
-          icon: 'none'
-        })
-      }
     }
   },
-  
+
   /**
-   * 更新用户资料
+   * 退出登录
    */
-  async updateUserProfile(profile) {
-    try {
-      await api.post('/auth/update-profile', {
-        nickname: profile.nickName,
-        avatar: profile.avatarUrl,
-        gender: profile.gender
-      })
-      
-      // 更新全局用户信息
-      const app = getApp()
-      if (app.globalData.userInfo) {
-        app.globalData.userInfo.nickname = profile.nickName
-        app.globalData.userInfo.avatar = profile.avatarUrl
-      }
-      
-    } catch (error) {
-      console.error('更新用户资料失败:', error)
-    }
-  },
-
-  // 退出登录
   onLogout() {
-    wx.showModal({
-      title: '提示',
-      content: '确定要退出登录吗？',
-      success: (res) => {
-        if (res.confirm) {
-          wx.removeStorageSync('token');
-          this.setData({
-            userInfo: null,
-            orderStats: {
-              pending: 0,
-              paid: 0,
-              shipped: 0,
-              uncommented: 0
-            }
-          });
-          
-          wx.showToast({
-            title: '已退出登录',
-            icon: 'success'
-          });
-        }
+    logout()
+    
+    // 清空页面数据
+    this.setData({
+      userInfo: null,
+      orderStats: {
+        pending: 0,
+        paid: 0,
+        shipped: 0,
+        completed: 0
       }
-    });
+    })
   },
 
-  // 查看订单列表
+  /**
+   * 查看订单列表
+   */
   onViewOrders(e) {
-    const status = e.currentTarget.dataset.status;
+    const { status } = e.currentTarget.dataset
     
     if (!this.data.userInfo) {
-      this.onLogin();
-      return;
+      this.onLogin()
+      return
     }
     
     wx.navigateTo({
       url: `/pages/order-list/order-list?status=${status}`
-    });
+    })
   },
 
-  // 查看全部订单
+  /**
+   * 查看全部订单
+   */
   onViewAllOrders() {
     if (!this.data.userInfo) {
-      this.onLogin();
-      return;
+      this.onLogin()
+      return
     }
     
     wx.navigateTo({
       url: '/pages/order-list/order-list'
-    });
+    })
   },
 
-  // 页面导航
+  /**
+   * 页面导航
+   */
   onNavigate(e) {
-    const url = e.currentTarget.dataset.url;
+    const { url } = e.currentTarget.dataset
     
-    if (!this.data.userInfo) {
-      this.onLogin();
-      return;
+    if (!this.data.userInfo && url !== '/pages/test-api/test-api') {
+      this.onLogin()
+      return
     }
     
     wx.navigateTo({
       url
-    });
+    })
   },
 
-  // 联系客服
+  /**
+   * 联系客服
+   */
   onContact() {
     wx.showModal({
       title: '联系客服',
       content: '客服电话：400-123-4567\n工作时间：9:00-18:00',
       showCancel: false,
       confirmText: '我知道了'
-    });
+    })
   },
 
-  // 下拉刷新
+  /**
+   * 下拉刷新
+   */
   onPullDownRefresh() {
     this.loadUserData().then(() => {
-      wx.stopPullDownRefresh();
-    });
-  },
-
-  // 使用模拟数据
-  useMockData() {
-    const mockUser = {
-      id: 1,
-      nickname: '零食爱好者',
-      avatar: 'https://img.yzcdn.cn/vant/cat.jpeg',
-      phone: '138****8888',
-      is_vip: true,
-      points: 1280,
-      coupon_count: 5
-    };
-    
-    const mockStats = {
-      pending: 1,
-      paid: 2,
-      shipped: 1,
-      uncommented: 3
-    };
-    
-    this.setData({
-      userInfo: mockUser,
-      orderStats: mockStats
-    });
+      wx.stopPullDownRefresh()
+    })
   }
-});
+})

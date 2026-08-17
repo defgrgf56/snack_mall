@@ -60,7 +60,7 @@
     </view>
 
     <!-- 空状态 -->
-    <view class="empty-orders" wx:if="{{orders.length === 0}}">
+    <view class="empty-orders" wx:if="{{orders.length === 0}}" style="height: {{windowHeight}}px;">
       <image class="empty-image" src="/images/empty.png" mode="aspectFit" />
       <text class="empty-text">暂无订单</text>
     </view>

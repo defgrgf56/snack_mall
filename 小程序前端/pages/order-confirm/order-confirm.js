@@ -38,7 +38,6 @@ Page({
       this.calculatePrice();
     } catch (error) {
       console.error('加载购物车商品失败:', error);
-      this.useMockProducts();
     }
   },
 
@@ -66,10 +65,14 @@ Page({
   async loadDefaultAddress() {
     try {
       const res = await api.get('/addresses/default', {}, false);
+      console.log('=== 默认地址数据 ===', res);
       if (res) {
         this.setData({
           selectedAddress: res
         });
+        console.log('selectedAddress:', this.data.selectedAddress);
+      } else {
+        console.log('没有默认地址');
       }
     } catch (error) {
       console.error('加载默认地址失败:', error);
@@ -178,25 +181,19 @@ Page({
     }
   },
 
-  // 使用模拟商品
-  useMockProducts() {
-    const mockProducts = [
-      {
-        product_id: 1,
-        quantity: 2,
-        spec: '500g',
-        product: {
-          id: 1,
-          name: '每日坚果混合装',
-          cover: 'https://img.yzcdn.cn/vant/apple-1.jpg',
-          price: '29.90'
-        }
-      }
-    ];
+  // 计算价格
+  calculatePrice() {
+    let productAmount = 0;
+    
+    this.data.products.forEach(item => {
+      productAmount += parseFloat(item.product.price) * item.quantity;
+    });
+    
+    const totalAmount = productAmount + this.data.deliveryFee - this.data.couponDiscount;
     
     this.setData({
-      products: mockProducts
+      productAmount: productAmount.toFixed(2),
+      totalAmount: totalAmount.toFixed(2)
     });
-    this.calculatePrice();
   }
 });

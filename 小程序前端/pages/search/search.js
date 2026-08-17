@@ -8,11 +8,32 @@ Page({
     hotKeywords: ['坚果', '巧克力', '饼干', '零食大礼包'],
     searching: false,
     searched: false,
-    products: []
+    products: [],
+    autoFocus: false,
+    statusBarHeight: 0,
+    navBarHeight: 0
   },
 
   onLoad(options) {
+    this.setNavBarInfo();
     this.loadHistory();
+  },
+
+  // 设置导航栏信息（自适应设备）
+  setNavBarInfo() {
+    const systemInfo = wx.getSystemInfoSync();
+    const menuButton = wx.getMenuButtonBoundingClientRect();
+    
+    // 状态栏高度
+    const statusBarHeight = systemInfo.statusBarHeight;
+    
+    // 导航栏高度 = 胶囊底部位置 - 状态栏高度 + 胶囊高度 + 额外间距
+    const navBarHeight = (menuButton.top - statusBarHeight) + menuButton.height + 10;
+    
+    this.setData({
+      statusBarHeight,
+      navBarHeight
+    });
   },
 
   // 加载搜索历史
@@ -42,6 +63,14 @@ Page({
   onKeywordInput(e) {
     this.setData({
       keyword: e.detail.value
+    });
+  },
+
+  // 清除输入框
+  onClearInput() {
+    this.setData({
+      keyword: '',
+      autoFocus: true
     });
   },
 

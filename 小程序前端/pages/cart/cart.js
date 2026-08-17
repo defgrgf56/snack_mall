@@ -1,262 +1,233 @@
 // pages/cart/cart.js
-const api = require('../../utils/request');
+const { api } = require('../../config/api.js')
+const { updateCartItemQuantity, deleteCartItem, calculateTotal } = require('../../utils/cart.js')
+const { requireLogin } = require('../../utils/auth.js')
+const { formatPrice } = require('../../utils/format.js')
 
 Page({
   data: {
     cartItems: [],
     allSelected: false,
     selectedCount: 0,
-    totalPrice: '0.00'
+    totalPrice: '0.00',
+    loading: true
   },
 
-  onLoad(options) {
-    this.loadCartData();
+  onLoad() {
   },
 
   onShow() {
-    this.loadCartData();
-  },
-
-  // 加载购物车数据
-  async loadCartData() {
-    try {
-      wx.showLoading({ title: '加载中...' });
-      
-      const res = await api.get('/cart', {}, false); // 暂时不需要登录
-      
-      const items = (res || []).map(item => ({
-        ...item,
-        selected: false
-      }));
-      
-      this.setData({
-        cartItems: items
-      });
-      
-      this.calculateTotal();
-    } catch (error) {
-      console.error('加载购物车失败:', error);
-      
-      // 使用模拟数据
-      this.useMockData();
-    } finally {
-      wx.hideLoading();
+    this.loadCartData()
+    
+    // 设置TabBar选中状态
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({
+        selected: 2
+      })
     }
   },
 
-  // 选择商品
-  onSelectItem(e) {
-    const id = e.currentTarget.dataset.id;
-    const items = this.data.cartItems.map(item => {
-      if (item.id === id) {
-        return { ...item, selected: !item.selected };
+  /**
+   * 加载购物车数据
+   */
+  async loadCartData() {
+    const app = getApp()
+    
+    // 检查登录状态
+    if (!app.globalData.token) {
+      this.setData({ 
+        loading: false,
+        cartItems: [] 
+      })
+      return
+    }
+    
+    this.setData({ loading: true })
+    
+    try {
+      const res = await api.getCart()
+      
+      if (res.code === 200) {
+        // 添加选中状态
+        const items = (res.data || []).map(item => ({
+          ...item,
+          selected: true  // 默认全选
+        }))
+        
+        this.setData({
+          cartItems: items,
+          allSelected: items.length > 0
+        })
+        
+        this.calculateTotal()
       }
-      return item;
-    });
-    
-    this.setData({
-      cartItems: items
-    });
-    
-    this.calculateTotal();
+    } catch (error) {
+      console.error('加载购物车失败:', error)
+    } finally {
+      this.setData({ loading: false })
+    }
   },
 
-  // 全选/取消全选
-  onSelectAll() {
-    const allSelected = !this.data.allSelected;
-    const items = this.data.cartItems.map(item => ({
-      ...item,
-      selected: allSelected
-    }));
+  /**
+   * 选择商品
+   */
+  onSelectItem(e) {
+    const { id } = e.currentTarget.dataset
+    const items = this.data.cartItems.map(item => {
+      if (item.id === id) {
+        return { ...item, selected: !item.selected }
+      }
+      return item
+    })
+    
+    // 检查是否全选
+    const allSelected = items.length > 0 && items.every(item => item.selected)
     
     this.setData({
       cartItems: items,
       allSelected
-    });
+    })
     
-    this.calculateTotal();
+    this.calculateTotal()
   },
 
-  // 减少数量
-  async onDecreaseQuantity(e) {
-    const id = e.currentTarget.dataset.id;
-    const item = this.data.cartItems.find(i => i.id === id);
-    
-    if (item.quantity <= 1) {
-      return;
-    }
-    
-    try {
-      await api.put(`/cart/${id}`, {
-        quantity: item.quantity - 1
-      });
-      
-      const items = this.data.cartItems.map(i => {
-        if (i.id === id) {
-          return { ...i, quantity: i.quantity - 1 };
-        }
-        return i;
-      });
-      
-      this.setData({
-        cartItems: items
-      });
-      
-      this.calculateTotal();
-    } catch (error) {
-      console.error('更新数量失败:', error);
-      wx.showToast({
-        title: '更新失败',
-        icon: 'none'
-      });
-    }
-  },
-
-  // 增加数量
-  async onIncreaseQuantity(e) {
-    const id = e.currentTarget.dataset.id;
-    const item = this.data.cartItems.find(i => i.id === id);
-    
-    try {
-      await api.put(`/cart/${id}`, {
-        quantity: item.quantity + 1
-      });
-      
-      const items = this.data.cartItems.map(i => {
-        if (i.id === id) {
-          return { ...i, quantity: i.quantity + 1 };
-        }
-        return i;
-      });
-      
-      this.setData({
-        cartItems: items
-      });
-      
-      this.calculateTotal();
-    } catch (error) {
-      console.error('更新数量失败:', error);
-      wx.showToast({
-        title: error.message || '更新失败',
-        icon: 'none'
-      });
-    }
-  },
-
-  // 删除商品
-  onDeleteItem(e) {
-    const id = e.currentTarget.dataset.id;
-    
-    wx.showModal({
-      title: '提示',
-      content: '确定要删除这个商品吗？',
-      success: async (res) => {
-        if (res.confirm) {
-          try {
-            await api.delete(`/cart/${id}`);
-            
-            const items = this.data.cartItems.filter(item => item.id !== id);
-            
-            this.setData({
-              cartItems: items
-            });
-            
-            this.calculateTotal();
-            
-            wx.showToast({
-              title: '已删除',
-              icon: 'success'
-            });
-          } catch (error) {
-            console.error('删除失败:', error);
-            wx.showToast({
-              title: '删除失败',
-              icon: 'none'
-            });
-          }
-        }
-      }
-    });
-  },
-
-  // 计算总价
-  calculateTotal() {
-    const selectedItems = this.data.cartItems.filter(item => item.selected);
-    const total = selectedItems.reduce((sum, item) => {
-      return sum + parseFloat(item.product.price) * item.quantity;
-    }, 0);
-    
-    const allSelected = this.data.cartItems.length > 0 && 
-                       selectedItems.length === this.data.cartItems.length;
+  /**
+   * 全选/取消全选
+   */
+  onSelectAll() {
+    const allSelected = !this.data.allSelected
+    const items = this.data.cartItems.map(item => ({
+      ...item,
+      selected: allSelected
+    }))
     
     this.setData({
-      selectedCount: selectedItems.length,
-      totalPrice: total.toFixed(2),
+      cartItems: items,
       allSelected
-    });
+    })
+    
+    this.calculateTotal()
   },
 
-  // 去结算
+  /**
+   * 减少数量
+   */
+  async onDecreaseQuantity(e) {
+    const { id } = e.currentTarget.dataset
+    const item = this.data.cartItems.find(i => i.id === id)
+    
+    if (item.quantity <= 1) {
+      return
+    }
+    
+    const success = await updateCartItemQuantity(id, item.quantity - 1)
+    
+    if (success) {
+      const items = this.data.cartItems.map(i => {
+        if (i.id === id) {
+          return { ...i, quantity: i.quantity - 1 }
+        }
+        return i
+      })
+      
+      this.setData({ cartItems: items })
+      this.calculateTotal()
+    }
+  },
+
+  /**
+   * 增加数量
+   */
+  async onIncreaseQuantity(e) {
+    const { id } = e.currentTarget.dataset
+    const item = this.data.cartItems.find(i => i.id === id)
+    
+    // 检查库存
+    if (item.quantity >= item.product.stock) {
+      wx.showToast({
+        title: '库存不足',
+        icon: 'none'
+      })
+      return
+    }
+    
+    const success = await updateCartItemQuantity(id, item.quantity + 1)
+    
+    if (success) {
+      const items = this.data.cartItems.map(i => {
+        if (i.id === id) {
+          return { ...i, quantity: i.quantity + 1 }
+        }
+        return i
+      })
+      
+      this.setData({ cartItems: items })
+      this.calculateTotal()
+    }
+  },
+
+  /**
+   * 删除商品
+   */
+  async onDeleteItem(e) {
+    const { id } = e.currentTarget.dataset
+    
+    const success = await deleteCartItem(id)
+    
+    if (success) {
+      const items = this.data.cartItems.filter(item => item.id !== id)
+      
+      this.setData({ cartItems: items })
+      this.calculateTotal()
+      
+      // 更新购物车徽标
+      const app = getApp()
+      app.updateCartCount()
+    }
+  },
+
+  /**
+   * 计算总价
+   */
+  calculateTotal() {
+    const selectedItems = this.data.cartItems.filter(item => item.selected)
+    const selectedIds = selectedItems.map(item => item.id)
+    
+    const result = calculateTotal(this.data.cartItems, selectedIds)
+    
+    this.setData({
+      selectedCount: result.count,
+      totalPrice: result.total
+    })
+  },
+
+  /**
+   * 去结算
+   */
   onCheckout() {
     if (this.data.selectedCount === 0) {
       wx.showToast({
         title: '请选择商品',
         icon: 'none'
-      });
-      return;
+      })
+      return
     }
     
     const selectedItems = this.data.cartItems
       .filter(item => item.selected)
-      .map(item => item.id);
+      .map(item => item.id)
     
     wx.navigateTo({
       url: `/pages/order-confirm/order-confirm?cartIds=${selectedItems.join(',')}`
-    });
+    })
   },
 
-  // 去逛逛
+  /**
+   * 去逛逛
+   */
   onGoShopping() {
     wx.switchTab({
       url: '/pages/index/index'
-    });
-  },
-
-  // 使用模拟数据
-  useMockData() {
-    const mockData = [
-      {
-        id: 1,
-        product_id: 1,
-        quantity: 2,
-        selected: false,
-        product: {
-          id: 1,
-          name: '每日坚果混合装',
-          image: 'https://img.yzcdn.cn/vant/apple-1.jpg',
-          price: '29.90',
-          spec: '500g/袋'
-        }
-      },
-      {
-        id: 2,
-        product_id: 2,
-        quantity: 1,
-        selected: false,
-        product: {
-          id: 2,
-          name: '夏威夷果',
-          image: 'https://img.yzcdn.cn/vant/apple-2.jpg',
-          price: '39.90',
-          spec: '250g/袋'
-        }
-      }
-    ];
-    
-    this.setData({
-      cartItems: mockData
-    });
-    
-    this.calculateTotal();
+    })
   }
-});
+})

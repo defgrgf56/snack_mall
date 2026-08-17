@@ -5,13 +5,25 @@ const config = require('../config/database')
 const env = process.env.NODE_ENV || 'development'
 const dbConfig = config[env]
 
-// 创建Sequelize实例
+// 创建Sequelize实例 - 强制使用utf8mb4字符集
 const sequelize = new Sequelize(
   dbConfig.database,
   dbConfig.username,
   dbConfig.password,
-  dbConfig
+  {
+    ...dbConfig,
+    dialectOptions: {
+      ...dbConfig.dialectOptions,
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci'
+    }
+  }
 )
+
+// 在连接后执行字符集设置
+sequelize.query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'")
+  .then(() => console.log('✓ 字符集设置为 utf8mb4'))
+  .catch(err => console.error('字符集设置失败:', err))
 
 // 导入模型
 const User = require('./User')(sequelize)

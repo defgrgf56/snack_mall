@@ -1,25 +1,54 @@
 // pages/index/index.js
-const api = require('../../utils/request.js')
-const util = require('../../utils/util.js')
+const { api } = require('../../config/api.js')
+const { addToCart } = require('../../utils/cart.js')
 
 Page({
   data: {
     banners: [],
     categories: [],
-    coupons: [],
     hotProducts: [],
     newProducts: [],
-    loading: true
+    loading: true,
+    navBarHeight: 0,  // 导航栏高度
+    menuTop: 0,       // 胶囊按钮上边距
+    menuHeight: 0     // 胶囊按钮高度
   },
 
   onLoad() {
+    this.setNavBarInfo()
     this.loadData()
+  },
+
+  /**
+   * 设置导航栏信息
+   */
+  setNavBarInfo() {
+    // 获取胶囊按钮位置信息
+    const menuButtonInfo = wx.getMenuButtonBoundingClientRect()
+    // 获取系统信息
+    const systemInfo = wx.getSystemInfoSync()
+    
+    // 计算导航栏高度：胶囊按钮下边距 + 胶囊按钮高度 + 胶囊按钮上边距
+    const navBarHeight = menuButtonInfo.bottom + menuButtonInfo.top - systemInfo.statusBarHeight
+    
+    this.setData({
+      navBarHeight: navBarHeight,
+      menuTop: menuButtonInfo.top,
+      menuHeight: menuButtonInfo.height
+    })
   },
 
   onShow() {
     // 更新购物车数量
     const app = getApp()
     app.updateCartCount()
+    
+    // 设置TabBar选中状态
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({
+        selected: 0
+      })
+    }
   },
 
   onPullDownRefresh() {
@@ -35,11 +64,10 @@ Page({
     this.setData({ loading: true })
     
     try {
-      // 并行请求多个接口，使用 Promise.allSettled 避免某个接口失败导致全部失败
+      // 并行请求多个接口
       const results = await Promise.allSettled([
         this.loadBanners(),
         this.loadCategories(),
-        this.loadCoupons(),
         this.loadHotProducts(),
         this.loadNewProducts()
       ])
@@ -47,21 +75,17 @@ Page({
       // 提取成功的结果
       const banners = results[0].status === 'fulfilled' ? results[0].value : []
       const categories = results[1].status === 'fulfilled' ? results[1].value : []
-      const coupons = results[2].status === 'fulfilled' ? results[2].value : []
-      const hotProducts = results[3].status === 'fulfilled' ? results[3].value : []
-      const newProducts = results[4].status === 'fulfilled' ? results[4].value : []
+      const hotProducts = results[2].status === 'fulfilled' ? results[2].value : []
+      const newProducts = results[3].status === 'fulfilled' ? results[3].value : []
 
       console.log('轮播图数量:', banners.length)
-      console.log('轮播图数据:', banners)
       console.log('分类数量:', categories.length)
-      console.log('优惠券数量:', coupons.length)
       console.log('热门商品数量:', hotProducts.length)
       console.log('新品数量:', newProducts.length)
 
       this.setData({
         banners,
         categories: categories.slice(0, 8), // 只显示前8个分类
-        coupons: coupons.slice(0, 3), // 只显示前3个优惠券
         hotProducts,
         newProducts,
         loading: false
@@ -69,6 +93,10 @@ Page({
     } catch (error) {
       console.error('加载数据失败', error)
       this.setData({ loading: false })
+      wx.showToast({
+        title: '加载失败',
+        icon: 'none'
+      })
     }
   },
 
@@ -77,7 +105,8 @@ Page({
    */
   async loadBanners() {
     try {
-      return await api.get('/banners', {}, false)
+      const res = await api.getBanners()
+      return res.data || []
     } catch (error) {
       console.log('加载轮播图失败', error)
       return []
@@ -89,7 +118,8 @@ Page({
    */
   async loadCategories() {
     try {
-      return await api.get('/categories', {}, false)
+      const res = await api.getCategories()
+      return res.data || []
     } catch (error) {
       console.log('加载分类失败', error)
       return []
@@ -97,41 +127,37 @@ Page({
   },
 
   /**
-   * 加载优惠券
-   */
-  async loadCoupons() {
-    try {
-      return await api.get('/coupons/available', {}, false)
-    } catch (error) {
-      console.log('加载优惠券失败，使用空数据', error)
-      return []  // 返回空数组，不影响其他数据加载
-    }
-  },
-
-  /**
    * 加载热门商品
    */
   async loadHotProducts() {
-    const res = await api.get('/products', {
-      is_hot: 1,
-      page: 1,
-      limit: 6
-    }, false)
-    // 处理返回数据结构
-    return res.items || res || []
+    try {
+      const res = await api.getProducts({
+        is_hot: 1,
+        page: 1,
+        pageSize: 6
+      })
+      return res.data.items || []
+    } catch (error) {
+      console.log('加载热门商品失败', error)
+      return []
+    }
   },
 
   /**
    * 加载新品
    */
   async loadNewProducts() {
-    const res = await api.get('/products', {
-      is_new: 1,
-      page: 1,
-      limit: 6
-    }, false)
-    // 处理返回数据结构
-    return res.items || res || []
+    try {
+      const res = await api.getProducts({
+        is_new: 1,
+        page: 1,
+        pageSize: 6
+      })
+      return res.data.items || []
+    } catch (error) {
+      console.log('加载新品失败', error)
+      return []
+    }
   },
 
   /**
@@ -146,14 +172,18 @@ Page({
         this.goProductDetail({ currentTarget: { dataset: { id: link_value } } })
         break
       case 2: // 分类
-        this.goCategory({ currentTarget: { dataset: { id: link_value } } })
+        wx.switchTab({
+          url: '/pages/category/category'
+        })
         break
       case 3: // 外链
-        // 小程序暂不支持外链，可以复制链接
         wx.setClipboardData({
           data: link_value,
           success: () => {
-            util.showSuccess('链接已复制')
+            wx.showToast({
+              title: '链接已复制',
+              icon: 'success'
+            })
           }
         })
         break
@@ -177,7 +207,6 @@ Page({
     wx.switchTab({
       url: '/pages/category/category'
     })
-    // 可以通过事件或全局变量传递分类ID
   },
 
   /**
@@ -191,26 +220,19 @@ Page({
   },
 
   /**
-   * 跳转优惠券页
+   * 快速加入购物车
    */
-  goCoupon() {
-    util.navigateTo('/pages/coupon-list/coupon-list', true)
-  },
-
-  /**
-   * 领取优惠券
-   */
-  async receiveCoupon(e) {
+  async handleAddToCart(e) {
     const { id } = e.currentTarget.dataset
     
-    try {
-      await api.post('/coupons/receive', { coupon_id: id }, true)
-      util.showSuccess('领取成功')
-      // 重新加载优惠券列表
-      const coupons = await this.loadCoupons()
-      this.setData({ coupons: coupons.slice(0, 3) })
-    } catch (error) {
-      // 错误已在request.js中处理
+    // 阻止冒泡到商品详情
+    e.stopPropagation()
+    
+    const success = await addToCart(id, 1)
+    if (success) {
+      // 刷新购物车数量
+      const app = getApp()
+      app.updateCartCount()
     }
   }
 })

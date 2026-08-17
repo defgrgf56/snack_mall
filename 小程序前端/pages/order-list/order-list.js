@@ -7,10 +7,12 @@ Page({
     currentTab: 0,
     orders: [],
     page: 1,
-    hasMore: true
+    hasMore: true,
+    windowHeight: 0
   },
 
   onLoad(options) {
+    this.setWindowHeight();
     if (options.status) {
       const statusMap = {
         '1': 1, // 待付款
@@ -24,6 +26,14 @@ Page({
       });
     }
     this.loadOrders();
+  },
+
+  // 设置窗口高度
+  setWindowHeight() {
+    const systemInfo = wx.getSystemInfoSync();
+    this.setData({
+      windowHeight: systemInfo.windowHeight - 44 // 减去Tab栏高度
+    });
   },
 
   onPullDownRefresh() {
@@ -81,10 +91,6 @@ Page({
       });
     } catch (error) {
       console.error('加载订单失败:', error);
-      // 使用模拟数据
-      if (this.data.page === 1) {
-        this.useMockData();
-      }
     } finally {
       wx.hideLoading();
     }
@@ -231,38 +237,5 @@ Page({
       6: 'refunded'
     };
     return classMap[status] || '';
-  },
-
-  // 使用模拟数据
-  useMockData() {
-    const mockOrders = [
-      {
-        id: 1,
-        order_no: '202608120001',
-        status: 1,
-        status_text: '待付款',
-        status_class: 'pending',
-        total_amount: '59.80',
-        created_at: '2026-08-12 16:30:00',
-        item_count: 2,
-        items: [
-          {
-            id: 1,
-            product: {
-              id: 1,
-              name: '每日坚果混合装',
-              cover: 'https://img.yzcdn.cn/vant/apple-1.jpg'
-            },
-            price: '29.90',
-            quantity: 2,
-            spec: '500g'
-          }
-        ]
-      }
-    ];
-    
-    this.setData({
-      orders: mockOrders
-    });
   }
 });

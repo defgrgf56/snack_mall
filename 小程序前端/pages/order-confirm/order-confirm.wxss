@@ -2,7 +2,7 @@
 .order-confirm-container {
   min-height: 100vh;
   background-color: #f5f5f5;
-  padding-bottom: 200rpx;
+  padding-bottom: calc(200rpx + env(safe-area-inset-bottom));
 }
 
 .order-content {
@@ -57,6 +57,13 @@
   width: 24rpx;
   height: 24rpx;
   margin-left: 20rpx;
+}
+
+.arrow-text {
+  font-size: 40rpx;
+  color: #999;
+  margin-left: 20rpx;
+  line-height: 1;
 }
 
 /* 商品列表 */
@@ -204,6 +211,7 @@
   right: 0;
   background-color: #fff;
   box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .price-info {

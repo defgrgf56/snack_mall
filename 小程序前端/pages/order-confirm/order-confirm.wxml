@@ -5,17 +5,17 @@
     <view class="address-section" bindtap="onSelectAddress">
       <view class="address-info" wx:if="{{selectedAddress}}">
         <view class="address-header">
-          <text class="consignee">{{selectedAddress.consignee}}</text>
-          <text class="phone">{{selectedAddress.phone}}</text>
+          <text class="consignee">收货人：{{selectedAddress.consignee || '未设置'}}</text>
+          <text class="phone">{{selectedAddress.phone || ''}}</text>
         </view>
         <text class="address-detail">
-          {{selectedAddress.province}} {{selectedAddress.city}} {{selectedAddress.district}} {{selectedAddress.detail}}
+          收货地址：{{selectedAddress.province || ''}}{{selectedAddress.city || ''}}{{selectedAddress.district || ''}}{{selectedAddress.detail || selectedAddress.address || ''}}
         </text>
       </view>
       <view class="no-address" wx:else>
         <text>请选择收货地址</text>
       </view>
-      <image class="arrow-icon" src="/images/arrow-right.png" mode="aspectFit" />
+      <text class="arrow-text">›</text>
     </view>
 
     <!-- 商品列表 -->
@@ -70,7 +70,7 @@
         <view class="coupon-value">
           <text wx:if="{{couponId}}">-¥{{couponDiscount}}</text>
           <text wx:else class="placeholder">请选择</text>
-          <image class="arrow-icon" src="/images/arrow-right.png" mode="aspectFit" />
+          <text class="arrow-text">›</text>
         </view>
       </view>
     </view>

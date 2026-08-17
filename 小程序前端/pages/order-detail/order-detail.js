@@ -44,8 +44,6 @@ Page({
         title: '加载失败',
         icon: 'none'
       });
-      // 使用模拟数据
-      this.useMockData();
     } finally {
       wx.hideLoading();
     }
@@ -200,46 +198,16 @@ Page({
     return classMap[status] || '';
   },
 
-  // 使用模拟数据
-  useMockData() {
-    const mockOrder = {
-      id: 1,
-      order_no: '202608120001',
-      status: 1,
-      status_text: '待付款',
-      status_class: 'pending',
-      total_amount: '59.80',
-      delivery_type: 1,
-      created_at: '2026-08-12 16:30:00',
-      item_count: 2,
-      address: {
-        consignee: '张三',
-        phone: '138****8888',
-        province: '广东省',
-        city: '深圳市',
-        district: '南山区',
-        detail: '科技园科技大厦A座1001'
-      },
-      items: [
-        {
-          id: 1,
-          product: {
-            id: 1,
-            name: '每日坚果混合装',
-            cover: 'https://img.yzcdn.cn/vant/apple-1.jpg'
-          },
-          price: '29.90',
-          quantity: 2,
-          spec: '500g'
-        }
-      ],
-      product_amount: '59.80',
-      delivery_fee: '0.00',
-      coupon_discount: '0.00'
+  // 获取订单状态文字
+  getStatusText(status) {
+    const statusMap = {
+      1: '待付款',
+      2: '待发货',
+      3: '待收货',
+      4: '已完成',
+      5: '已取消',
+      6: '已退款'
     };
-    
-    this.setData({
-      order: mockOrder
-    });
+    return statusMap[status] || '未知';
   }
 });

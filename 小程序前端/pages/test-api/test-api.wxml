@@ -1,0 +1,61 @@
+<!--pages/test-api/test-api.wxml-->
+<view class="container">
+  <view class="header">
+    <text class="title">API接口测试</text>
+    <text class="subtitle">测试前端请求后端API</text>
+  </view>
+
+  <view class="status-card">
+    <view class="status-row">
+      <text class="status-label">后端服务:</text>
+      <text class="status-value">{{backendStatus}}</text>
+    </view>
+    <view class="status-row">
+      <text class="status-label">API地址:</text>
+      <text class="status-value small">{{apiUrl}}</text>
+    </view>
+  </view>
+
+  <view class="test-buttons">
+    <button type="primary" bindtap="runAllTests" class="btn">运行所有测试</button>
+    <button type="default" bindtap="clearResults" class="btn">清空结果</button>
+  </view>
+
+  <view class="single-tests">
+    <text class="section-title">单独测试</text>
+    
+    <view class="test-row">
+      <button size="mini" bindtap="checkBackend" class="mini-btn check">检查后端</button>
+      <button size="mini" bindtap="testCategories" class="mini-btn">商品分类</button>
+    </view>
+    
+    <view class="test-row">
+      <button size="mini" bindtap="testProducts" class="mini-btn">商品列表</button>
+      <button size="mini" bindtap="testDevLogin" class="mini-btn primary">快速登录</button>
+    </view>
+    
+    <view class="test-row">
+      <button size="mini" bindtap="testCart" class="mini-btn">购物车</button>
+      <button size="mini" bindtap="testAddresses" class="mini-btn">地址列表</button>
+    </view>
+    
+    <view class="test-row">
+      <button size="mini" bindtap="testOrders" class="mini-btn">订单列表</button>
+    </view>
+  </view>
+
+  <view class="results">
+    <text class="section-title">测试结果</text>
+    
+    <view class="result-list" wx:if="{{testResults.length > 0}}">
+      <view class="result-item" wx:for="{{testResults}}" wx:key="index">
+        <text class="result-text">{{item}}</text>
+      </view>
+    </view>
+    
+    <view class="empty" wx:else>
+      <text class="empty-text">暂无测试结果</text>
+      <text class="empty-hint">点击上方按钮开始测试</text>
+    </view>
+  </view>
+</view>

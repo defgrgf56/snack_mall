@@ -1,4 +1,6 @@
 // app.js
+const { api } = require('./config/api.js')
+
 App({
   globalData: {
     userInfo: null,
@@ -31,19 +33,10 @@ App({
    */
   async validateToken() {
     try {
-      const res = await new Promise((resolve, reject) => {
-        wx.request({
-          url: `${this.globalData.apiBase}/user/info`,
-          header: {
-            'Authorization': `Bearer ${this.globalData.token}`
-          },
-          success: resolve,
-          fail: reject
-        })
-      })
+      const res = await api.getUserInfo()
       
-      if (res.data.code === 200) {
-        this.globalData.userInfo = res.data.data
+      if (res.code === 200) {
+        this.globalData.userInfo = res.data
         // 更新购物车数量
         this.updateCartCount()
       } else {
@@ -60,24 +53,27 @@ App({
    * 开发环境快速登录
    */
   devLogin() {
-    return new Promise((resolve, reject) => {
-      wx.request({
-        url: `${this.globalData.apiBase}/auth/dev-login`,
-        method: 'POST',
-        success: (response) => {
-          if (response.data.code === 200) {
-            const { token, userInfo } = response.data.data
-            this.globalData.token = token
-            this.globalData.userInfo = userInfo
-            wx.setStorageSync('token', token)
-            wx.setStorageSync('userInfo', userInfo)
-            resolve(userInfo)
-          } else {
-            reject(response.data.message || '开发登录失败')
-          }
-        },
-        fail: reject
-      })
+    return new Promise(async (resolve, reject) => {
+      try {
+        const res = await api.devLogin()
+        
+        if (res.code === 200) {
+          const { token, userInfo } = res.data
+          this.globalData.token = token
+          this.globalData.userInfo = userInfo
+          wx.setStorageSync('token', token)
+          wx.setStorageSync('userInfo', userInfo)
+          
+          // 更新购物车数量
+          this.updateCartCount()
+          
+          resolve(userInfo)
+        } else {
+          reject(res.message || '开发登录失败')
+        }
+      } catch (error) {
+        reject(error)
+      }
     })
   },
 
@@ -163,34 +159,32 @@ App({
   /**
    * 更新购物车数量
    */
-  updateCartCount() {
+  async updateCartCount() {
     const token = this.globalData.token
     if (!token) {
       this.globalData.cartCount = 0
       return
     }
 
-    wx.request({
-      url: `${this.globalData.apiBase}/cart/count`,
-      header: {
-        'Authorization': `Bearer ${token}`
-      },
-      success: (res) => {
-        if (res.data.code === 200) {
-          this.globalData.cartCount = res.data.data.count
-          // 更新tabBar徽标
-          if (this.globalData.cartCount > 0) {
-            wx.setTabBarBadge({
-              index: 2,
-              text: String(this.globalData.cartCount)
-            })
-          } else {
-            wx.removeTabBarBadge({
-              index: 2
-            })
-          }
+    try {
+      const res = await api.getCartCount()
+      
+      if (res.code === 200) {
+        this.globalData.cartCount = res.data.count
+        // 更新tabBar徽标
+        if (this.globalData.cartCount > 0) {
+          wx.setTabBarBadge({
+            index: 2,
+            text: String(this.globalData.cartCount)
+          })
+        } else {
+          wx.removeTabBarBadge({
+            index: 2
+          })
         }
       }
-    })
+    } catch (error) {
+      console.error('获取购物车数量失败:', error)
+    }
   }
 })

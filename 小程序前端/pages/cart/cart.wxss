@@ -1,62 +1,108 @@
 /* pages/cart/cart.wxss */
 .cart-container {
-  min-height: 100vh;
-  background-color: #f5f5f5;
-  padding-bottom: 120rpx;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+}
+
+/* 加载中 */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  font-size: 28rpx;
+  color: #999;
 }
 
 /* 购物车列表 */
 .cart-list {
-  height: calc(100vh - 120rpx);
+  flex: 1;
+  padding: 20rpx 0;
+  padding-bottom: calc(160rpx + env(safe-area-inset-bottom)); /* 为底部栏留出更多空间 */
+  overflow-y: auto;
 }
 
 .cart-item {
+  background: white;
+  margin-bottom: 20rpx;
+  padding: 25rpx;
   display: flex;
   align-items: center;
-  background-color: #fff;
-  padding: 30rpx;
-  margin-bottom: 20rpx;
-  position: relative;
+  gap: 20rpx;
 }
 
+@media screen and (max-width: 640rpx) {
+  .cart-item {
+    padding: 20rpx;
+    gap: 15rpx;
+  }
+}
+
+/* 选择框 */
 .item-checkbox {
-  margin-right: 20rpx;
+  display: flex;
+  align-items: center;
 }
 
-.checkbox-icon {
+.checkbox {
   width: 40rpx;
   height: 40rpx;
+  border: 2rpx solid #ddd;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: white;
 }
 
+.checkbox.checked {
+  background: #ff6b00;
+  border-color: #ff6b00;
+}
+
+/* 商品图片 */
 .item-image {
   width: 160rpx;
   height: 160rpx;
   border-radius: 12rpx;
-  margin-right: 20rpx;
+  flex-shrink: 0;
 }
 
+@media screen and (max-width: 640rpx) {
+  .item-image {
+    width: 140rpx;
+    height: 140rpx;
+  }
+}
+
+@media screen and (min-width: 768rpx) {
+  .item-image {
+    width: 180rpx;
+    height: 180rpx;
+  }
+}
+
+/* 商品信息 */
 .item-info {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  height: 160rpx;
+  min-height: 160rpx;
 }
 
 .item-name {
   font-size: 28rpx;
   color: #333;
+  line-height: 1.4;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  line-height: 1.5;
-}
-
-.item-spec {
-  font-size: 24rpx;
-  color: #999;
-  margin-top: 10rpx;
+  margin-bottom: 10rpx;
 }
 
 .item-footer {
@@ -67,144 +113,174 @@
 
 .item-price {
   font-size: 32rpx;
-  color: #ff6b35;
+  color: #ff6b00;
   font-weight: bold;
 }
 
-/* 数量选择器 */
+/* 数量控制 */
 .quantity-control {
   display: flex;
   align-items: center;
-  border: 1rpx solid #eee;
-  border-radius: 8rpx;
-  overflow: hidden;
+  gap: 15rpx;
 }
 
 .quantity-btn {
-  width: 60rpx;
-  height: 50rpx;
+  width: 48rpx;
+  height: 48rpx;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f5f5f5;
   font-size: 32rpx;
   color: #333;
 }
 
 .quantity-btn.disabled {
   color: #ccc;
+  border-color: #eee;
 }
 
-.quantity-input {
-  width: 80rpx;
-  height: 50rpx;
+.quantity-value {
+  min-width: 60rpx;
   text-align: center;
   font-size: 28rpx;
-  border-left: 1rpx solid #eee;
-  border-right: 1rpx solid #eee;
+  color: #333;
 }
 
+/* 删除按钮 */
 .item-delete {
-  position: absolute;
-  right: 30rpx;
-  top: 30rpx;
-}
-
-.delete-icon {
-  width: 40rpx;
-  height: 40rpx;
+  padding: 10rpx 15rpx;
+  font-size: 24rpx;
+  color: #999;
 }
 
 /* 空购物车 */
 .empty-cart {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 200rpx 0;
+  min-height: calc(100vh - 100rpx);
+  padding: 0;
 }
 
-.empty-image {
-  width: 400rpx;
-  height: 400rpx;
-  margin-bottom: 40rpx;
+.empty-icon {
+  font-size: 160rpx;
+  margin-bottom: 30rpx;
+  opacity: 0.3;
 }
 
 .empty-text {
   font-size: 28rpx;
   color: #999;
-  margin-bottom: 60rpx;
+  margin-bottom: 40rpx;
 }
 
 .go-shopping-btn {
   width: 300rpx;
   height: 80rpx;
-  line-height: 80rpx;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
-  color: #fff;
+  background: linear-gradient(135deg, #ff9a9e 0%, #ff6b00 100%);
+  color: white;
   border-radius: 40rpx;
   font-size: 28rpx;
+  border: none;
+  line-height: 80rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.go-shopping-btn::after {
   border: none;
 }
 
 /* 底部结算栏 */
 .cart-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 120rpx;
-  background-color: #fff;
+  background: white;
+  padding: 15rpx 20rpx;
+  padding-bottom: calc(15rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid #eee;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 30rpx;
   box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  position: fixed;
+  bottom: 100rpx; /* 在TabBar上方 */
+  left: 0;
+  right: 0;
   z-index: 100;
+  min-height: 70rpx;
 }
 
 .footer-left {
   display: flex;
   align-items: center;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .select-all {
   display: flex;
   align-items: center;
-  margin-right: 40rpx;
-  font-size: 28rpx;
-  color: #333;
+  gap: 8rpx;
+  flex-shrink: 0;
+  padding-right: 20rpx;
 }
 
-.select-all .checkbox-icon {
-  margin-right: 10rpx;
+.select-text {
+  font-size: 26rpx;
+  color: #333;
+  white-space: nowrap;
 }
 
 .total-info {
   display: flex;
   align-items: baseline;
+  gap: 4rpx;
+  flex: 1;
+  justify-content: flex-end;
+  padding-right: 20rpx;
+  min-width: 0;
 }
 
 .total-label {
-  font-size: 28rpx;
+  font-size: 24rpx;
   color: #666;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .total-price {
-  font-size: 36rpx;
-  color: #ff6b35;
+  font-size: 32rpx;
+  color: #ff6b00;
   font-weight: bold;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .checkout-btn {
-  width: 240rpx;
-  height: 80rpx;
-  line-height: 80rpx;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
-  color: #fff;
-  border-radius: 40rpx;
+  min-width: 160rpx;
+  max-width: 200rpx;
+  height: 70rpx;
+  background: linear-gradient(135deg, #ff9a9e 0%, #ff6b00 100%);
+  color: white;
+  border-radius: 35rpx;
   font-size: 28rpx;
+  border: none;
+  line-height: 70rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20rpx;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.checkout-btn::after {
   border: none;
 }
 
