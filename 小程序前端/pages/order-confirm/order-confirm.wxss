@@ -255,6 +255,7 @@
   font-size: 36rpx;
 }
 
+/* 提交订单按钮 */
 .submit-btn {
   height: 100rpx;
   line-height: 100rpx;
@@ -263,5 +264,42 @@
   font-size: 32rpx;
   font-weight: bold;
   border: none;
-  border-radius: 0;
+  margin: 20rpx;
+  border-radius: 50rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.submit-btn::after {
+  border: none;
+}
+
+.submit-btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* 小屏幕按钮适配 */
+@media screen and (max-width: 640rpx) {
+  .submit-btn {
+    height: 90rpx;
+    line-height: 90rpx;
+    font-size: 30rpx;
+    margin: 16rpx;
+    border-radius: 45rpx;
+  }
+}
+
+/* 大屏幕按钮适配 */
+@media screen and (min-width: 1024rpx) {
+  .submit-btn {
+    height: 110rpx;
+    line-height: 110rpx;
+    font-size: 34rpx;
+    margin: 24rpx;
+    border-radius: 55rpx;
+  }
 }
