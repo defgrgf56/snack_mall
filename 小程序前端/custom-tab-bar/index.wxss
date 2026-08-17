@@ -52,6 +52,14 @@
   }
 }
 
+/* 图标包裹容器 */
+.tab-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .tab-icon {
   font-size: 48rpx;
   line-height: 1;
@@ -109,4 +117,63 @@
 .tab-text.active {
   color: #FF6B00;
   font-weight: bold;
+}
+
+/* 购物车徽章 */
+.cart-badge {
+  position: absolute;
+  top: -8rpx;
+  right: -16rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8rpx;
+  box-shadow: 0 2rpx 8rpx rgba(255, 107, 53, 0.4);
+  z-index: 10;
+}
+
+@media screen and (max-width: 640rpx) {
+  .cart-badge {
+    top: -6rpx;
+    right: -14rpx;
+    min-width: 28rpx;
+    height: 28rpx;
+    border-radius: 14rpx;
+    padding: 0 6rpx;
+  }
+}
+
+@media screen and (min-width: 1024rpx) {
+  .cart-badge {
+    top: -10rpx;
+    right: -18rpx;
+    min-width: 36rpx;
+    height: 36rpx;
+    border-radius: 18rpx;
+    padding: 0 10rpx;
+  }
+}
+
+.badge-text {
+  font-size: 20rpx;
+  color: #fff;
+  font-weight: bold;
+  line-height: 1;
+  transform: scale(0.9);
+}
+
+@media screen and (max-width: 640rpx) {
+  .badge-text {
+    font-size: 18rpx;
+  }
+}
+
+@media screen and (min-width: 1024rpx) {
+  .badge-text {
+    font-size: 22rpx;
+  }
 }

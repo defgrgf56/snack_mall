@@ -20,8 +20,23 @@
 .cart-list {
   flex: 1;
   padding: 20rpx 0;
-  padding-bottom: calc(160rpx + env(safe-area-inset-bottom)); /* 为底部栏留出更多空间 */
+  padding-bottom: calc(240rpx + env(safe-area-inset-bottom)); /* 结算栏(100rpx) + TabBar(100rpx) + 额外空间(40rpx) */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* iOS滑动优化 */
+}
+
+/* 响应式调整 - 小屏 */
+@media screen and (max-width: 640rpx) {
+  .cart-list {
+    padding-bottom: calc(220rpx + env(safe-area-inset-bottom));
+  }
+}
+
+/* 响应式调整 - 大屏 */
+@media screen and (min-width: 1024rpx) {
+  .cart-list {
+    padding-bottom: calc(260rpx + env(safe-area-inset-bottom));
+  }
 }
 
 .cart-item {
@@ -150,9 +165,104 @@
 
 /* 删除按钮 */
 .item-delete {
-  padding: 10rpx 15rpx;
-  font-size: 24rpx;
-  color: #999;
+  padding: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 垃圾桶图标 */
+.delete-icon {
+  width: 32rpx;
+  height: 36rpx;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  opacity: 0.5;
+}
+
+/* 垃圾桶盖子 */
+.delete-icon-lid {
+  width: 32rpx;
+  height: 4rpx;
+  background: #999;
+  border-radius: 2rpx;
+  position: relative;
+}
+
+.delete-icon-lid::before {
+  content: '';
+  position: absolute;
+  top: -6rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16rpx;
+  height: 4rpx;
+  background: #999;
+  border-radius: 2rpx;
+}
+
+/* 垃圾桶身体 */
+.delete-icon-body {
+  width: 26rpx;
+  height: 28rpx;
+  border: 2rpx solid #999;
+  border-top: none;
+  border-radius: 0 0 4rpx 4rpx;
+  position: relative;
+  margin-top: 2rpx;
+}
+
+.delete-icon-body::before,
+.delete-icon-body::after {
+  content: '';
+  position: absolute;
+  width: 2rpx;
+  height: 16rpx;
+  background: #999;
+  top: 4rpx;
+}
+
+.delete-icon-body::before {
+  left: 6rpx;
+}
+
+.delete-icon-body::after {
+  right: 6rpx;
+}
+
+/* 响应式调整 */
+@media screen and (max-width: 640rpx) {
+  .delete-icon {
+    width: 28rpx;
+    height: 32rpx;
+  }
+  
+  .delete-icon-lid {
+    width: 28rpx;
+  }
+  
+  .delete-icon-body {
+    width: 24rpx;
+    height: 24rpx;
+  }
+}
+
+@media screen and (min-width: 1024rpx) {
+  .delete-icon {
+    width: 36rpx;
+    height: 40rpx;
+  }
+  
+  .delete-icon-lid {
+    width: 36rpx;
+  }
+  
+  .delete-icon-body {
+    width: 30rpx;
+    height: 32rpx;
+  }
 }
 
 /* 空购物车 */
@@ -200,8 +310,8 @@
 /* 底部结算栏 */
 .cart-footer {
   background: white;
-  padding: 15rpx 20rpx;
-  padding-bottom: calc(15rpx + env(safe-area-inset-bottom));
+  padding: 20rpx 20rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
   border-top: 1rpx solid #eee;
   display: flex;
   align-items: center;
@@ -212,7 +322,25 @@
   left: 0;
   right: 0;
   z-index: 100;
-  min-height: 70rpx;
+  min-height: 80rpx;
+}
+
+/* 响应式调整 - 小屏 */
+@media screen and (max-width: 640rpx) {
+  .cart-footer {
+    padding: 15rpx 15rpx;
+    padding-bottom: calc(15rpx + env(safe-area-inset-bottom));
+    min-height: 70rpx;
+  }
+}
+
+/* 响应式调整 - 大屏 */
+@media screen and (min-width: 1024rpx) {
+  .cart-footer {
+    padding: 25rpx 30rpx;
+    padding-bottom: calc(25rpx + env(safe-area-inset-bottom));
+    min-height: 90rpx;
+  }
 }
 
 .footer-left {

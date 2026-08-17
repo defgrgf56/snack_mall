@@ -18,7 +18,10 @@
       <view class="avatar">
         <text class="avatar-emoji">👤</text>
       </view>
-      <text class="login-text">点击登录</text>
+      <view class="login-info">
+        <text class="login-text">微信登录</text>
+        <text class="login-desc">快速安全登录</text>
+      </view>
     </view>
     
     <!-- 积分信息 -->

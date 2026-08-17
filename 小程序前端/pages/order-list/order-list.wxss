@@ -208,10 +208,10 @@
   justify-content: center;
 }
 
-.empty-image {
-  width: 400rpx;
-  height: 400rpx;
+.empty-icon {
+  font-size: 200rpx;
   margin-bottom: 40rpx;
+  opacity: 0.3;
 }
 
 .empty-text {

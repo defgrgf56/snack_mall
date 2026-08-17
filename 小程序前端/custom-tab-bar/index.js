@@ -4,6 +4,7 @@ Component({
     selected: 0,
     color: "#999999",
     selectedColor: "#FF6B00",
+    cartCount: 0, // 购物车数量
     list: [
       {
         pagePath: "/pages/index/index",
@@ -18,7 +19,8 @@ Component({
       {
         pagePath: "/pages/cart/cart",
         text: "购物车",
-        iconText: "🛒"
+        iconText: "🛒",
+        showBadge: true // 标记需要显示徽章
       },
       {
         pagePath: "/pages/user/user",
@@ -28,11 +30,28 @@ Component({
     ]
   },
 
+  lifetimes: {
+    attached() {
+      // 组件加载时获取购物车数量
+      this.updateCartCount();
+    }
+  },
+
   methods: {
     switchTab(e) {
-      const data = e.currentTarget.dataset
-      const url = data.path
-      wx.switchTab({ url })
+      const data = e.currentTarget.dataset;
+      const url = data.path;
+      wx.switchTab({ url });
+    },
+
+    // 更新购物车数量
+    updateCartCount() {
+      const app = getApp();
+      if (app.globalData) {
+        this.setData({
+          cartCount: app.globalData.cartCount || 0
+        });
+      }
     }
   }
 })

@@ -3,7 +3,7 @@
   <!-- 搜索框 -->
   <view class="search-header" style="padding-top: {{statusBarHeight + navBarHeight}}px;">
     <view class="search-box">
-      <image class="search-icon" src="/images/icon-search.png" mode="aspectFit" />
+      <view class="search-icon">🔍</view>
       <input 
         class="search-input" 
         placeholder="搜索商品"

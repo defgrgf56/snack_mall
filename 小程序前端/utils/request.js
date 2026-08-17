@@ -25,17 +25,21 @@ function request(url, method = 'GET', data = {}, needAuth = true) {
     // needAuth=true 时必须有 token；有 token 时始终带上
     if (needAuth && !token) {
       console.log('未登录，跳过认证接口')
-      reject('未登录')
+      const error = new Error('未登录')
+      error.code = 'NOT_LOGGED_IN'
+      reject(error)
       return
     }
     if (token) {
       header['Authorization'] = `Bearer ${token}`
     }
 
-    console.log(`发起请求: ${method} ${app.globalData.apiBase}${url}`)
+    const fullUrl = `${app.globalData.apiBase}${url}`
+    console.log(`发起请求: ${method} ${fullUrl}`, data)
+    console.log(`API Base: ${app.globalData.apiBase}`)
 
     wx.request({
-      url: `${app.globalData.apiBase}${url}`,
+      url: fullUrl,
       method,
       data,
       header,
@@ -50,20 +54,39 @@ function request(url, method = 'GET', data = {}, needAuth = true) {
             // token失效
             app.logout()
             console.log('登录已失效')
-            reject(res.data.message)
+            const error = new Error(res.data.message || '登录已失效')
+            error.code = 'UNAUTHORIZED'
+            reject(error)
           } else {
             console.log('请求失败:', res.data.message)
-            reject(res.data.message)
+            const error = new Error(res.data.message || '请求失败')
+            error.code = res.data.code
+            reject(error)
           }
         } else {
-          console.log('网络错误:', res.statusCode)
-          reject('网络错误')
+          console.error('❌ 网络错误:', res.statusCode)
+          const error = new Error(`网络错误 (${res.statusCode})`)
+          error.code = 'NETWORK_ERROR'
+          error.statusCode = res.statusCode
+          reject(error)
         }
       },
       fail: (err) => {
         // wx.hideLoading()
-        console.error('请求失败:', url, err)
-        reject(err)
+        console.error('❌ 请求失败:', url, err)
+        console.error('❌ 完整URL:', fullUrl)
+        console.error('❌ 错误详情:', JSON.stringify(err))
+        
+        wx.showModal({
+          title: '网络请求失败',
+          content: `URL: ${fullUrl}\n错误: ${err.errMsg}`,
+          showCancel: false
+        })
+        
+        const error = new Error(err.errMsg || '网络连接失败')
+        error.code = 'REQUEST_FAILED'
+        error.originalError = err
+        reject(error)
       }
     })
   })

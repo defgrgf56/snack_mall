@@ -181,6 +181,59 @@ async function batchDeleteCart(cartIds) {
 }
 
 /**
+ * 清空购物车
+ */
+async function clearCart() {
+  return new Promise((resolve, reject) => {
+    wx.showModal({
+      title: '确认清空',
+      content: '确定要清空购物车吗？此操作不可恢复',
+      confirmText: '清空',
+      confirmColor: '#ff6b00',
+      success: async (res) => {
+        if (res.confirm) {
+          try {
+            wx.showLoading({ title: '清空中...' })
+            
+            const result = await api.clearCart()
+            
+            wx.hideLoading()
+            
+            if (result.code === 200) {
+              wx.showToast({
+                title: '已清空购物车',
+                icon: 'success'
+              })
+              
+              // 更新购物车数量
+              const app = getApp()
+              app.updateCartCount()
+              
+              resolve(true)
+            } else {
+              wx.showToast({
+                title: result.message || '清空失败',
+                icon: 'none'
+              })
+              resolve(false)
+            }
+          } catch (error) {
+            wx.hideLoading()
+            wx.showToast({
+              title: '清空失败',
+              icon: 'none'
+            })
+            resolve(false)
+          }
+        } else {
+          resolve(false)
+        }
+      }
+    })
+  })
+}
+
+/**
  * 获取购物车列表
  */
 async function getCartList() {
@@ -228,6 +281,7 @@ module.exports = {
   updateCartItemQuantity,
   deleteCartItem,
   batchDeleteCart,
+  clearCart,
   getCartList,
   calculateTotal
 }

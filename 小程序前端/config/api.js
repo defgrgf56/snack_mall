@@ -223,6 +223,16 @@ const api = {
   },
   
   /**
+   * 清空购物车
+   */
+  clearCart: () => {
+    return request({
+      url: '/cart/clear',
+      method: 'DELETE'
+    })
+  },
+  
+  /**
    * 获取购物车数量
    */
   getCartCount: () => {

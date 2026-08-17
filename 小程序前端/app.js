@@ -1,11 +1,20 @@
 // app.js
 const { api } = require('./config/api.js')
 
+// 获取API基础地址
+function getApiBase() {
+  // 统一使用localhost,开发工具测试
+  return 'http://localhost:3000/api'
+  
+  // 如果要真机预览,请手动改成你的IP:
+  // return 'http://10.105.120.132:3000/api'
+}
+
 App({
   globalData: {
     userInfo: null,
     token: null,
-    apiBase: 'http://localhost:3000/api', // 后端API地址
+    apiBase: getApiBase(), // 自动根据环境选择API地址
     cartCount: 0
   },
 
@@ -163,6 +172,8 @@ App({
     const token = this.globalData.token
     if (!token) {
       this.globalData.cartCount = 0
+      // 更新自定义TabBar
+      this.updateCustomTabBar(0)
       return
     }
 
@@ -171,20 +182,28 @@ App({
       
       if (res.code === 200) {
         this.globalData.cartCount = res.data.count
-        // 更新tabBar徽标
-        if (this.globalData.cartCount > 0) {
-          wx.setTabBarBadge({
-            index: 2,
-            text: String(this.globalData.cartCount)
-          })
-        } else {
-          wx.removeTabBarBadge({
-            index: 2
-          })
-        }
+        // 更新自定义TabBar
+        this.updateCustomTabBar(res.data.count)
       }
     } catch (error) {
       console.error('获取购物车数量失败:', error)
+    }
+  },
+
+  /**
+   * 更新自定义TabBar购物车数量
+   */
+  updateCustomTabBar(count) {
+    // 获取所有页面
+    const pages = getCurrentPages()
+    if (pages.length > 0) {
+      const currentPage = pages[pages.length - 1]
+      // 更新当前页面的TabBar
+      if (typeof currentPage.getTabBar === 'function' && currentPage.getTabBar()) {
+        currentPage.getTabBar().setData({
+          cartCount: count
+        })
+      }
     }
   }
 })

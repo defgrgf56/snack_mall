@@ -46,9 +46,16 @@ router.get('/', authenticateToken, async (req, res) => {
  */
 router.get('/count', authenticateToken, async (req, res) => {
   try {
-    const count = await Cart.count({
-      where: { user_id: req.userId }
+    // 获取购物车所有商品
+    const cartItems = await Cart.findAll({
+      where: { user_id: req.userId },
+      attributes: ['quantity']
     });
+    
+    // 计算商品总数量（累加所有商品的quantity）
+    const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    
+    console.log(`用户${req.userId}购物车: ${cartItems.length}种商品, 总数量${count}`);
     
     res.json({
       code: 200,
@@ -281,6 +288,33 @@ router.post('/batch-delete', authenticateToken, async (req, res) => {
     res.json({
       code: 500,
       message: '删除失败',
+      data: null
+    });
+  }
+});
+
+/**
+ * 清空购物车
+ * DELETE /api/cart/clear
+ */
+router.delete('/clear', authenticateToken, async (req, res) => {
+  try {
+    const deletedCount = await Cart.destroy({
+      where: { user_id: req.userId }
+    });
+    
+    console.log(`用户${req.userId}清空购物车，删除${deletedCount}个商品`);
+    
+    res.json({
+      code: 200,
+      message: '购物车已清空',
+      data: { deletedCount }
+    });
+  } catch (error) {
+    console.error('清空购物车失败:', error);
+    res.json({
+      code: 500,
+      message: '清空失败',
       data: null
     });
   }

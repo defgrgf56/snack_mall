@@ -2,7 +2,18 @@
 <view class="index-page">
   <!-- 自定义导航栏 -->
   <view class="custom-nav-bar" style="height: {{navBarHeight}}px;">
-    <view class="nav-title" style="line-height: {{menuHeight}}px; top: {{menuTop}}px;">零食商城</view>
+    <view class="nav-content" style="height: {{menuHeight}}px; top: {{menuTop}}px;">
+      <!-- Logo区域 -->
+      <view class="nav-logo-area">
+        <view class="logo-circle">
+          <text class="logo-text">阿宇</text>
+        </view>
+        <view class="nav-text-area">
+          <text class="nav-title">阿宇商城</text>
+          <text class="nav-slogan">🏪 品质生活，一站购齐</text>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 搜索栏 -->

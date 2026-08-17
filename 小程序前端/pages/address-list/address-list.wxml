@@ -36,7 +36,7 @@
 
   <!-- 空状态 -->
   <view class="empty-address" wx:else style="height: {{windowHeight}}px;">
-    <image class="empty-image" src="/images/empty.png" mode="aspectFit" />
+    <view class="empty-icon">📍</view>
     <text class="empty-text">还没有收货地址</text>
   </view>
 

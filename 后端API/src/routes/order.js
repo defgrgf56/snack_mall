@@ -217,6 +217,10 @@ router.post('/', authenticateToken, async (req, res) => {
  */
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    console.log('=== 获取订单列表 ===');
+    console.log('用户ID:', req.userId);
+    console.log('查询参数:', req.query);
+    
     const { status, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     
@@ -224,6 +228,9 @@ router.get('/', authenticateToken, async (req, res) => {
     if (status) {
       where.status = parseInt(status);
     }
+    
+    console.log('查询条件:', where);
+    console.log('分页:', { offset, limit });
     
     const { count, rows: orders } = await Order.findAndCountAll({
       where,
@@ -241,6 +248,8 @@ router.get('/', authenticateToken, async (req, res) => {
       offset
     });
     
+    console.log('查询结果: 共', count, '条订单');
+    
     res.json({
       code: 200,
       message: 'success',
@@ -253,6 +262,7 @@ router.get('/', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('获取订单列表失败:', error);
+    console.error('错误堆栈:', error.stack);
     res.json({
       code: 500,
       message: '获取失败',
@@ -352,19 +362,40 @@ router.put('/:id/cancel', authenticateToken, async (req, res) => {
       });
     }
     
+    console.log(`取消订单 ${order.order_no}, 包含 ${order.items.length} 个商品`);
+    
     // 更新订单状态
     await order.update({ status: 5 }, { transaction }); // 5: 已取消
     
-    // 恢复库存
+    // 恢复库存 & 从购物车中删除该订单的商品
+    let cartDeletedCount = 0;
     for (const item of order.items) {
+      // 恢复库存
       await Product.increment('stock', {
         by: item.quantity,
         where: { id: item.product_id },
         transaction
       });
+      console.log(`商品 ${item.product_name} (ID: ${item.product_id}) 库存已恢复 +${item.quantity}`);
+      
+      // 从购物车中删除该商品
+      const deleted = await Cart.destroy({
+        where: {
+          user_id: req.userId,
+          product_id: item.product_id
+        },
+        transaction
+      });
+      
+      if (deleted > 0) {
+        cartDeletedCount++;
+        console.log(`已从购物车删除商品: ${item.product_name} (ID: ${item.product_id})`);
+      }
     }
     
     await transaction.commit();
+    
+    console.log(`订单取消成功: ${order.order_no}, 从购物车删除了 ${cartDeletedCount} 个商品`);
     
     res.json({
       code: 200,

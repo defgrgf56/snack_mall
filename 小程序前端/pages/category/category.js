@@ -1,5 +1,6 @@
 // pages/category/category.js
-const api = require('../../utils/request');
+const { get } = require('../../utils/request');
+const { addToCart } = require('../../utils/cart.js');
 
 Page({
   data: {
@@ -74,7 +75,7 @@ Page({
     try {
       wx.showLoading({ title: '加载中...' });
       
-      const res = await api.get('/categories', {}, false)
+      const res = await get('/categories', {}, false)
 
       if (res && res.length > 0) {
         this.setData({
@@ -124,7 +125,7 @@ Page({
           break;
       }
       
-      const res = await api.get('/products', params, false);
+      const res = await get('/products', params, false);
       
       // 处理商品数据，添加榜单信息
       const products = (res.items || []).map((item, index) => {
@@ -207,31 +208,20 @@ Page({
   async onAddToCart(e) {
     const id = e.currentTarget.dataset.id;
     
-    try {
-      await api.post('/cart/add', {
-        product_id: id,
-        quantity: 1
-      });
-      
-      wx.showToast({
-        title: '已加入购物车',
-        icon: 'success'
-      });
-
-      // 更新购物车数量
+    // catchtap 会自动阻止冒泡,不需要手动调用 stopPropagation
+    
+    const success = await addToCart(id, 1);
+    if (success) {
+      // 刷新购物车数量
       const app = getApp();
       app.updateCartCount();
-    } catch (error) {
-      console.error('加入购物车失败:', error);
-      wx.showToast({
-        title: error.message || '加入失败',
-        icon: 'none'
-      });
     }
   },
 
   onShow() {
     // 页面显示时刷新购物车数量
+    const app = getApp();
+    app.updateCartCount();
     
     // 设置TabBar选中状态
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {

@@ -70,11 +70,20 @@ Page({
       const statusMap = [null, 1, 2, 3, 4]; // 全部、待付款、待发货、待收货、已完成
       const status = statusMap[this.data.currentTab];
       
+      console.log('=== 加载订单列表 ===');
+      console.log('当前Tab:', this.data.currentTab);
+      console.log('状态筛选:', status);
+      console.log('页码:', this.data.page);
+      console.log('Token存在:', !!wx.getStorageSync('token'));
+      
       const res = await api.get('/orders', {
         status,
         page: this.data.page,
         limit: 10
       }, false);
+      
+      console.log('API响应:', res);
+      console.log('订单数量:', res.items ? res.items.length : 0);
       
       const orders = (res.items || []).map(order => {
         return {
@@ -89,8 +98,39 @@ Page({
         orders: this.data.page === 1 ? orders : [...this.data.orders, ...orders],
         hasMore: orders.length >= 10
       });
+      
+      console.log('最终显示订单数:', this.data.orders.length);
+      
+      // 如果没有订单,显示提示
+      if (this.data.orders.length === 0) {
+        console.log('当前筛选条件下没有订单');
+      }
     } catch (error) {
       console.error('加载订单失败:', error);
+      console.error('错误详情:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      
+      let errorMsg = '加载失败';
+      if (error.code === 'NOT_LOGGED_IN') {
+        errorMsg = '请先登录';
+      } else if (error.code === 'UNAUTHORIZED') {
+        errorMsg = '登录已失效,请重新登录';
+      } else if (error.code === 'NETWORK_ERROR') {
+        errorMsg = '网络错误,请检查网络连接';
+      } else if (error.code === 'REQUEST_FAILED') {
+        errorMsg = '请求失败: ' + (error.message || '后端服务未启动?');
+      } else {
+        errorMsg = error.message || '未知错误';
+      }
+      
+      wx.showToast({
+        title: errorMsg,
+        icon: 'none',
+        duration: 3000
+      });
     } finally {
       wx.hideLoading();
     }

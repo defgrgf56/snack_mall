@@ -8,7 +8,13 @@
     data-index="{{index}}" 
     bindtap="switchTab"
   >
-    <text class="tab-icon {{selected === index ? 'active' : ''}}">{{item.iconText}}</text>
+    <view class="tab-icon-wrapper">
+      <text class="tab-icon {{selected === index ? 'active' : ''}}">{{item.iconText}}</text>
+      <!-- 购物车徽章 -->
+      <view class="cart-badge" wx:if="{{item.showBadge && cartCount > 0}}">
+        <text class="badge-text">{{cartCount > 99 ? '99+' : cartCount}}</text>
+      </view>
+    </view>
     <text class="tab-text {{selected === index ? 'active' : ''}}">{{item.text}}</text>
   </view>
 </view>

@@ -58,9 +58,21 @@
   color: #ffd700;
 }
 
+.login-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
 .login-text {
   font-size: 32rpx;
   color: #fff;
+  font-weight: bold;
+}
+
+.login-desc {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* 积分信息 */

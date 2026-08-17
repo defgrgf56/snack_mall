@@ -35,6 +35,19 @@ Page({
       order.status_class = this.getStatusClass(order.status);
       order.item_count = order.items.reduce((sum, item) => sum + item.quantity, 0);
       
+      // 字段映射：后端字段 -> 前端显示字段
+      order.product_amount = order.total_amount;  // 商品总价
+      order.delivery_fee = order.freight_amount;  // 配送费
+      order.coupon_discount = order.discount_amount; // 优惠金额
+      order.total_amount = order.pay_amount;      // 实付款
+      
+      console.log('订单详情加载成功:', {
+        product_amount: order.product_amount,
+        delivery_fee: order.delivery_fee,
+        coupon_discount: order.coupon_discount,
+        total_amount: order.total_amount
+      });
+      
       this.setData({
         order
       });

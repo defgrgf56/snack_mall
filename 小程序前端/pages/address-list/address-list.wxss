@@ -193,12 +193,10 @@
   min-height: 60vh;
 }
 
-.empty-image {
-  width: 400rpx;
-  height: 400rpx;
+.empty-icon {
+  font-size: 200rpx;
+  opacity: 0.3;
   margin-bottom: 40rpx;
-  opacity: 0.6;
-  max-width: 80%;
 }
 
 .empty-text {

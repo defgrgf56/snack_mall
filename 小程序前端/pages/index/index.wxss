@@ -12,18 +12,188 @@
   left: 0;
   right: 0;
   z-index: 101;
-  background: #FF6B00;
+  background: linear-gradient(135deg, #ff6b00 0%, #ff8c5a 100%);
+  box-shadow: 0 2rpx 12rpx rgba(255, 107, 0, 0.15);
 }
 
-.nav-title {
+.nav-content {
   position: absolute;
   left: 0;
   right: 0;
-  font-size: 36rpx;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 20rpx;
+}
+
+/* Logo区域 */
+.nav-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  max-width: 100%;
+}
+
+.logo-circle {
+  width: 76rpx;
+  height: 76rpx;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 12rpx rgba(255, 107, 0, 0.2);
+  border: 3rpx solid rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 30rpx;
   font-weight: bold;
-  color: #FFFFFF;
-  text-align: center;
-  letter-spacing: 2rpx;
+  background: linear-gradient(135deg, #ff6b00 0%, #ff8c5a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.nav-text-area {
+  display: flex;
+  flex-direction: column;
+  gap: 2rpx;
+  min-width: 0;
+  flex: 1;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  color: white;
+  font-weight: bold;
+  letter-spacing: 1rpx;
+  text-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-slogan {
+  font-size: 20rpx;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.5rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 响应式 - 超小屏 (iPhone SE 等) */
+@media screen and (max-width: 375px) {
+  .nav-content {
+    padding: 0 16rpx;
+  }
+  
+  .nav-logo-area {
+    gap: 10rpx;
+  }
+  
+  .logo-circle {
+    width: 64rpx;
+    height: 64rpx;
+  }
+  
+  .logo-text {
+    font-size: 26rpx;
+  }
+  
+  .nav-title {
+    font-size: 28rpx;
+  }
+  
+  .nav-slogan {
+    font-size: 18rpx;
+  }
+}
+
+/* 响应式 - 小屏 (iPhone 12/13 mini, 标准手机) */
+@media screen and (min-width: 375px) and (max-width: 640rpx) {
+  .nav-content {
+    padding: 0 18rpx;
+  }
+  
+  .nav-logo-area {
+    gap: 12rpx;
+  }
+  
+  .logo-circle {
+    width: 70rpx;
+    height: 70rpx;
+  }
+  
+  .logo-text {
+    font-size: 28rpx;
+  }
+  
+  .nav-title {
+    font-size: 32rpx;
+  }
+  
+  .nav-slogan {
+    font-size: 20rpx;
+  }
+}
+
+/* 响应式 - 中屏 (iPhone 12/13 Pro, 大屏手机) */
+@media screen and (min-width: 640rpx) and (max-width: 1024rpx) {
+  .nav-content {
+    padding: 0 24rpx;
+  }
+  
+  .nav-logo-area {
+    gap: 16rpx;
+  }
+  
+  .logo-circle {
+    width: 80rpx;
+    height: 80rpx;
+  }
+  
+  .logo-text {
+    font-size: 32rpx;
+  }
+  
+  .nav-title {
+    font-size: 36rpx;
+  }
+  
+  .nav-slogan {
+    font-size: 22rpx;
+  }
+}
+
+/* 响应式 - 大屏 (iPad, 平板) */
+@media screen and (min-width: 1024rpx) {
+  .nav-content {
+    padding: 0 40rpx;
+  }
+  
+  .nav-logo-area {
+    gap: 20rpx;
+  }
+  
+  .logo-circle {
+    width: 96rpx;
+    height: 96rpx;
+  }
+  
+  .logo-text {
+    font-size: 38rpx;
+  }
+  
+  .nav-title {
+    font-size: 42rpx;
+  }
+  
+  .nav-slogan {
+    font-size: 26rpx;
+  }
 }
 
 /* 搜索栏 */

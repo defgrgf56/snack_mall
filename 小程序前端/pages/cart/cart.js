@@ -132,6 +132,10 @@ Page({
       
       this.setData({ cartItems: items })
       this.calculateTotal()
+      
+      // 更新购物车角标
+      const app = getApp()
+      app.updateCartCount()
     }
   },
 
@@ -163,6 +167,10 @@ Page({
       
       this.setData({ cartItems: items })
       this.calculateTotal()
+      
+      // 更新购物车角标
+      const app = getApp()
+      app.updateCartCount()
     }
   },
 

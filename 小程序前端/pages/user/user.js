@@ -77,11 +77,28 @@ Page({
   },
 
   /**
-   * 登录
+   * 登录 - 自动根据环境选择登录方式
    */
   async onLogin() {
     try {
-      const userInfo = await quickLogin()
+      // 获取运行环境
+      const accountInfo = wx.getAccountInfoSync()
+      const envVersion = accountInfo.miniProgram.envVersion
+      
+      // develop: 开发版, trial: 体验版, release: 正式版
+      const isDev = envVersion === 'develop'
+      
+      let userInfo
+      if (isDev) {
+        // 开发环境使用快速登录
+        console.log('使用开发登录')
+        userInfo = await quickLogin()
+      } else {
+        // 生产环境使用微信登录
+        console.log('使用微信登录')
+        const { wxLogin } = require('../../utils/auth.js')
+        userInfo = await wxLogin()
+      }
       
       // 刷新页面数据
       this.loadUserData()
