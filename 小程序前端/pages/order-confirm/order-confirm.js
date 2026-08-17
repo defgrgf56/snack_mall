@@ -31,33 +31,64 @@ Page({
   // 从购物车加载
   async loadFromCart(cartIds) {
     try {
+      console.log('=== 开始加载购物车商品 ===');
+      console.log('cartIds:', cartIds);
+      
       const res = await api.get('/cart/settle', { ids: cartIds }, false);
+      console.log('结算接口返回:', res);
+      
+      const items = res.items || [];
+      console.log('商品列表:', items);
+      
       this.setData({
-        products: res.items || []
+        products: items
       });
+      
+      console.log('设置后的products:', this.data.products);
       this.calculatePrice();
     } catch (error) {
       console.error('加载购物车商品失败:', error);
+      wx.showToast({
+        title: '加载商品失败',
+        icon: 'none'
+      });
     }
   },
 
   // 从商品直接购买
   async loadFromProduct(productId, quantity, spec) {
     try {
+      console.log('=== 开始加载商品 ===');
+      console.log('productId:', productId);
+      console.log('quantity:', quantity);
+      console.log('spec:', spec);
+      
       const res = await api.get(`/products/${productId}`, {}, false);
-      const product = res
+      const product = res;
+      
+      console.log('商品信息:', product);
+      
+      const productData = [{
+        product_id: product.id,
+        product,
+        quantity: parseInt(quantity) || 1,
+        spec: spec || ''
+      }];
+      
+      console.log('商品数据:', productData);
       
       this.setData({
-        products: [{
-          product_id: product.id,
-          product,
-          quantity: parseInt(quantity) || 1,
-          spec: spec || ''
-        }]
+        products: productData
       });
+      
+      console.log('设置后的products:', this.data.products);
       this.calculatePrice();
     } catch (error) {
       console.error('加载商品失败:', error);
+      wx.showToast({
+        title: '加载商品失败',
+        icon: 'none'
+      });
     }
   },
 
@@ -113,13 +144,21 @@ Page({
     let totalPrice = 0;
     
     products.forEach(item => {
-      const price = parseFloat(item.product.price);
-      totalPrice += price * item.quantity;
+      const price = parseFloat(item.product.price) || 0;
+      const quantity = parseInt(item.quantity) || 0;
+      totalPrice += price * quantity;
     });
     
-    const couponDiscount = this.data.couponDiscount;
-    const pointsDiscount = this.data.pointsDiscount;
+    const couponDiscount = parseFloat(this.data.couponDiscount) || 0;
+    const pointsDiscount = parseFloat(this.data.pointsDiscount) || 0;
     const finalPrice = Math.max(0, totalPrice - couponDiscount - pointsDiscount);
+    
+    console.log('=== 价格计算 ===');
+    console.log('商品列表:', products);
+    console.log('商品总价:', totalPrice);
+    console.log('优惠券折扣:', couponDiscount);
+    console.log('积分折扣:', pointsDiscount);
+    console.log('最终价格:', finalPrice);
     
     this.setData({
       totalPrice: totalPrice.toFixed(2),
@@ -179,21 +218,5 @@ Page({
         icon: 'none'
       });
     }
-  },
-
-  // 计算价格
-  calculatePrice() {
-    let productAmount = 0;
-    
-    this.data.products.forEach(item => {
-      productAmount += parseFloat(item.product.price) * item.quantity;
-    });
-    
-    const totalAmount = productAmount + this.data.deliveryFee - this.data.couponDiscount;
-    
-    this.setData({
-      productAmount: productAmount.toFixed(2),
-      totalAmount: totalAmount.toFixed(2)
-    });
   }
 });
