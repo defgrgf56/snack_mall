@@ -19,10 +19,24 @@
     <text class="cancel-btn" bindtap="onCancel">取消</text>
   </view>
 
+  <!-- 搜索联想列表 -->
+  <view class="suggestions-list" wx:if="{{showSuggestions && suggestions.length > 0}}">
+    <view 
+      class="suggestion-item"
+      wx:for="{{suggestions}}"
+      wx:key="index"
+      data-keyword="{{item}}"
+      bindtap="onSuggestionTap"
+    >
+      <text class="suggestion-icon">🔍</text>
+      <text class="suggestion-text">{{item}}</text>
+    </view>
+  </view>
+
   <!-- 搜索内容区域 -->
-  <view class="search-content">
+  <view class="search-content" wx:if="{{!showSuggestions}}">
     <!-- 搜索历史 -->
-    <view class="search-section" wx:if="{{!searching && history.length > 0}}">
+    <view class="search-section" wx:if="{{!searching && !searched && history.length > 0}}">
       <view class="section-header">
         <text class="section-title">搜索历史</text>
         <text class="clear-btn" bindtap="onClearHistory">
@@ -44,7 +58,7 @@
     </view>
 
     <!-- 热门搜索 -->
-    <view class="search-section" wx:if="{{!searching && hotKeywords.length > 0}}">
+    <view class="search-section" wx:if="{{!searching && !searched && hotKeywords.length > 0}}">
       <view class="section-header">
         <text class="section-title">热门搜索</text>
         <text class="hot-badge">HOT</text>
@@ -64,9 +78,19 @@
     </view>
 
     <!-- 搜索结果 -->
-    <view class="search-results" wx:if="{{searching}}">
-      <view class="result-header" wx:if="{{products.length > 0}}">
-        <text class="result-count">找到 <text class="count-num">{{products.length}}</text> 个相关商品</text>
+    <view class="search-results" wx:if="{{searched}}">
+      <!-- 排序栏 -->
+      <view class="sort-bar" wx:if="{{products.length > 0}}">
+        <view 
+          class="sort-item {{sortType === item.value ? 'active' : ''}}"
+          wx:for="{{sortOptions}}"
+          wx:key="value"
+          wx:for-item="item"
+          data-sort="{{item.value}}"
+          bindtap="onSortChange"
+        >
+          <text class="sort-label">{{item.label}}</text>
+        </view>
       </view>
 
       <view class="product-list">
@@ -86,14 +110,17 @@
                 <text class="price-symbol">¥</text>
                 <text class="product-price">{{item.price}}</text>
               </view>
-              <text class="product-sales">已售 {{item.sales}}</text>
+              <view class="product-meta">
+                <text class="product-sales">销量 {{item.sales}}</text>
+                <text class="product-rating" wx:if="{{item.rating > 0}}">⭐{{item.rating}}</text>
+              </view>
             </view>
           </view>
         </view>
       </view>
 
       <!-- 空状态 -->
-      <view class="empty-result" wx:if="{{products.length === 0 && searched}}">
+      <view class="empty-result" wx:if="{{products.length === 0}}">
         <view class="empty-icon">🔍</view>
         <text class="empty-text">没有找到"{{keyword}}"相关商品</text>
         <text class="empty-tip">换个关键词试试吧</text>

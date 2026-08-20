@@ -1,0 +1,58 @@
+<!--pages/points-exchange-record/points-exchange-record.wxml-->
+<view class="exchange-record">
+  <!-- 记录列表 -->
+  <view class="record-list" wx:if="{{records.length > 0}}">
+    <view 
+      class="record-item" 
+      wx:for="{{records}}" 
+      wx:key="id"
+      bindtap="onRecordTap"
+      data-id="{{item.id}}"
+    >
+      <view class="record-header">
+        <view class="record-date">{{item.created_at}}</view>
+        <view 
+          class="record-status" 
+          style="color: {{statusMap[item.status].color}}"
+        >
+          {{statusMap[item.status].text}}
+        </view>
+      </view>
+
+      <view class="record-content">
+        <image class="product-image" src="{{item.product.image}}" mode="aspectFill" />
+        <view class="product-info">
+          <view class="product-name">{{item.product.name}}</view>
+          <view class="product-meta">
+            <text class="quantity">x{{item.quantity}}</text>
+            <text class="points">{{item.total_points}}积分</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="record-footer" wx:if="{{item.express_no}}">
+        <view class="express-info">
+          <text class="label">快递单号:</text>
+          <text class="value">{{item.express_no}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-more" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+  <view class="no-more" wx:if="{{!hasMore && records.length > 0}}">
+    <text>没有更多了</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty" wx:if="{{records.length === 0 && !loading}}">
+    <text class="empty-icon">📝</text>
+    <text class="empty-text">暂无兑换记录</text>
+    <navigator url="/pages/points-mall/points-mall" class="btn-goto-mall">
+      去积分商城看看
+    </navigator>
+  </view>
+</view>

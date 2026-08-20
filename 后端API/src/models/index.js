@@ -49,6 +49,17 @@ const Activity = require('./Activity')(sequelize)
 const ActivityProduct = require('./ActivityProduct')(sequelize)
 const Review = require('./Review')(sequelize)
 const ReviewImage = require('./ReviewImage')(sequelize)
+const SearchHistory = require('./SearchHistory')(sequelize)
+const SearchHot = require('./SearchHot')(sequelize)
+const PointsProduct = require('./PointsProduct')(sequelize)
+const PointsExchange = require('./PointsExchange')(sequelize)
+const LotteryActivity = require('./LotteryActivity')(sequelize)
+const LotteryPrize = require('./LotteryPrize')(sequelize)
+const LotteryRecord = require('./LotteryRecord')(sequelize)
+const CheckInRecord = require('./CheckInRecord')(sequelize)
+const PointsTask = require('./PointsTask')(sequelize)
+const UserTaskProgress = require('./UserTaskProgress')(sequelize)
+const PointsTransfer = require('./PointsTransfer')(sequelize)
 
 // 定义关联关系
 // 用户 - 地址
@@ -149,6 +160,48 @@ OrderItem.hasOne(Review, { foreignKey: 'order_item_id', as: 'review' })
 Review.hasMany(ReviewImage, { foreignKey: 'review_id', as: 'images' })
 ReviewImage.belongsTo(Review, { foreignKey: 'review_id', as: 'review' })
 
+// 积分兑换 - 用户
+PointsExchange.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+User.hasMany(PointsExchange, { foreignKey: 'user_id', as: 'pointsExchanges' })
+
+// 积分兑换 - 商品
+PointsExchange.belongsTo(PointsProduct, { foreignKey: 'product_id', as: 'product' })
+PointsProduct.hasMany(PointsExchange, { foreignKey: 'product_id', as: 'exchanges' })
+
+// 积分兑换 - 地址
+PointsExchange.belongsTo(Address, { foreignKey: 'address_id', as: 'address' })
+Address.hasMany(PointsExchange, { foreignKey: 'address_id', as: 'exchanges' })
+
+// 抽奖活动 - 奖品
+LotteryActivity.hasMany(LotteryPrize, { foreignKey: 'activity_id', as: 'prizes' })
+LotteryPrize.belongsTo(LotteryActivity, { foreignKey: 'activity_id', as: 'activity' })
+
+// 抽奖记录 - 用户
+LotteryRecord.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+User.hasMany(LotteryRecord, { foreignKey: 'user_id', as: 'lotteryRecords' })
+
+// 抽奖记录 - 活动
+LotteryRecord.belongsTo(LotteryActivity, { foreignKey: 'activity_id', as: 'activity' })
+LotteryActivity.hasMany(LotteryRecord, { foreignKey: 'activity_id', as: 'records' })
+
+// 签到记录 - 用户
+CheckInRecord.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+User.hasMany(CheckInRecord, { foreignKey: 'user_id', as: 'checkIns' })
+
+// 用户任务进度 - 用户
+UserTaskProgress.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+User.hasMany(UserTaskProgress, { foreignKey: 'user_id', as: 'taskProgress' })
+
+// 用户任务进度 - 任务
+UserTaskProgress.belongsTo(PointsTask, { foreignKey: 'task_id', as: 'task' })
+PointsTask.hasMany(UserTaskProgress, { foreignKey: 'task_id', as: 'userProgress' })
+
+// 积分转赠 - 用户
+PointsTransfer.belongsTo(User, { foreignKey: 'from_user_id', as: 'fromUser' })
+PointsTransfer.belongsTo(User, { foreignKey: 'to_user_id', as: 'toUser' })
+User.hasMany(PointsTransfer, { foreignKey: 'from_user_id', as: 'sentTransfers' })
+User.hasMany(PointsTransfer, { foreignKey: 'to_user_id', as: 'receivedTransfers' })
+
 // 导出
 module.exports = {
   sequelize,
@@ -175,5 +228,16 @@ module.exports = {
   Activity,
   ActivityProduct,
   Review,
-  ReviewImage
+  ReviewImage,
+  SearchHistory,
+  SearchHot,
+  PointsProduct,
+  PointsExchange,
+  LotteryActivity,
+  LotteryPrize,
+  LotteryRecord,
+  CheckInRecord,
+  PointsTask,
+  UserTaskProgress,
+  PointsTransfer
 }

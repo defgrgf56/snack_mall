@@ -12,7 +12,8 @@ Page({
     pointsUsed: 0,
     pointsDiscount: 0,
     totalPrice: 0,
-    finalPrice: 0
+    finalPrice: 0,
+    cartIds: null // 保存购物车ID，用于提交订单后清空购物车
   },
 
   onLoad(options) {
@@ -41,7 +42,8 @@ Page({
       console.log('商品列表:', items);
       
       this.setData({
-        products: items
+        products: items,
+        cartIds: cartIds // 保存购物车ID
       });
       
       console.log('设置后的products:', this.data.products);
@@ -168,7 +170,7 @@ Page({
 
   // 提交订单
   async onSubmit() {
-    const { selectedAddress, deliveryType, products, remark, couponId, pointsUsed } = this.data;
+    const { selectedAddress, deliveryType, products, remark, couponId, pointsUsed, cartIds } = this.data;
     
     // 验证地址
     if (deliveryType === 1 && !selectedAddress) {
@@ -194,6 +196,11 @@ Page({
           spec: item.spec
         }))
       };
+      
+      // 如果是从购物车结算，传递cart_ids用于清空购物车
+      if (cartIds) {
+        orderData.cart_ids = cartIds.split(',').map(id => parseInt(id));
+      }
       
       const res = await api.post('/orders', orderData, false);
       

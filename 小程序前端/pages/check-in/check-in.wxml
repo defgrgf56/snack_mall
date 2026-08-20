@@ -1,0 +1,108 @@
+<!--pages/check-in/check-in.wxml-->
+<view class="check-in-page">
+  <!-- 顶部卡片 -->
+  <view class="header-card">
+    <view class="points-display">
+      <view class="points-item">
+        <view class="points-value">{{continuousDays}}</view>
+        <view class="points-label">连续签到（天）</view>
+      </view>
+      <view class="divider"></view>
+      <view class="points-item">
+        <view class="points-value">{{totalPoints}}</view>
+        <view class="points-label">累计积分</view>
+      </view>
+    </view>
+
+    <!-- 签到按钮 -->
+    <view class="check-in-btn-wrapper">
+      <button 
+        class="check-in-btn {{hasCheckedIn ? 'checked' : ''}}" 
+        bindtap="onCheckIn"
+      >
+        <view class="btn-content">
+          <text class="btn-icon">{{hasCheckedIn ? '✓' : '📅'}}</text>
+          <text class="btn-text">{{hasCheckedIn ? '今日已签到' : '立即签到'}}</text>
+          <text class="btn-points" wx:if="{{!hasCheckedIn}}">+{{todayPoints}}积分</text>
+        </view>
+      </button>
+    </view>
+
+    <!-- 操作按钮 -->
+    <view class="action-btns">
+      <view class="action-btn" bindtap="onShowRules">
+        <text class="icon">📋</text>
+        <text class="text">签到规则</text>
+      </view>
+      <view class="action-btn" bindtap="onShowRecords">
+        <text class="icon">📊</text>
+        <text class="text">签到记录</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 连续签到奖励 -->
+  <view class="rewards-section">
+    <view class="section-title">连续签到奖励</view>
+    <view class="rewards-list">
+      <view 
+        class="reward-item {{continuousDays % 7 === index ? 'active' : ''}} {{continuousDays % 7 > index ? 'completed' : ''}}" 
+        wx:for="{{rewardRules}}" 
+        wx:key="day"
+        wx:for-index="index"
+      >
+        <view class="reward-day">第{{item.day}}天</view>
+        <view class="reward-icon">
+          <text wx:if="{{continuousDays % 7 > index}}">✓</text>
+          <text wx:else>🎁</text>
+        </view>
+        <view class="reward-points">{{item.points}}积分</view>
+      </view>
+    </view>
+    <view class="rewards-tip">连续签到7天后重新开始循环</view>
+  </view>
+
+  <!-- 签到日历 -->
+  <view class="calendar-section">
+    <view class="section-title">
+      <text>{{currentMonth}}签到日历</text>
+    </view>
+    
+    <view class="calendar">
+      <!-- 星期标题 -->
+      <view class="calendar-header">
+        <view class="week-day">日</view>
+        <view class="week-day">一</view>
+        <view class="week-day">二</view>
+        <view class="week-day">三</view>
+        <view class="week-day">四</view>
+        <view class="week-day">五</view>
+        <view class="week-day">六</view>
+      </view>
+
+      <!-- 日期 -->
+      <view class="calendar-body">
+        <view class="calendar-week" wx:for="{{calendar}}" wx:key="index">
+          <view 
+            class="calendar-day {{day.isEmpty ? 'empty' : ''}} {{day.isToday ? 'today' : ''}} {{day.hasCheckedIn ? 'checked' : ''}}"
+            wx:for="{{item}}"
+            wx:for-item="day"
+            wx:key="day"
+          >
+            <text class="day-text">{{day.day}}</text>
+            <view class="check-mark" wx:if="{{day.hasCheckedIn}}">✓</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 签到成功动画 -->
+  <view class="success-animation" wx:if="{{showSuccess}}">
+    <view class="success-content">
+      <view class="success-icon">🎉</view>
+      <view class="success-text">签到成功</view>
+      <view class="success-points">+{{todayPoints}}积分</view>
+    </view>
+  </view>
+</view>

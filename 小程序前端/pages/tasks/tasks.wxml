@@ -1,0 +1,107 @@
+<!--pages/tasks/tasks.wxml-->
+<view class="tasks-page">
+  <!-- 任务概况 -->
+  <view class="summary-card">
+    <view class="summary-item">
+      <view class="summary-value">{{summary.total_tasks}}</view>
+      <view class="summary-label">任务总数</view>
+    </view>
+    <view class="summary-divider"></view>
+    <view class="summary-item">
+      <view class="summary-value">{{summary.completed_tasks}}</view>
+      <view class="summary-label">已完成</view>
+    </view>
+    <view class="summary-divider"></view>
+    <view class="summary-item">
+      <view class="summary-value">{{summary.total_points}}</view>
+      <view class="summary-label">已获积分</view>
+    </view>
+  </view>
+
+  <!-- 任务分类标签 -->
+  <view class="tabs">
+    <view 
+      class="tab-item {{activeTab === item.key ? 'active' : ''}}" 
+      wx:for="{{tabs}}" 
+      wx:key="key"
+      bindtap="onTabChange"
+      data-key="{{item.key}}"
+    >
+      {{item.name}}
+    </view>
+  </view>
+
+  <!-- 任务列表 -->
+  <view class="tasks-list">
+    <view class="task-item" wx:for="{{tasks}}" wx:key="id">
+      <!-- 任务信息 -->
+      <view class="task-header">
+        <view class="task-icon">
+          <text wx:if="{{item.type === 'daily'}}">📅</text>
+          <text wx:elif="{{item.type === 'weekly'}}">📆</text>
+          <text wx:else>🎯</text>
+        </view>
+        <view class="task-info">
+          <view class="task-name">{{item.name}}</view>
+          <view class="task-desc">{{item.description}}</view>
+        </view>
+        <view class="task-points">
+          <text class="points-value">+{{item.points}}</text>
+          <text class="points-unit">积分</text>
+        </view>
+      </view>
+
+      <!-- 任务进度 -->
+      <view class="task-progress">
+        <view class="progress-bar">
+          <view 
+            class="progress-fill" 
+            style="width: {{item.progress / item.target_count * 100}}%"
+          ></view>
+        </view>
+        <view class="progress-text">{{item.progress}}/{{item.target_count}}</view>
+      </view>
+
+      <!-- 任务操作 -->
+      <view class="task-footer">
+        <view class="task-type">
+          <text wx:if="{{item.type === 'daily'}}">每日任务</text>
+          <text wx:elif="{{item.type === 'weekly'}}">每周任务</text>
+          <text wx:else>新手任务</text>
+        </view>
+        
+        <!-- 未完成：去完成 -->
+        <button 
+          class="btn-action btn-go" 
+          wx:if="{{item.progress < item.target_count}}"
+          bindtap="onGoToTask"
+          data-action="{{item.action_type}}"
+          data-url="{{item.action_url}}"
+        >
+          去完成
+        </button>
+        
+        <!-- 已完成未领取：领取奖励 -->
+        <button 
+          class="btn-action btn-claim" 
+          wx:elif="{{!item.is_claimed}}"
+          bindtap="onClaimReward"
+          data-id="{{item.id}}"
+        >
+          领取奖励
+        </button>
+        
+        <!-- 已领取 -->
+        <view class="task-status completed" wx:else>
+          <text>✓ 已完成</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty" wx:if="{{tasks.length === 0}}">
+      <text class="empty-icon">📋</text>
+      <text class="empty-text">暂无任务</text>
+    </view>
+  </view>
+</view>

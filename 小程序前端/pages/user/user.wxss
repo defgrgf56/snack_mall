@@ -172,6 +172,53 @@
   text-align: center;
 }
 
+/* 积分中心区域 */
+.points-center-section {
+  background-color: #fff;
+  margin-bottom: 20rpx;
+  padding: 30rpx;
+}
+
+.points-menu {
+  display: flex;
+  justify-content: space-around;
+}
+
+.points-menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  transition: all 0.2s ease;
+}
+
+.points-menu-item:active {
+  transform: scale(0.95);
+  opacity: 0.8;
+}
+
+.points-menu-icon {
+  width: 100rpx;
+  height: 100rpx;
+  background: linear-gradient(135deg, #FFF5F0 0%, #FFE5D0 100%);
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  box-shadow: 0 4rpx 16rpx rgba(255, 107, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.points-menu-item:active .points-menu-icon {
+  box-shadow: 0 2rpx 8rpx rgba(255, 107, 0, 0.15);
+}
+
+.points-menu-text {
+  font-size: 24rpx;
+  color: #666;
+}
+
 /* 功能菜单 */
 .menu-section {
   background-color: #fff;

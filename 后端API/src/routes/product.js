@@ -6,7 +6,15 @@ const { Product } = require('../models')
 // 获取商品列表
 router.get('/', async (req, res) => {
   try {
-    const { category_id, is_hot, is_new, keyword, page = 1, limit = 20 } = req.query
+    const { 
+      category_id, 
+      is_hot, 
+      is_new, 
+      keyword, 
+      page = 1, 
+      limit = 20,
+      sort_by = 'default' // 排序方式：default-默认, price_asc-价格升序, price_desc-价格降序, sales-销量, rating-好评
+    } = req.query
     const where = { status: 1 }
     
     if (category_id) {
@@ -23,11 +31,31 @@ router.get('/', async (req, res) => {
       where.name = { [Op.like]: `%${keyword}%` }
     }
     
+    // 根据排序方式设置排序规则
+    let order = [['sort', 'DESC'], ['created_at', 'DESC']]; // 默认排序
+    
+    switch (sort_by) {
+      case 'price_asc':
+        order = [['price', 'ASC']];
+        break;
+      case 'price_desc':
+        order = [['price', 'DESC']];
+        break;
+      case 'sales':
+        order = [['sales', 'DESC']];
+        break;
+      case 'rating':
+        order = [['rating', 'DESC']];
+        break;
+      default:
+        order = [['sort', 'DESC'], ['created_at', 'DESC']];
+    }
+    
     const products = await Product.findAll({
       where,
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit),
-      order: [['sort', 'DESC'], ['created_at', 'DESC']]
+      order
     })
     
     res.json({

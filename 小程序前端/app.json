@@ -20,7 +20,13 @@
     "pages/coupon-list/coupon-list",
     "pages/points/points",
     "pages/review-submit/review-submit",
-    "pages/review-list/review-list"
+    "pages/review-list/review-list",
+    "pages/points-mall/points-mall",
+    "pages/points-product-detail/points-product-detail",
+    "pages/points-exchange-record/points-exchange-record",
+    "pages/lottery/lottery",
+    "pages/check-in/check-in",
+    "pages/tasks/tasks"
   ],
   "window": {
     "backgroundTextStyle": "light",
