@@ -159,10 +159,65 @@ Page({
 
   // 去评价
   onComment() {
-    wx.showToast({
-      title: '评价功能开发中',
-      icon: 'none'
-    });
+    const order = this.data.order
+    
+    // 检查是否有未评价的商品
+    const unReviewedItems = order.items.filter(item => !item.is_reviewed)
+    
+    if (unReviewedItems.length === 0) {
+      wx.showToast({
+        title: '所有商品已评价',
+        icon: 'none'
+      })
+      return
+    }
+    
+    // 如果只有一个未评价商品，直接跳转评价页面
+    if (unReviewedItems.length === 1) {
+      wx.navigateTo({
+        url: `/pages/review-submit/review-submit?orderItemId=${unReviewedItems[0].id}`
+      })
+      return
+    }
+    
+    // 如果有多个未评价商品，显示选择列表
+    const itemNames = unReviewedItems.map(item => item.product_name || item.product.name)
+    
+    wx.showActionSheet({
+      itemList: itemNames,
+      success: (res) => {
+        const selectedItem = unReviewedItems[res.tapIndex]
+        wx.navigateTo({
+          url: `/pages/review-submit/review-submit?orderItemId=${selectedItem.id}`
+        })
+      }
+    })
+  },
+
+  // 查看评价
+  onViewReviews() {
+    const order = this.data.order
+    
+    // 如果只有一个商品，直接跳转到该商品的评价列表
+    if (order.items.length === 1) {
+      wx.navigateTo({
+        url: `/pages/review-list/review-list?productId=${order.items[0].product_id}`
+      })
+      return
+    }
+    
+    // 如果有多个商品，显示选择列表
+    const itemNames = order.items.map(item => item.product_name || item.product.name)
+    
+    wx.showActionSheet({
+      itemList: itemNames,
+      success: (res) => {
+        const selectedItem = order.items[res.tapIndex]
+        wx.navigateTo({
+          url: `/pages/review-list/review-list?productId=${selectedItem.product_id}`
+        })
+      }
+    })
   },
 
   // 删除订单

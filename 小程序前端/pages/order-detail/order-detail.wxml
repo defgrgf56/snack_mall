@@ -117,7 +117,11 @@
     
     <button class="action-btn" wx:if="{{order.status === 3}}" bindtap="onViewLogistics">查看物流</button>
     <button class="action-btn primary" wx:if="{{order.status === 3}}" bindtap="onConfirmReceive">确认收货</button>
-    <button class="action-btn primary" wx:if="{{order.status === 4}}" bindtap="onComment">去评价</button>
+    
+    <!-- 评价按钮 - 完成后显示 -->
+    <button class="action-btn primary" wx:if="{{order.status === 4 && !order.allReviewed}}" bindtap="onComment">去评价</button>
+    <button class="action-btn" wx:if="{{order.status === 4 && order.allReviewed}}" bindtap="onViewReviews">查看评价</button>
+    
     <button class="action-btn" wx:if="{{order.status === 4}}" bindtap="onDeleteOrder">删除订单</button>
   </view>
 </view>

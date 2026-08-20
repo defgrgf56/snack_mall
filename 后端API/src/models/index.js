@@ -47,6 +47,8 @@ const Favorite = require('./Favorite')(sequelize)
 const Seckill = require('./Seckill')(sequelize)
 const Activity = require('./Activity')(sequelize)
 const ActivityProduct = require('./ActivityProduct')(sequelize)
+const Review = require('./Review')(sequelize)
+const ReviewImage = require('./ReviewImage')(sequelize)
 
 // 定义关联关系
 // 用户 - 地址
@@ -127,6 +129,26 @@ Product.belongsToMany(Activity, {
   as: 'activities' 
 })
 
+// 评价 - 用户
+Review.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+User.hasMany(Review, { foreignKey: 'user_id', as: 'reviews' })
+
+// 评价 - 商品
+Review.belongsTo(Product, { foreignKey: 'product_id', as: 'product' })
+Product.hasMany(Review, { foreignKey: 'product_id', as: 'reviews' })
+
+// 评价 - 订单
+Review.belongsTo(Order, { foreignKey: 'order_id', as: 'order' })
+Order.hasMany(Review, { foreignKey: 'order_id', as: 'reviews' })
+
+// 评价 - 订单商品
+Review.belongsTo(OrderItem, { foreignKey: 'order_item_id', as: 'orderItem' })
+OrderItem.hasOne(Review, { foreignKey: 'order_item_id', as: 'review' })
+
+// 评价 - 评价图片
+Review.hasMany(ReviewImage, { foreignKey: 'review_id', as: 'images' })
+ReviewImage.belongsTo(Review, { foreignKey: 'review_id', as: 'review' })
+
 // 导出
 module.exports = {
   sequelize,
@@ -151,5 +173,7 @@ module.exports = {
   Favorite,
   Seckill,
   Activity,
-  ActivityProduct
+  ActivityProduct,
+  Review,
+  ReviewImage
 }

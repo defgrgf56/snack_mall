@@ -18,7 +18,9 @@
     "pages/notification-list/notification-list",
     "pages/favorite-list/favorite-list",
     "pages/coupon-list/coupon-list",
-    "pages/points/points"
+    "pages/points/points",
+    "pages/review-submit/review-submit",
+    "pages/review-list/review-list"
   ],
   "window": {
     "backgroundTextStyle": "light",

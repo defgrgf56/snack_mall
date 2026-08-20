@@ -1,0 +1,132 @@
+<!--pages/review-list/review-list.wxml-->
+<view class="review-list-page">
+  <!-- 评价统计 -->
+  <view class="stats-section" wx:if="{{stats}}">
+    <view class="stats-left">
+      <text class="good-rate">{{stats.goodRate}}%</text>
+      <text class="good-label">好评率</text>
+    </view>
+    <view class="stats-right">
+      <view class="stats-item">
+        <text class="stats-num">{{stats.total}}</text>
+        <text class="stats-label">总评价</text>
+      </view>
+      <view class="stats-item">
+        <text class="stats-num">{{stats.imageCount}}</text>
+        <text class="stats-label">晒单</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 评分筛选 -->
+  <view class="filter-section">
+    <view 
+      class="filter-item {{filterRating === '' ? 'active' : ''}}"
+      data-rating=""
+      bindtap="onFilterTap"
+    >
+      全部
+    </view>
+    <view 
+      class="filter-item {{filterRating === '5' ? 'active' : ''}}"
+      data-rating="5"
+      bindtap="onFilterTap"
+    >
+      好评({{stats.ratingStats[4].count || 0}})
+    </view>
+    <view 
+      class="filter-item {{filterRating === '3' ? 'active' : ''}}"
+      data-rating="3"
+      bindtap="onFilterTap"
+    >
+      中评({{stats.ratingStats[2].count || 0}})
+    </view>
+    <view 
+      class="filter-item {{filterRating === '1' ? 'active' : ''}}"
+      data-rating="1"
+      bindtap="onFilterTap"
+    >
+      差评({{stats.ratingStats[0].count || 0}})
+    </view>
+    <view 
+      class="filter-item {{showImageOnly ? 'active' : ''}}"
+      bindtap="onShowImageToggle"
+    >
+      有图
+    </view>
+  </view>
+
+  <!-- 评价列表 -->
+  <view class="review-list">
+    <view class="review-item" wx:for="{{reviews}}" wx:key="id">
+      <!-- 用户信息 -->
+      <view class="review-header">
+        <image class="user-avatar" src="{{item.user.avatar || '/images/default-avatar.png'}}" mode="aspectFill" />
+        <view class="user-info">
+          <text class="user-name">{{item.user.nickname}}</text>
+          <view class="review-stars">
+            <block wx:for="{{[1,2,3,4,5]}}" wx:key="*this" wx:for-item="star">
+              <text class="star {{item.rating >= star ? 'active' : ''}}">★</text>
+            </block>
+          </view>
+        </view>
+        <text class="review-date">{{item.created_at}}</text>
+      </view>
+
+      <!-- 评价内容 -->
+      <view class="review-content" wx:if="{{item.content}}">
+        <text>{{item.content}}</text>
+      </view>
+
+      <!-- 评价图片 -->
+      <view class="review-images" wx:if="{{item.images && item.images.length > 0}}">
+        <image 
+          class="review-image"
+          wx:for="{{item.images}}"
+          wx:key="id"
+          wx:for-item="img"
+          src="{{img.image_url}}"
+          mode="aspectFill"
+          data-images="{{item.images}}"
+          data-index="{{index}}"
+          bindtap="onPreviewImage"
+        />
+      </view>
+
+      <!-- 商家回复 -->
+      <view class="reply-section" wx:if="{{item.reply_content}}">
+        <view class="reply-label">商家回复：</view>
+        <text class="reply-content">{{item.reply_content}}</text>
+      </view>
+
+      <!-- 点赞 -->
+      <view class="review-actions">
+        <view class="action-btn" data-id="{{item.id}}" bindtap="onLikeTap">
+          <text class="like-icon">👍</text>
+          <text class="like-count">{{item.likes > 0 ? item.likes : '赞'}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{!loading && reviews.length === 0}}">
+      <text class="empty-icon">📝</text>
+      <text class="empty-text">暂无评价</text>
+    </view>
+
+    <!-- 加载中 -->
+    <view class="loading-state" wx:if="{{loading}}">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 加载更多 -->
+    <view class="loadmore-state" wx:if="{{!loading && hasMore}}">
+      <text>上拉加载更多</text>
+    </view>
+
+    <!-- 没有更多 -->
+    <view class="nomore-state" wx:if="{{!loading && !hasMore && reviews.length > 0}}">
+      <text>没有更多了</text>
+    </view>
+  </view>
+</view>

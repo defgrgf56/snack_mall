@@ -20,6 +20,7 @@ const notificationRoutes = require('./notification');
 const favoriteRoutes = require('./favorite');
 const seckillRoutes = require('./seckill');
 const activityRoutes = require('./activity');
+const reviewRoutes = require('./review');
 
 // 注册路由
 router.use('/auth', authRoutes);
@@ -39,6 +40,7 @@ router.use('/notifications', notificationRoutes);
 router.use('/favorites', favoriteRoutes);
 router.use('/seckills', seckillRoutes);
 router.use('/activities', activityRoutes);
+router.use('/reviews', reviewRoutes);
 
 // 根路由
 router.get('/', (req, res) => {
