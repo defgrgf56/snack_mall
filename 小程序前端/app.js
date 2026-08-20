@@ -194,16 +194,19 @@ App({
    * 更新自定义TabBar购物车数量
    */
   updateCustomTabBar(count) {
+    // 更新全局数据
+    this.globalData.cartCount = count
+    
     // 获取所有页面
     const pages = getCurrentPages()
-    if (pages.length > 0) {
-      const currentPage = pages[pages.length - 1]
-      // 更新当前页面的TabBar
-      if (typeof currentPage.getTabBar === 'function' && currentPage.getTabBar()) {
-        currentPage.getTabBar().setData({
+    
+    // 更新所有页面的TabBar
+    pages.forEach(page => {
+      if (typeof page.getTabBar === 'function' && page.getTabBar()) {
+        page.getTabBar().setData({
           cartCount: count
         })
       }
-    }
+    })
   }
 })

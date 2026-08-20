@@ -188,9 +188,17 @@ Page({
       this.setData({ cartItems: items })
       this.calculateTotal()
       
-      // 更新购物车徽标
+      // 更新购物车徽标 - 等待更新完成
       const app = getApp()
-      app.updateCartCount()
+      await app.updateCartCount()
+      
+      // 如果购物车为空，显示提示
+      if (items.length === 0) {
+        wx.showToast({
+          title: '购物车已清空',
+          icon: 'none'
+        })
+      }
     }
   },
 

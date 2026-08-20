@@ -75,6 +75,10 @@
         <text class="bar-icon">🏠</text>
         <text class="bar-text">首页</text>
       </view>
+      <view class="bar-btn {{isFavorited ? 'favorited' : ''}}" bindtap="handleFavorite">
+        <text class="bar-icon">{{isFavorited ? '❤️' : '🤍'}}</text>
+        <text class="bar-text">{{isFavorited ? '已收藏' : '收藏'}}</text>
+      </view>
       <view class="bar-btn" bindtap="goCart">
         <text class="bar-icon">🛒</text>
         <text class="bar-text">购物车</text>

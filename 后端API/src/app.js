@@ -27,11 +27,13 @@ app.use((req, res, next) => {
   next()
 })
 
-// API限流
+// API限流 - 根据环境设置不同限制
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分钟
-  max: 100, // 限制100个请求
-  message: '请求过于频繁，请稍后再试'
+  max: process.env.NODE_ENV === 'production' ? 300 : 1000, // 生产环境300，开发环境1000
+  message: '请求过于频繁，请稍后再试',
+  standardHeaders: true, // 返回 RateLimit-* 响应头
+  legacyHeaders: false, // 禁用 X-RateLimit-* 响应头
 })
 app.use('/api/', limiter)
 

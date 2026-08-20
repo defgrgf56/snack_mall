@@ -111,6 +111,10 @@
   <view class="order-footer" wx:if="{{order.status !== 5 && order.status !== 6}}">
     <button class="action-btn" wx:if="{{order.status === 1}}" bindtap="onCancelOrder">取消订单</button>
     <button class="action-btn primary" wx:if="{{order.status === 1}}" bindtap="onPayOrder">去支付</button>
+    
+    <!-- 已支付、已发货、已完成的订单可以申请退款 -->
+    <button class="action-btn" wx:if="{{order.status === 2 || order.status === 3 || order.status === 4}}" bindtap="onApplyRefund">申请退款</button>
+    
     <button class="action-btn" wx:if="{{order.status === 3}}" bindtap="onViewLogistics">查看物流</button>
     <button class="action-btn primary" wx:if="{{order.status === 3}}" bindtap="onConfirmReceive">确认收货</button>
     <button class="action-btn primary" wx:if="{{order.status === 4}}" bindtap="onComment">去评价</button>

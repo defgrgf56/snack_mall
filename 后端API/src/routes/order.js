@@ -132,9 +132,75 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
     
-    // 计算优惠（简化版）
-    const couponDiscount = 0; // TODO: 实现优惠券逻辑
-    const pointsDiscount = 0; // TODO: 实现积分抵扣逻辑
+    // 计算优惠券折扣
+    let couponDiscount = 0;
+    let usedCoupon = null;
+    
+    if (coupon_id) {
+      // 查询用户优惠券
+      const userCoupon = await UserCoupon.findOne({
+        where: {
+          id: coupon_id,
+          user_id: req.userId,
+          status: 0 // 未使用
+        },
+        include: [{
+          model: Coupon,
+          as: 'coupon'
+        }]
+      });
+      
+      if (!userCoupon) {
+        await transaction.rollback();
+        return res.json({
+          code: 400,
+          message: '优惠券不可用',
+          data: null
+        });
+      }
+      
+      const coupon = userCoupon.coupon;
+      
+      // 检查是否过期
+      if (new Date() > new Date(userCoupon.expire_time)) {
+        await transaction.rollback();
+        return res.json({
+          code: 400,
+          message: '优惠券已过期',
+          data: null
+        });
+      }
+      
+      // 检查使用条件
+      if (productAmount < coupon.min_amount) {
+        await transaction.rollback();
+        return res.json({
+          code: 400,
+          message: `订单金额需满${coupon.min_amount}元才能使用此优惠券`,
+          data: null
+        });
+      }
+      
+      // 计算折扣金额
+      if (coupon.discount_type === 'amount') {
+        // 固定金额折扣
+        couponDiscount = parseFloat(coupon.discount_value);
+      } else if (coupon.discount_type === 'percent') {
+        // 百分比折扣（如8.5折）
+        const discountRate = parseFloat(coupon.discount_value) / 10;
+        couponDiscount = productAmount * (1 - discountRate);
+      }
+      
+      // 确保折扣不超过商品总额
+      if (couponDiscount > productAmount) {
+        couponDiscount = productAmount;
+      }
+      
+      usedCoupon = userCoupon;
+    }
+    
+    // 计算积分抵扣（暂不实现）
+    const pointsDiscount = 0;
     const deliveryFee = 0; // 免运费
     
     const totalAmount = productAmount - couponDiscount - pointsDiscount + deliveryFee;
@@ -187,6 +253,15 @@ router.post('/', authenticateToken, async (req, res) => {
         },
         transaction
       });
+    }
+    
+    // 标记优惠券为已使用
+    if (usedCoupon) {
+      await usedCoupon.update({
+        status: 1, // 已使用
+        use_time: new Date(),
+        order_id: order.id
+      }, { transaction });
     }
     
     await transaction.commit();

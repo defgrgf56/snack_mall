@@ -125,6 +125,13 @@ Page({
     });
   },
 
+  // 申请退款
+  onApplyRefund() {
+    wx.navigateTo({
+      url: `/pages/refund-apply/refund-apply?orderId=${this.data.orderId}`
+    });
+  },
+
   // 确认收货
   onConfirmReceive() {
     wx.showModal({

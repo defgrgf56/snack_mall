@@ -13,6 +13,13 @@
           <text class="nav-slogan">🏪 品质生活，一站购齐</text>
         </view>
       </view>
+      
+      <!-- 右侧小Logo(自适应计算位置,不覆盖微信胶囊) -->
+      <view class="nav-right-logo" style="right: {{logoRight}}px; height: {{menuHeight}}px;">
+        <view class="right-logo-circle">
+          <text class="right-logo-text">阿宇</text>
+        </view>
+      </view>
     </view>
   </view>
 
@@ -31,6 +38,104 @@
         <image class="banner-image" src="{{item.image}}" mode="aspectFill"></image>
       </swiper-item>
     </swiper>
+  </view>
+
+  <!-- 优惠券领取中心 -->
+  <view class="coupon-section" wx:if="{{coupons.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">🎫 优惠券中心</text>
+      <text class="section-more" bindtap="goMyCoupons">我的优惠券 ></text>
+    </view>
+    <scroll-view class="coupon-scroll" scroll-x>
+      <view class="coupon-list">
+        <view class="coupon-item" wx:for="{{coupons}}" wx:key="id">
+          <view class="coupon-content">
+            <view class="coupon-left">
+              <view class="coupon-amount-box">
+                <text class="coupon-symbol">¥</text>
+                <text class="coupon-amount" wx:if="{{item.discount_type === 1}}">{{item.discount_value}}</text>
+                <text class="coupon-amount" wx:if="{{item.discount_type === 2}}">{{item.discount_value}}</text>
+                <text class="coupon-unit" wx:if="{{item.discount_type === 2}}">折</text>
+              </view>
+              <text class="coupon-condition">满{{item.min_amount}}元可用</text>
+            </view>
+            <view class="coupon-right">
+              <text class="coupon-name">{{item.name}}</text>
+              <text class="coupon-time">{{item.start_time}} - {{item.end_time}}</text>
+              <view class="coupon-btn" bindtap="receiveCoupon" data-id="{{item.id}}">
+                <text>立即领取</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 限时秒杀 -->
+  <view class="seckill-section" wx:if="{{seckills.length > 0}}">
+    <view class="section-header seckill-header">
+      <view class="seckill-title-box">
+        <text class="section-title seckill-title">⚡ 限时秒杀</text>
+        <view class="seckill-countdown" wx:if="{{seckillCountdown > 0}}">
+          <text class="countdown-label">距结束</text>
+          <view class="countdown-time">
+            <text class="time-unit">{{seckillHours}}</text>
+            <text class="time-sep">:</text>
+            <text class="time-unit">{{seckillMinutes}}</text>
+            <text class="time-sep">:</text>
+            <text class="time-unit">{{seckillSeconds}}</text>
+          </view>
+        </view>
+      </view>
+      <text class="section-more" bindtap="goSeckillList">更多 ></text>
+    </view>
+    <scroll-view class="seckill-scroll" scroll-x>
+      <view class="seckill-list">
+        <view class="seckill-item" wx:for="{{seckills}}" wx:key="id" bindtap="goProductDetail" data-id="{{item.product.id}}">
+          <image class="seckill-image" src="{{item.product.cover}}" mode="aspectFill"></image>
+          <view class="seckill-badge">限时</view>
+          <view class="seckill-info">
+            <text class="seckill-product-name">{{item.product.name}}</text>
+            <view class="seckill-price-box">
+              <view class="seckill-price">
+                <text class="price-symbol">¥</text>
+                <text class="price-value">{{item.seckill_price}}</text>
+              </view>
+              <text class="seckill-original-price">¥{{item.original_price}}</text>
+            </view>
+            <view class="seckill-progress">
+              <view class="progress-bar">
+                <view class="progress-fill" style="width: {{item.progress}}%"></view>
+              </view>
+              <text class="progress-text">已抢{{item.progress}}%</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 活动专区 -->
+  <view class="activity-section" wx:if="{{activities.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">🎉 活动专区</text>
+    </view>
+    <view class="activity-grid">
+      <view class="activity-item" wx:for="{{activities}}" wx:key="id" bindtap="goActivityDetail" data-id="{{item.id}}">
+        <image class="activity-cover" src="{{item.cover}}" mode="aspectFill"></image>
+        <view class="activity-overlay">
+          <text class="activity-title">{{item.title}}</text>
+          <text class="activity-subtitle" wx:if="{{item.subtitle}}">{{item.subtitle}}</text>
+        </view>
+        <view class="activity-tag activity-tag-{{item.type}}">
+          <text wx:if="{{item.type === 'festival'}}">节日促销</text>
+          <text wx:if="{{item.type === 'newbie'}}">新人专享</text>
+          <text wx:if="{{item.type === 'vip'}}">会员专区</text>
+          <text wx:if="{{item.type === 'group'}}">拼团活动</text>
+        </view>
+      </view>
+    </view>
   </view>
 
   <!-- 分类导航 -->

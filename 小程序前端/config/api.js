@@ -390,6 +390,38 @@ const api = {
     return request({
       url: '/orders/stats'
     })
+  },
+  
+  // ==================== 优惠券接口 ====================
+  
+  /**
+   * 获取可用优惠券列表
+   */
+  getCoupons: () => {
+    return request({
+      url: '/coupons/available'
+    })
+  },
+  
+  /**
+   * 领取优惠券
+   */
+  receiveCoupon: (coupon_id) => {
+    return request({
+      url: '/coupons/receive',
+      method: 'POST',
+      data: { coupon_id }
+    })
+  },
+  
+  /**
+   * 获取我的优惠券
+   */
+  getMyCoupons: (status) => {
+    return request({
+      url: '/coupons/my',
+      data: status !== undefined ? { status } : {}
+    })
   }
 }
 

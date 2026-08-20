@@ -1,0 +1,223 @@
+/* pages/refund-list/refund-list.wxss */
+.refund-list-page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* 标签栏 */
+.tabs {
+  display: flex;
+  background-color: #fff;
+  padding: 0 30rpx;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.tab-item {
+  flex: 1;
+  padding: 28rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  cursor: pointer;
+}
+
+.tab-text {
+  font-size: 28rpx;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.tab-item.active .tab-text {
+  color: #ff6b00;
+  font-weight: bold;
+}
+
+.tab-line {
+  position: absolute;
+  bottom: 0;
+  width: 60rpx;
+  height: 6rpx;
+  background: linear-gradient(135deg, #ff6b00 0%, #ff8533 100%);
+  border-radius: 3rpx;
+}
+
+/* 退款列表 */
+.refund-list {
+  padding: 20rpx;
+}
+
+.refund-item {
+  background-color: #fff;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+  padding: 30rpx;
+  overflow: hidden;
+}
+
+/* 头部 */
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid #eee;
+}
+
+.refund-no {
+  font-size: 24rpx;
+  color: #666;
+  flex: 1;
+}
+
+.status {
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  flex-shrink: 0;
+}
+
+.status.status-0 {
+  background-color: #fff5e6;
+  color: #ff9500;
+}
+
+.status.status-1 {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.status.status-2 {
+  background-color: #fff1f0;
+  color: #ff4d4f;
+}
+
+.status.status-3 {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.status.status-4 {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.status.status-5 {
+  background-color: #f5f5f5;
+  color: #999;
+}
+
+/* 内容 */
+.item-content {
+  display: flex;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.product-image {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+}
+
+.product-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.product-name {
+  font-size: 28rpx;
+  color: #333;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.refund-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.refund-type {
+  font-size: 24rpx;
+  color: #666;
+}
+
+.refund-reason {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.refund-amount {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #ff6b00;
+}
+
+/* 底部 */
+.item-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 20rpx;
+  border-top: 1rpx solid #eee;
+}
+
+.time {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.arrow {
+  font-size: 48rpx;
+  color: #ddd;
+  font-weight: 300;
+  line-height: 1;
+}
+
+/* 空状态 */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+
+.empty-image {
+  width: 300rpx;
+  height: 300rpx;
+  margin-bottom: 40rpx;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 加载中 */
+.loading {
+  text-align: center;
+  padding: 40rpx 0;
+  font-size: 28rpx;
+  color: #999;
+}
+
+/* 没有更多 */
+.no-more {
+  text-align: center;
+  padding: 40rpx 0;
+  font-size: 24rpx;
+  color: #ccc;
+}

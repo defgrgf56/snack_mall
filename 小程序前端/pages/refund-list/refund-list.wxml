@@ -1,0 +1,68 @@
+<!--pages/refund-list/refund-list.wxml-->
+<view class="refund-list-page">
+  <!-- 状态筛选 -->
+  <view class="tabs">
+    <view 
+      class="tab-item {{currentTab === item.value ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="value"
+      bindtap="switchTab"
+      data-tab="{{item.value}}"
+    >
+      <text class="tab-text">{{item.label}}</text>
+      <view class="tab-line" wx:if="{{currentTab === item.value}}"></view>
+    </view>
+  </view>
+
+  <!-- 退款列表 -->
+  <view class="refund-list">
+    <view 
+      class="refund-item" 
+      wx:for="{{refundList}}" 
+      wx:key="id"
+      bindtap="goDetail"
+      data-id="{{item.id}}"
+    >
+      <!-- 订单信息 -->
+      <view class="item-header">
+        <text class="refund-no">退款单号: {{item.refund_no}}</text>
+        <text class="status status-{{item.status}}">{{item.status_text}}</text>
+      </view>
+      
+      <!-- 商品信息 -->
+      <view class="item-content">
+        <image class="product-image" src="{{item.product_cover}}" mode="aspectFill"></image>
+        <view class="product-info">
+          <text class="product-name">{{item.product_name}}</text>
+          <view class="refund-info">
+            <text class="refund-type">{{item.refund_type_text}}</text>
+            <text class="refund-reason">{{item.refund_reason}}</text>
+          </view>
+          <text class="refund-amount">¥{{item.refund_amount}}</text>
+        </view>
+      </view>
+
+      <!-- 时间 -->
+      <view class="item-footer">
+        <text class="time">申请时间: {{item.created_at}}</text>
+        <view class="arrow">›</view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty" wx:if="{{!loading && refundList.length === 0}}">
+      <image class="empty-image" src="/images/empty.png" mode="aspectFit"></image>
+      <text class="empty-text">暂无退款记录</text>
+    </view>
+
+    <!-- 加载中 -->
+    <view class="loading" wx:if="{{loading}}">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 没有更多 -->
+    <view class="no-more" wx:if="{{!loading && refundList.length > 0 && !hasMore}}">
+      <text>没有更多了</text>
+    </view>
+  </view>
+</view>

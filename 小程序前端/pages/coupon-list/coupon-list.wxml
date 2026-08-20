@@ -1,2 +1,74 @@
 <!--pages/coupon-list/coupon-list.wxml-->
-<text>pages/coupon-list/coupon-list.wxml</text>
+<view class="coupon-list-page">
+  <!-- Tab切换 -->
+  <view class="tabs">
+    <view 
+      class="tab-item {{activeTab === index ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="index"
+      data-index="{{index}}"
+      bindtap="switchTab"
+    >
+      {{item}}
+    </view>
+  </view>
+
+  <!-- 优惠券列表 -->
+  <view class="coupon-list" wx:if="{{!loading && !isEmpty}}">
+    <view 
+      class="coupon-item {{activeTab !== 0 ? 'disabled' : ''}}"
+      wx:for="{{coupons}}"
+      wx:key="id"
+    >
+      <view class="coupon-main">
+        <!-- 左侧金额/折扣 -->
+        <view class="coupon-left">
+          <view class="coupon-value">
+            <text class="symbol" wx:if="{{item.coupon.discount_type === 'amount'}}">¥</text>
+            <text class="amount">
+              {{item.coupon.discount_type === 'amount' ? item.coupon.discount_value : item.coupon.discount_value}}
+            </text>
+            <text class="unit" wx:if="{{item.coupon.discount_type === 'percent'}}">折</text>
+          </view>
+          <view class="coupon-condition">
+            {{item.coupon.min_amount > 0 ? '满' + item.coupon.min_amount + '元' : '无门槛'}}
+          </view>
+        </view>
+
+        <!-- 右侧信息 -->
+        <view class="coupon-right">
+          <view class="coupon-info">
+            <view class="coupon-name">{{item.coupon.name}}</view>
+            <view class="coupon-time">有效期至 {{item.expire_time}}</view>
+          </view>
+          
+          <!-- 使用按钮（仅未使用状态显示） -->
+          <view 
+            class="coupon-btn"
+            wx:if="{{activeTab === 0}}"
+            data-id="{{item.id}}"
+            bindtap="useCoupon"
+          >
+            立即使用
+          </view>
+          
+          <!-- 已使用/已过期标签 -->
+          <view class="coupon-status" wx:if="{{activeTab === 1}}">已使用</view>
+          <view class="coupon-status expired" wx:if="{{activeTab === 2}}">已过期</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && isEmpty}}">
+    <text class="empty-emoji">🎫</text>
+    <text class="empty-text">暂无优惠券</text>
+    <view class="empty-btn" bindtap="goGetCoupons">去领券</view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-state" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+</view>

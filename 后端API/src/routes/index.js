@@ -15,6 +15,11 @@ const categoryRoutes = require('./category');
 const adminRoutes = require('./admin');
 const pointsRoutes = require('./points');
 const uploadRoutes = require('./upload');
+const refundRoutes = require('./refund');
+const notificationRoutes = require('./notification');
+const favoriteRoutes = require('./favorite');
+const seckillRoutes = require('./seckill');
+const activityRoutes = require('./activity');
 
 // 注册路由
 router.use('/auth', authRoutes);
@@ -29,6 +34,11 @@ router.use('/categories', categoryRoutes);
 router.use('/admin', adminRoutes);
 router.use('/points', pointsRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/refunds', refundRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/favorites', favoriteRoutes);
+router.use('/seckills', seckillRoutes);
+router.use('/activities', activityRoutes);
 
 // 根路由
 router.get('/', (req, res) => {

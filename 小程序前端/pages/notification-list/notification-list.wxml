@@ -1,0 +1,79 @@
+<!--pages/notification-list/notification-list.wxml-->
+<view class="notification-page">
+  <!-- 标签栏 -->
+  <view class="tabs">
+    <view 
+      class="tab-item {{currentTab === item.value ? 'active' : ''}}"
+      wx:for="{{tabs}}"
+      wx:key="value"
+      bindtap="switchTab"
+      data-tab="{{item.value}}"
+    >
+      <text class="tab-text">{{item.label}}</text>
+      <view class="tab-badge" wx:if="{{item.value === '' && unreadCount > 0}}">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
+      <view class="tab-line" wx:if="{{currentTab === item.value}}"></view>
+    </view>
+  </view>
+
+  <!-- 操作栏 -->
+  <view class="action-bar" wx:if="{{notificationList.length > 0}}">
+    <button class="action-btn" bindtap="markAllRead" wx:if="{{unreadCount > 0}}">
+      <text>全部已读</text>
+    </button>
+    <button class="action-btn" bindtap="clearRead">
+      <text>清空已读</text>
+    </button>
+  </view>
+
+  <!-- 消息列表 -->
+  <view class="notification-list">
+    <view 
+      class="notification-item {{item.is_read === 0 ? 'unread' : ''}}"
+      wx:for="{{notificationList}}"
+      wx:key="id"
+      bindtap="onItemTap"
+      data-item="{{item}}"
+    >
+      <!-- 未读标记 -->
+      <view class="unread-dot" wx:if="{{item.is_read === 0}}"></view>
+
+      <!-- 图标 -->
+      <view class="notification-icon type-{{item.type}}">
+        <text class="icon">{{item.type_icon}}</text>
+      </view>
+
+      <!-- 内容 -->
+      <view class="notification-content">
+        <view class="content-header">
+          <text class="notification-title">{{item.title}}</text>
+          <text class="notification-time">{{item.created_at}}</text>
+        </view>
+        <text class="notification-text">{{item.content}}</text>
+        <view class="notification-footer">
+          <text class="notification-type">{{item.type_text}}</text>
+        </view>
+      </view>
+
+      <!-- 删除按钮 -->
+      <view class="notification-action" catchtap="deleteNotification" data-id="{{item.id}}">
+        <text class="delete-icon">×</text>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty" wx:if="{{!loading && notificationList.length === 0}}">
+      <text class="empty-icon">📭</text>
+      <text class="empty-text">暂无消息</text>
+    </view>
+
+    <!-- 加载中 -->
+    <view class="loading" wx:if="{{loading}}">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 没有更多 -->
+    <view class="no-more" wx:if="{{!loading && notificationList.length > 0 && !hasMore}}">
+      <text>没有更多了</text>
+    </view>
+  </view>
+</view>

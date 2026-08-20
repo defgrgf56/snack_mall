@@ -11,7 +11,14 @@
     "pages/address-edit/address-edit",
     "pages/order-confirm/order-confirm",
     "pages/order-list/order-list",
-    "pages/order-detail/order-detail"
+    "pages/order-detail/order-detail",
+    "pages/refund-apply/refund-apply",
+    "pages/refund-detail/refund-detail",
+    "pages/refund-list/refund-list",
+    "pages/notification-list/notification-list",
+    "pages/favorite-list/favorite-list",
+    "pages/coupon-list/coupon-list",
+    "pages/points/points"
   ],
   "window": {
     "backgroundTextStyle": "light",

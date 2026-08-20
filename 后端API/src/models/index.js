@@ -41,6 +41,12 @@ const PointsLog = require('./PointsLog')(sequelize)
 const Banner = require('./Banner')(sequelize)
 const Admin = require('./Admin')(sequelize)
 const Config = require('./Config')(sequelize)
+const { Refund, RefundLog } = require('./Refund')(sequelize)
+const Notification = require('./Notification')(sequelize)
+const Favorite = require('./Favorite')(sequelize)
+const Seckill = require('./Seckill')(sequelize)
+const Activity = require('./Activity')(sequelize)
+const ActivityProduct = require('./ActivityProduct')(sequelize)
 
 // 定义关联关系
 // 用户 - 地址
@@ -83,6 +89,44 @@ UserCoupon.belongsTo(User, { foreignKey: 'user_id' })
 User.hasMany(PointsLog, { foreignKey: 'user_id', as: 'pointsLogs' })
 PointsLog.belongsTo(User, { foreignKey: 'user_id' })
 
+// 用户 - 消息通知
+User.hasMany(Notification, { foreignKey: 'user_id', as: 'notifications' })
+Notification.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+
+// 用户 - 商品收藏
+User.hasMany(Favorite, { foreignKey: 'user_id', as: 'favorites' })
+Favorite.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+Product.hasMany(Favorite, { foreignKey: 'product_id', as: 'favorites' })
+Favorite.belongsTo(Product, { foreignKey: 'product_id', as: 'product' })
+
+// 订单 - 退款
+Order.hasMany(Refund, { foreignKey: 'order_id', as: 'refunds' })
+Refund.belongsTo(Order, { foreignKey: 'order_id', as: 'order' })
+User.hasMany(Refund, { foreignKey: 'user_id', as: 'refunds' })
+Refund.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
+
+// 退款 - 退款日志
+Refund.hasMany(RefundLog, { foreignKey: 'refund_id', as: 'logs' })
+RefundLog.belongsTo(Refund, { foreignKey: 'refund_id' })
+
+// 秒杀 - 商品
+Seckill.belongsTo(Product, { foreignKey: 'product_id', as: 'product' })
+Product.hasMany(Seckill, { foreignKey: 'product_id', as: 'seckills' })
+
+// 活动 - 商品 (多对多)
+Activity.belongsToMany(Product, { 
+  through: ActivityProduct, 
+  foreignKey: 'activity_id',
+  otherKey: 'product_id',
+  as: 'products' 
+})
+Product.belongsToMany(Activity, { 
+  through: ActivityProduct, 
+  foreignKey: 'product_id',
+  otherKey: 'activity_id',
+  as: 'activities' 
+})
+
 // 导出
 module.exports = {
   sequelize,
@@ -100,5 +144,12 @@ module.exports = {
   PointsLog,
   Banner,
   Admin,
-  Config
+  Config,
+  Refund,
+  RefundLog,
+  Notification,
+  Favorite,
+  Seckill,
+  Activity,
+  ActivityProduct
 }

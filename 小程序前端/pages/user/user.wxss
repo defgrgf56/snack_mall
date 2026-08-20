@@ -268,3 +268,16 @@
   font-size: 20rpx;
   border-radius: 8rpx;
 }
+
+/* 消息角标 */
+.menu-badge {
+  background-color: #ff4d4f;
+  color: #fff;
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 20rpx;
+  min-width: 32rpx;
+  text-align: center;
+  line-height: 1;
+  margin-left: 12rpx;
+}

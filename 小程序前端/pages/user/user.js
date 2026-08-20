@@ -11,6 +11,7 @@ Page({
       shipped: 0,
       completed: 0
     },
+    unreadCount: 0, // 未读消息数量
     safeAreaBottom: 0,
     tabBarHeight: 50
   },
@@ -35,6 +36,12 @@ Page({
 
   onShow() {
     this.loadUserData()
+    
+    // 更新购物车数量
+    const app = getApp()
+    if (app.updateCartCount) {
+      app.updateCartCount()
+    }
     
     // 设置TabBar选中状态
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
@@ -71,8 +78,32 @@ Page({
           completed: 0
         }
       })
+      
+      // 加载未读消息数量
+      this.loadUnreadCount()
     } catch (error) {
       console.error('加载用户数据失败:', error)
+    }
+  },
+
+  /**
+   * 加载未读消息数量
+   */
+  async loadUnreadCount() {
+    try {
+      const { request } = require('../../utils/request')
+      const res = await request({
+        url: '/notifications/unread-count',
+        method: 'GET'
+      })
+      
+      if (res.code === 200) {
+        this.setData({
+          unreadCount: res.data.count
+        })
+      }
+    } catch (error) {
+      console.error('加载未读消息数量失败:', error)
     }
   },
 

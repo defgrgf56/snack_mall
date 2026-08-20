@@ -8,13 +8,16 @@ Page({
     productId: null,
     product: null,
     quantity: 1,
-    loading: true
+    loading: true,
+    isFavorited: false, // 是否已收藏
+    favoriteId: null    // 收藏ID
   },
 
   onLoad(options) {
     if (options.id) {
       this.setData({ productId: options.id })
       this.loadProductDetail()
+      this.checkFavoriteStatus() // 检查收藏状态
     } else {
       wx.showToast({
         title: '商品不存在',
@@ -174,6 +177,81 @@ Page({
     wx.switchTab({
       url: '/pages/cart/cart'
     })
+  },
+
+  /**
+   * 检查收藏状态
+   */
+  async checkFavoriteStatus() {
+    const app = getApp();
+    if (!app.globalData.token) {
+      return;
+    }
+
+    try {
+      const { request } = require('../../utils/request');
+      const res = await request(`/favorites/check/${this.data.productId}`, 'GET', {}, true);
+
+      this.setData({
+        isFavorited: res.is_favorited || false,
+        favoriteId: res.favorite_id || null
+      });
+    } catch (error) {
+      console.error('检查收藏状态失败:', error);
+    }
+  },
+
+  /**
+   * 收藏/取消收藏
+   */
+  async handleFavorite() {
+    const app = getApp();
+    if (!app.globalData.token) {
+      wx.showToast({
+        title: '请先登录',
+        icon: 'none'
+      });
+      return;
+    }
+
+    try {
+      const { request } = require('../../utils/request');
+      
+      if (this.data.isFavorited) {
+        // 取消收藏
+        await request(`/favorites/product/${this.data.productId}`, 'DELETE', {}, true);
+
+        this.setData({
+          isFavorited: false,
+          favoriteId: null
+        });
+        wx.showToast({
+          title: '取消收藏',
+          icon: 'success'
+        });
+      } else {
+        // 添加收藏
+        await request('/favorites', 'POST', {
+          product_id: this.data.productId
+        }, true);
+
+        this.setData({
+          isFavorited: true
+        });
+        wx.showToast({
+          title: '收藏成功',
+          icon: 'success'
+        });
+        // 重新检查收藏状态获取ID
+        this.checkFavoriteStatus();
+      }
+    } catch (error) {
+      console.error('收藏操作失败:', error);
+      wx.showToast({
+        title: error.message || '操作失败',
+        icon: 'none'
+      });
+    }
   },
 
   /**

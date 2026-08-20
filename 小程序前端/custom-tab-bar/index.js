@@ -34,6 +34,18 @@ Component({
     attached() {
       // 组件加载时获取购物车数量
       this.updateCartCount();
+    },
+    
+    // 页面显示时也更新
+    show() {
+      this.updateCartCount();
+    }
+  },
+
+  pageLifetimes: {
+    // 监听页面显示
+    show() {
+      this.updateCartCount();
     }
   },
 

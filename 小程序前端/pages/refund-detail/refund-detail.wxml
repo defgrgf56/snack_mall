@@ -1,0 +1,106 @@
+<!--pages/refund-detail/refund-detail.wxml-->
+<view class="refund-detail-page">
+  <!-- 退款状态 -->
+  <view class="status-section">
+    <view class="status-icon status-{{refund.status}}">
+      <text class="icon">{{statusIcons[refund.status]}}</text>
+    </view>
+    <text class="status-text">{{refund.status_text}}</text>
+    <text class="status-desc" wx:if="{{statusDescs[refund.status]}}">
+      {{statusDescs[refund.status]}}
+    </text>
+    <!-- 拒绝原因 -->
+    <view class="reject-reason" wx:if="{{refund.status === 2 && refund.reject_reason}}">
+      <text class="reason-label">拒绝原因：</text>
+      <text class="reason-text">{{refund.reject_reason}}</text>
+    </view>
+  </view>
+
+  <!-- 退款信息 -->
+  <view class="info-section">
+    <view class="section-title">退款信息</view>
+    <view class="info-list">
+      <view class="info-item">
+        <text class="label">退款单号</text>
+        <text class="value">{{refund.refund_no}}</text>
+      </view>
+      <view class="info-item">
+        <text class="label">退款类型</text>
+        <text class="value">{{refund.refund_type_text}}</text>
+      </view>
+      <view class="info-item">
+        <text class="label">退款原因</text>
+        <text class="value">{{refund.refund_reason}}</text>
+      </view>
+      <view class="info-item">
+        <text class="label">退款金额</text>
+        <text class="value amount">¥{{refund.refund_amount}}</text>
+      </view>
+      <view class="info-item" wx:if="{{refund.refund_desc}}">
+        <text class="label">退款说明</text>
+        <text class="value">{{refund.refund_desc}}</text>
+      </view>
+      <view class="info-item" wx:if="{{refund.refund_images && refund.refund_images.length > 0}}">
+        <text class="label">退款凭证</text>
+        <view class="image-list">
+          <image 
+            class="image" 
+            wx:for="{{refund.refund_images}}" 
+            wx:key="index"
+            src="{{item}}" 
+            mode="aspectFill"
+            bindtap="previewImage"
+            data-url="{{item}}"
+          ></image>
+        </view>
+      </view>
+      <view class="info-item">
+        <text class="label">申请时间</text>
+        <text class="value">{{refund.created_at}}</text>
+      </view>
+      <view class="info-item" wx:if="{{refund.refund_time}}">
+        <text class="label">退款完成时间</text>
+        <text class="value">{{refund.refund_time}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 订单信息 -->
+  <view class="order-section" wx:if="{{refund.order}}">
+    <view class="section-title">订单信息</view>
+    <view class="order-no">订单号: {{refund.order.order_no}}</view>
+    <view class="product-list">
+      <view class="product-item" wx:for="{{refund.order.items}}" wx:key="id">
+        <image class="product-image" src="{{item.product_cover}}" mode="aspectFill"></image>
+        <view class="product-info">
+          <text class="product-name">{{item.product_name}}</text>
+          <view class="product-bottom">
+            <text class="product-price">¥{{item.price}}</text>
+            <text class="product-quantity">x{{item.quantity}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 退款进度 -->
+  <view class="progress-section" wx:if="{{refund.logs && refund.logs.length > 0}}">
+    <view class="section-title">退款进度</view>
+    <view class="timeline">
+      <view class="timeline-item" wx:for="{{refund.logs}}" wx:key="id">
+        <view class="timeline-dot"></view>
+        <view class="timeline-content">
+          <text class="timeline-status">{{statusTexts[item.status]}}</text>
+          <text class="timeline-remark" wx:if="{{item.remark}}">{{item.remark}}</text>
+          <text class="timeline-time">{{item.created_at}}</text>
+          <text class="timeline-operator" wx:if="{{item.operator}}">操作人: {{item.operator}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-section" wx:if="{{refund.status === 0}}">
+    <button class="action-btn cancel-btn" bindtap="cancelRefund">取消申请</button>
+  </view>
+</view>

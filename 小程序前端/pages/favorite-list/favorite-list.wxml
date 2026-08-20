@@ -1,0 +1,95 @@
+<!--pages/favorite-list/favorite-list.wxml-->
+<view class="favorite-page">
+  <!-- 统计信息 -->
+  <view class="stats-bar" wx:if="{{!loading}}">
+    <text class="stats-text">共收藏 {{favoriteList.length}} 件商品</text>
+    <text class="edit-btn" bindtap="toggleEditMode">{{isEditMode ? '完成' : '管理'}}</text>
+  </view>
+
+  <!-- 收藏列表 -->
+  <view class="favorite-list">
+    <view 
+      class="favorite-item"
+      wx:for="{{favoriteList}}"
+      wx:key="id"
+    >
+      <!-- 选择框 (编辑模式) -->
+      <view class="item-checkbox" wx:if="{{isEditMode}}">
+        <checkbox-group bindchange="onSelectItem" data-id="{{item.id}}">
+          <checkbox value="{{item.id}}" checked="{{selectedIds.indexOf(item.id) > -1}}" color="#ff6b00" />
+        </checkbox-group>
+      </view>
+
+      <!-- 商品信息 -->
+      <view class="item-content" bindtap="goProductDetail" data-id="{{item.product.id}}">
+        <image class="product-image" src="{{item.product.cover}}" mode="aspectFill" lazy-load></image>
+        <view class="product-info">
+          <text class="product-name">{{item.product.name}}</text>
+          <text class="product-sales">已售{{item.product.sales || 0}}</text>
+          <view class="product-stock" wx:if="{{item.product.stock <= 10}}">
+            <text class="stock-warning">仅剩{{item.product.stock}}件</text>
+          </view>
+          <view class="product-footer">
+            <view class="price-box">
+              <text class="price-symbol">¥</text>
+              <text class="price-current">{{item.product.price}}</text>
+              <text class="price-original" wx:if="{{item.product.original_price}}">¥{{item.product.original_price}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 操作按钮 (非编辑模式) -->
+      <view class="item-actions" wx:if="{{!isEditMode}}">
+        <view class="btn-add-cart" bindtap="addToCart" data-id="{{item.product.id}}">
+          <text class="cart-icon">🛒</text>
+        </view>
+      </view>
+
+      <!-- 删除按钮 (编辑模式) -->
+      <view class="item-delete" wx:if="{{isEditMode}}" bindtap="deleteFavorite" data-id="{{item.id}}">
+        <view class="delete-icon">
+          <view class="delete-icon-lid"></view>
+          <view class="delete-icon-body"></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty" wx:if="{{!loading && favoriteList.length === 0}}">
+      <text class="empty-icon">💔</text>
+      <text class="empty-text">暂无收藏商品</text>
+      <button class="empty-btn" bindtap="goShopping">去逛逛</button>
+    </view>
+
+    <!-- 加载中 -->
+    <view class="loading" wx:if="{{loading}}">
+      <text>加载中...</text>
+    </view>
+
+    <!-- 没有更多 -->
+    <view class="no-more" wx:if="{{!loading && favoriteList.length > 0 && !hasMore}}">
+      <text>— 已经到底了 —</text>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 (编辑模式) -->
+  <view class="bottom-bar" wx:if="{{isEditMode && favoriteList.length > 0}}">
+    <view class="bar-left">
+      <checkbox-group bindchange="onSelectAll">
+        <label class="select-all-label">
+          <checkbox value="all" checked="{{isAllSelected}}" color="#ff6b00" />
+          <text>全选</text>
+        </label>
+      </checkbox-group>
+    </view>
+    <view class="bar-right">
+      <button class="btn-batch-cart" bindtap="batchAddToCart" disabled="{{selectedIds.length === 0}}">
+        加入购物车({{selectedIds.length}})
+      </button>
+      <button class="btn-batch-delete" bindtap="batchDelete" disabled="{{selectedIds.length === 0}}">
+        删除({{selectedIds.length}})
+      </button>
+    </view>
+  </view>
+</view>
