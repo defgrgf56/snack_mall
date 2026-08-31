@@ -17,6 +17,8 @@ module.exports = {
       timestamps: false,  // 禁用时间戳（数据表没有created_at等字段）
       underscored: true,
       paranoid: false,    // 禁用软删除
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci'
     },
     pool: {
       max: 10,
@@ -43,6 +45,8 @@ module.exports = {
       timestamps: false,
       underscored: true,
       paranoid: false,
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci'
     },
     pool: {
       max: 20,

@@ -1,8 +1,12 @@
-// pages/user/user.js
-const { api } = require('../../config/api.js')
-const { quickLogin, logout } = require('../../utils/auth.js')
+// pages/user/user.js - 重构后的用户中心页面
+const createPageMixin = require('../../mixins/page-mixin')
+const { ORDER_STATUS } = require('../../constants/index')
+const errorHandler = require('../../utils/error-handler')
+const { IS_DEV } = require('../../config/env')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     userInfo: null,
     orderStats: {
@@ -11,78 +15,70 @@ Page({
       shipped: 0,
       completed: 0
     },
-    unreadCount: 0, // 未读消息数量
+    unreadCount: 0,
     safeAreaBottom: 0,
-    tabBarHeight: 50
+    tabBarHeight: 80
   },
 
   onLoad() {
-    this.setSafeArea();
+    this.setSafeArea()
+  },
+
+  onShow() {
+    this.loadUserData()
+
+    // 设置 TabBar 选中状态和购物车数量
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ 
+        selected: 3,
+        cartCount: app.store.getState('cartCount') || 0
+      })
+    }
   },
 
   /**
    * 设置安全区域
    */
   setSafeArea() {
-    const systemInfo = wx.getSystemInfoSync();
-    const safeAreaBottom = systemInfo.safeArea ? 
-      systemInfo.screenHeight - systemInfo.safeArea.bottom : 0;
-    
-    this.setData({
-      safeAreaBottom: safeAreaBottom,
-      tabBarHeight: 80 // TabBar高度约80px（增加到80）
-    });
-  },
+    const systemInfo = app.store.getState('systemInfo')
+    const safeAreaBottom = systemInfo.safeArea
+      ? systemInfo.screenHeight - systemInfo.safeArea.bottom
+      : 0
 
-  onShow() {
-    this.loadUserData()
-    
-    // 更新购物车数量
-    const app = getApp()
-    if (app.updateCartCount) {
-      app.updateCartCount()
-    }
-    
-    // 设置TabBar选中状态
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({
-        selected: 3
-      })
-    }
+    this.setData({
+      safeAreaBottom,
+      tabBarHeight: 80
+    })
   },
 
   /**
    * 加载用户数据
    */
   async loadUserData() {
-    const app = getApp()
-    
-    if (!app.globalData.token) {
+    if (!app.store.isLoggedIn()) {
       this.setData({
-        userInfo: null
+        userInfo: null,
+        orderStats: { pending: 0, paid: 0, shipped: 0, completed: 0 }
       })
       return
     }
-    
+
     try {
-      // 加载用户信息
-      const userRes = await api.getUserInfo()
-      const statsRes = await api.getOrderStats()
+      // 并行加载用户信息和订单统计
+      const [userInfo, orderStats] = await Promise.all([
+        app.api.user.getUserInfo(),
+        app.api.user.getOrderStats()
+      ])
 
       this.setData({
-        userInfo: userRes.data,
-        orderStats: statsRes.data || {
-          pending: 0,
-          paid: 0,
-          shipped: 0,
-          completed: 0
-        }
+        userInfo,
+        orderStats: orderStats || { pending: 0, paid: 0, shipped: 0, completed: 0 }
       })
-      
+
       // 加载未读消息数量
       this.loadUnreadCount()
     } catch (error) {
-      console.error('加载用户数据失败:', error)
+      // 错误已统一处理
     }
   },
 
@@ -91,82 +87,65 @@ Page({
    */
   async loadUnreadCount() {
     try {
-      const { request } = require('../../utils/request')
-      const res = await request({
-        url: '/notifications/unread-count',
-        method: 'GET'
-      })
-      
-      if (res.code === 200) {
-        this.setData({
-          unreadCount: res.data.count
-        })
-      }
+      // TODO: 调用未读消息接口
+      // const result = await app.api.xxx.getUnreadCount()
+      // this.setData({ unreadCount: result.count })
     } catch (error) {
-      console.error('加载未读消息数量失败:', error)
+      // 静默失败
     }
   },
 
   /**
-   * 登录 - 自动根据环境选择登录方式
+   * 登录
    */
   async onLogin() {
     try {
-      // 获取运行环境
-      const accountInfo = wx.getAccountInfoSync()
-      const envVersion = accountInfo.miniProgram.envVersion
-      
-      // develop: 开发版, trial: 体验版, release: 正式版
-      const isDev = envVersion === 'develop'
-      
       let userInfo
-      if (isDev) {
+
+      if (IS_DEV) {
         // 开发环境使用快速登录
-        console.log('使用开发登录')
-        userInfo = await quickLogin()
+        const result = await app.devLogin()
+        userInfo = result
       } else {
         // 生产环境使用微信登录
-        console.log('使用微信登录')
-        const { wxLogin } = require('../../utils/auth.js')
-        userInfo = await wxLogin()
+        userInfo = await app.login()
       }
-      
+
       // 刷新页面数据
       this.loadUserData()
     } catch (error) {
-      console.error('登录失败:', error)
+      // 错误已统一处理
     }
   },
 
   /**
    * 退出登录
    */
-  onLogout() {
-    logout()
-    
+  async onLogout() {
+    const confirmed = await errorHandler.confirm({
+      content: '确定要退出登录吗？'
+    })
+
+    if (!confirmed) return
+
+    app.logout()
+
     // 清空页面数据
     this.setData({
       userInfo: null,
-      orderStats: {
-        pending: 0,
-        paid: 0,
-        shipped: 0,
-        completed: 0
-      }
+      orderStats: { pending: 0, paid: 0, shipped: 0, completed: 0 }
     })
+
+    errorHandler.showSuccess('已退出登录')
   },
 
   /**
    * 查看订单列表
    */
   onViewOrders(e) {
+    if (!this.checkLogin()) return
+
     const { status } = e.currentTarget.dataset
-    
-    if (!this.data.userInfo) {
-      this.onLogin()
-      return
-    }
-    
     wx.navigateTo({
       url: `/pages/order-list/order-list?status=${status}`
     })
@@ -176,11 +155,8 @@ Page({
    * 查看全部订单
    */
   onViewAllOrders() {
-    if (!this.data.userInfo) {
-      this.onLogin()
-      return
-    }
-    
+    if (!this.checkLogin()) return
+
     wx.navigateTo({
       url: '/pages/order-list/order-list'
     })
@@ -190,16 +166,25 @@ Page({
    * 页面导航
    */
   onNavigate(e) {
-    const { url } = e.currentTarget.dataset
-    
-    if (!this.data.userInfo && url !== '/pages/test-api/test-api') {
-      this.onLogin()
+    const { url, requireLogin } = e.currentTarget.dataset
+
+    // 某些页面不需要登录
+    if (requireLogin !== false && !this.checkLogin()) {
       return
     }
-    
-    wx.navigateTo({
-      url
-    })
+
+    wx.navigateTo({ url })
+  },
+
+  /**
+   * 检查登录状态
+   */
+  checkLogin() {
+    if (!app.store.isLoggedIn()) {
+      this.onLogin()
+      return false
+    }
+    return true
   },
 
   /**
@@ -212,14 +197,5 @@ Page({
       showCancel: false,
       confirmText: '我知道了'
     })
-  },
-
-  /**
-   * 下拉刷新
-   */
-  onPullDownRefresh() {
-    this.loadUserData().then(() => {
-      wx.stopPullDownRefresh()
-    })
   }
-})
+}))

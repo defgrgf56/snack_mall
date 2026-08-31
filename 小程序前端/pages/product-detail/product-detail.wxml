@@ -13,9 +13,10 @@
       <view class="product-price-row">
         <view class="product-price">
           <text class="price-symbol">¥</text>
-          <text class="price-value">{{product.price}}</text>
-          <text class="price-original" wx:if="{{product.original_price}}">¥{{product.original_price}}</text>
+          <text class="price-value">{{product.actual_price || product.price}}</text>
         </view>
+        <!-- 原价划线（仅活动商品显示） -->
+        <text class="price-original" wx:if="{{product.actual_price && product.actual_price < product.price}}">¥{{product.price}}</text>
         <view class="product-sales">已售{{product.sales || 0}}</view>
       </view>
       

@@ -32,8 +32,8 @@
           <view class="product-footer">
             <view class="price-box">
               <text class="price-symbol">¥</text>
-              <text class="price-current">{{item.product.price}}</text>
-              <text class="price-original" wx:if="{{item.product.original_price}}">¥{{item.product.original_price}}</text>
+              <text class="price-current">{{item.product.actual_price || item.product.price}}</text>
+              <text class="price-original" wx:if="{{item.product.has_activity && item.product.price}}">¥{{item.product.price}}</text>
             </view>
           </view>
         </view>

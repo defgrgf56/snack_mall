@@ -86,6 +86,15 @@ async function startServer() {
       logger.info(`API前缀: ${process.env.API_PREFIX || '/api'}`)
       logger.info(`环境: ${process.env.NODE_ENV || 'development'}`)
       logger.info('💡 提示: 当前可以测试API接口，部分功能需要数据库支持')
+      
+      // 启动订单超时取消定时任务
+      try {
+        const { startSchedule } = require('./tasks/cancel-unpaid-orders')
+        startSchedule()
+        logger.info('✅ 订单超时取消任务已启动')
+      } catch (taskError) {
+        logger.warn('⚠️ 订单超时取消任务启动失败:', taskError.message)
+      }
     })
   } catch (error) {
     logger.error('服务器启动失败:', error)

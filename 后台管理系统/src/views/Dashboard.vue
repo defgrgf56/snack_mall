@@ -106,16 +106,35 @@
       </el-col>
     </el-row>
 
-    <!-- 图表区域（预留） -->
+    <!-- 最近订单 -->
     <el-row style="margin-top: 20px;">
       <el-col :span="24">
         <el-card>
           <template #header>
             <div class="card-header">
-              <span>销售趋势</span>
+              <span>最近订单</span>
+              <el-button type="primary" link @click="$router.push('/orders')">
+                查看全部
+              </el-button>
             </div>
           </template>
-          <div ref="chartRef" style="height: 300px;"></div>
+          <el-table :data="recentOrders" style="width: 100%">
+            <el-table-column prop="order_no" label="订单号" width="180" />
+            <el-table-column prop="user.nickname" label="用户" width="120" />
+            <el-table-column prop="total_amount" label="订单金额" width="120">
+              <template #default="{ row }">
+                ¥{{ row.total_amount }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="status" label="订单状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getStatusType(row.status)">
+                  {{ getStatusText(row.status) }}
+                </el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="created_at" label="下单时间" />
+          </el-table>
         </el-card>
       </el-col>
     </el-row>
@@ -139,13 +158,17 @@ const stats = reactive({
   }
 })
 
-const chartRef = ref()
+const recentOrders = ref([])
 
 const fetchStats = async () => {
   try {
-    // 获取统计数据（需要后端接口支持）
-    const res = await request.get('/admin/stats')
-    Object.assign(stats, res)
+    const res = await request.get('/admin/statistics')
+    if (res.code === 200) {
+      stats.totalSales = res.data.totalSales || 0
+      stats.orderCount = res.data.totalOrders || 0
+      stats.userCount = res.data.totalUsers || 0
+      stats.productCount = res.data.totalProducts || 0
+    }
   } catch (error) {
     console.error('获取统计数据失败:', error)
     // 使用模拟数据
@@ -162,21 +185,55 @@ const fetchStats = async () => {
   }
 }
 
+const fetchRecentOrders = async () => {
+  try {
+    // 使用管理员订单列表API获取最近的订单
+    const res = await request.get('/admin/orders', {
+      params: { page: 1, pageSize: 5 }
+    })
+    recentOrders.value = res.list || []
+  } catch (error) {
+    console.error('获取最近订单失败:', error)
+    // 模拟数据
+    recentOrders.value = []
+  }
+}
+
+const getStatusType = (status) => {
+  const map = {
+    pending: 'warning',
+    paid: 'success',
+    shipped: 'primary',
+    completed: 'info',
+    cancelled: 'danger'
+  }
+  return map[status] || 'info'
+}
+
+const getStatusText = (status) => {
+  const map = {
+    pending: '待付款',
+    paid: '待发货',
+    shipped: '已发货',
+    completed: '已完成',
+    cancelled: '已取消'
+  }
+  return map[status] || status
+}
+
 onMounted(() => {
   fetchStats()
+  fetchRecentOrders()
 })
 </script>
 
 <style scoped lang="scss">
 .dashboard-container {
   .stat-card {
-    display: flex;
-    align-items: center;
-
     :deep(.el-card__body) {
       display: flex;
       align-items: center;
-      width: 100%;
+      padding: 20px;
     }
 
     .stat-icon {
@@ -188,6 +245,7 @@ onMounted(() => {
       justify-content: center;
       color: #fff;
       margin-right: 20px;
+      flex-shrink: 0;
     }
 
     .stat-content {

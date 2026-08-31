@@ -77,7 +77,7 @@ const handleLogin = async () => {
     const response = await request.post('/admin/login', loginForm)
     
     userStore.setToken(response.token)
-    userStore.setUserInfo(response.adminInfo)
+    userStore.setUserInfo(response.userInfo)
     
     ElMessage.success('登录成功')
     router.push('/')

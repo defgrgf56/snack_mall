@@ -1,7 +1,11 @@
-// pages/order-detail/order-detail.js
-const api = require('../../utils/request');
+// pages/order-detail/order-detail.js - 重构后的订单详情页面
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
+const { ORDER_STATUS } = require('../../constants/index')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     orderId: null,
     order: null
@@ -9,180 +13,156 @@ Page({
 
   onLoad(options) {
     if (options.id) {
-      this.setData({
-        orderId: options.id
-      });
-      this.loadOrderDetail(options.id);
+      this.setData({ orderId: options.id })
+      this.loadOrderDetail(options.id)
     }
   },
 
-  onPullDownRefresh() {
-    this.loadOrderDetail(this.data.orderId).then(() => {
-      wx.stopPullDownRefresh();
-    });
+  onShow() {
+    // 每次显示时刷新订单详情
+    if (this.data.orderId) {
+      this.loadOrderDetail(this.data.orderId)
+    }
   },
 
-  // 加载订单详情
+  /**
+   * 加载订单详情
+   */
   async loadOrderDetail(id) {
     try {
-      wx.showLoading({ title: '加载中...' });
-      
-      const res = await api.get(`/orders/${id}`, {}, false);
-      const order = res
-      
-      // 处理订单状态
-      order.status_text = this.getStatusText(order.status);
-      order.status_class = this.getStatusClass(order.status);
-      order.item_count = order.items.reduce((sum, item) => sum + item.quantity, 0);
-      
-      // 字段映射：后端字段 -> 前端显示字段
-      order.product_amount = order.total_amount;  // 商品总价
-      order.delivery_fee = order.freight_amount;  // 配送费
-      order.coupon_discount = order.discount_amount; // 优惠金额
-      order.total_amount = order.pay_amount;      // 实付款
-      
-      console.log('订单详情加载成功:', {
-        product_amount: order.product_amount,
-        delivery_fee: order.delivery_fee,
-        coupon_discount: order.coupon_discount,
-        total_amount: order.total_amount
-      });
-      
-      this.setData({
-        order
-      });
+      const order = await this.loadData(
+        () => app.api.order.getOrderDetail(id),
+        { showLoading: true }
+      )
+
+      // 处理订单数据
+      order.status_text = this.getStatusText(order.status)
+      order.status_class = this.getStatusClass(order.status)
+      order.item_count = order.items.reduce((sum, item) => sum + item.quantity, 0)
+
+      // 字段映射：后端 -> 前端
+      order.product_amount = order.total_amount
+      order.delivery_fee = order.freight_amount || 0
+      order.coupon_discount = order.discount_amount || 0
+      order.total_amount = order.pay_amount
+
+      this.setData({ order })
     } catch (error) {
-      console.error('加载订单详情失败:', error);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
-    } finally {
-      wx.hideLoading();
+      // 错误已统一处理
     }
   },
 
-  // 复制订单号
+  /**
+   * 复制订单号
+   */
   onCopyOrderNo() {
     wx.setClipboardData({
       data: this.data.order.order_no,
       success: () => {
-        wx.showToast({
-          title: '已复制',
-          icon: 'success'
-        });
+        errorHandler.showSuccess('已复制')
       }
-    });
+    })
   },
 
-  // 联系客服
+  /**
+   * 联系客服
+   */
   onContact() {
-    wx.showModal({
+    errorHandler.showModal({
       title: '联系客服',
       content: '客服电话：400-123-4567',
       showCancel: false
-    });
+    })
   },
 
-  // 取消订单
-  onCancelOrder() {
-    wx.showModal({
-      title: '提示',
-      content: '确定取消这个订单吗？',
-      success: async (res) => {
-        if (res.confirm) {
-          try {
-            await api.put(`/orders/${this.data.orderId}/cancel`, {}, false);
-            wx.showToast({
-              title: '已取消',
-              icon: 'success'
-            });
-            this.loadOrderDetail(this.data.orderId);
-          } catch (error) {
-            wx.showToast({
-              title: '取消失败',
-              icon: 'none'
-            });
-          }
-        }
-      }
-    });
+  /**
+   * 取消订单
+   */
+  async onCancelOrder() {
+    const confirmed = await errorHandler.confirm({
+      content: '确定取消这个订单吗？'
+    })
+
+    if (!confirmed) return
+
+    try {
+      await app.api.order.cancelOrder(this.data.orderId)
+      errorHandler.showSuccess('已取消')
+      this.loadOrderDetail(this.data.orderId)
+    } catch (error) {
+      // 错误已统一处理
+    }
   },
 
-  // 去支付
+  /**
+   * 去支付
+   */
   onPayOrder() {
-    wx.showToast({
-      title: '支付功能开发中',
-      icon: 'none'
-    });
+    // TODO: 接入支付功能
+    errorHandler.showToast('支付功能开发中')
   },
 
-  // 查看物流
+  /**
+   * 查看物流
+   */
   onViewLogistics() {
-    wx.showToast({
-      title: '物流功能开发中',
-      icon: 'none'
-    });
+    // TODO: 接入物流查询
+    errorHandler.showToast('物流功能开发中')
   },
 
-  // 申请退款
+  /**
+   * 申请退款
+   */
   onApplyRefund() {
     wx.navigateTo({
       url: `/pages/refund-apply/refund-apply?orderId=${this.data.orderId}`
-    });
+    })
   },
 
-  // 确认收货
-  onConfirmReceive() {
-    wx.showModal({
-      title: '提示',
-      content: '确认已收到货物吗？',
-      success: async (res) => {
-        if (res.confirm) {
-          try {
-            await api.put(`/orders/${this.data.orderId}/receive`, {}, false);
-            wx.showToast({
-              title: '确认成功',
-              icon: 'success'
-            });
-            this.loadOrderDetail(this.data.orderId);
-          } catch (error) {
-            wx.showToast({
-              title: '操作失败',
-              icon: 'none'
-            });
-          }
-        }
-      }
-    });
+  /**
+   * 确认收货
+   */
+  async onConfirmReceive() {
+    const confirmed = await errorHandler.confirm({
+      content: '确认已收到货物吗？'
+    })
+
+    if (!confirmed) return
+
+    try {
+      await app.api.order.confirmReceive(this.data.orderId)
+      errorHandler.showSuccess('确认成功')
+      this.loadOrderDetail(this.data.orderId)
+    } catch (error) {
+      // 错误已统一处理
+    }
   },
 
-  // 去评价
+  /**
+   * 去评价
+   */
   onComment() {
     const order = this.data.order
-    
+
     // 检查是否有未评价的商品
     const unReviewedItems = order.items.filter(item => !item.is_reviewed)
-    
+
     if (unReviewedItems.length === 0) {
-      wx.showToast({
-        title: '所有商品已评价',
-        icon: 'none'
-      })
+      errorHandler.showToast('所有商品已评价')
       return
     }
-    
-    // 如果只有一个未评价商品，直接跳转评价页面
+
+    // 只有一个未评价商品，直接跳转
     if (unReviewedItems.length === 1) {
       wx.navigateTo({
         url: `/pages/review-submit/review-submit?orderItemId=${unReviewedItems[0].id}`
       })
       return
     }
-    
-    // 如果有多个未评价商品，显示选择列表
+
+    // 多个未评价商品，显示选择列表
     const itemNames = unReviewedItems.map(item => item.product_name || item.product.name)
-    
+
     wx.showActionSheet({
       itemList: itemNames,
       success: (res) => {
@@ -194,21 +174,23 @@ Page({
     })
   },
 
-  // 查看评价
+  /**
+   * 查看评价
+   */
   onViewReviews() {
     const order = this.data.order
-    
-    // 如果只有一个商品，直接跳转到该商品的评价列表
+
+    // 只有一个商品，直接跳转
     if (order.items.length === 1) {
       wx.navigateTo({
         url: `/pages/review-list/review-list?productId=${order.items[0].product_id}`
       })
       return
     }
-    
-    // 如果有多个商品，显示选择列表
+
+    // 多个商品，显示选择列表
     const itemNames = order.items.map(item => item.product_name || item.product.name)
-    
+
     wx.showActionSheet({
       itemList: itemNames,
       success: (res) => {
@@ -220,69 +202,55 @@ Page({
     })
   },
 
-  // 删除订单
-  onDeleteOrder() {
-    wx.showModal({
-      title: '提示',
-      content: '确定删除这个订单吗？',
-      success: async (res) => {
-        if (res.confirm) {
-          try {
-            await api.del(`/orders/${this.data.orderId}`, {}, false);
-            wx.showToast({
-              title: '删除成功',
-              icon: 'success'
-            });
-            setTimeout(() => {
-              wx.navigateBack();
-            }, 1500);
-          } catch (error) {
-            wx.showToast({
-              title: '删除失败',
-              icon: 'none'
-            });
-          }
-        }
-      }
-    });
+  /**
+   * 删除订单
+   */
+  async onDeleteOrder() {
+    const confirmed = await errorHandler.confirm({
+      content: '确定删除这个订单吗？'
+    })
+
+    if (!confirmed) return
+
+    try {
+      await app.api.order.deleteOrder(this.data.orderId)
+      errorHandler.showSuccess('删除成功')
+
+      this.$setTimeout(() => {
+        wx.navigateBack()
+      }, 1500)
+    } catch (error) {
+      // 错误已统一处理
+    }
   },
 
-  // 获取状态文本
+  /**
+   * 获取状态文本
+   */
   getStatusText(status) {
     const statusMap = {
-      1: '待付款',
-      2: '待发货',
-      3: '待收货',
-      4: '已完成',
-      5: '已取消',
-      6: '已退款'
-    };
-    return statusMap[status] || '未知';
+      [ORDER_STATUS.PENDING_PAYMENT]: '待付款',
+      [ORDER_STATUS.PENDING_DELIVERY]: '待发货',
+      [ORDER_STATUS.PENDING_RECEIVE]: '待收货',
+      [ORDER_STATUS.COMPLETED]: '已完成',
+      [ORDER_STATUS.CANCELLED]: '已取消',
+      [ORDER_STATUS.REFUNDED]: '已退款'
+    }
+    return statusMap[status] || '未知'
   },
 
-  // 获取状态样式
+  /**
+   * 获取状态样式类名
+   */
   getStatusClass(status) {
     const classMap = {
-      1: 'pending',
-      2: 'paid',
-      3: 'shipped',
-      4: 'completed',
-      5: 'cancelled',
-      6: 'refunded'
-    };
-    return classMap[status] || '';
-  },
-
-  // 获取订单状态文字
-  getStatusText(status) {
-    const statusMap = {
-      1: '待付款',
-      2: '待发货',
-      3: '待收货',
-      4: '已完成',
-      5: '已取消',
-      6: '已退款'
-    };
-    return statusMap[status] || '未知';
+      [ORDER_STATUS.PENDING_PAYMENT]: 'pending',
+      [ORDER_STATUS.PENDING_DELIVERY]: 'paid',
+      [ORDER_STATUS.PENDING_RECEIVE]: 'shipped',
+      [ORDER_STATUS.COMPLETED]: 'completed',
+      [ORDER_STATUS.CANCELLED]: 'cancelled',
+      [ORDER_STATUS.REFUNDED]: 'refunded'
+    }
+    return classMap[status] || ''
   }
-});
+}))

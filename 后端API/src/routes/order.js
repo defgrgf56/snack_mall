@@ -138,6 +138,7 @@ router.post('/', authenticateToken, async (req, res) => {
     
     if (coupon_id) {
       // 查询用户优惠券
+      const { UserCoupon, Coupon } = require('../models');
       const userCoupon = await UserCoupon.findOne({
         where: {
           id: coupon_id,
@@ -182,10 +183,10 @@ router.post('/', authenticateToken, async (req, res) => {
       }
       
       // 计算折扣金额
-      if (coupon.discount_type === 'amount') {
+      if (coupon.discount_type === 1) {
         // 固定金额折扣
         couponDiscount = parseFloat(coupon.discount_value);
-      } else if (coupon.discount_type === 'percent') {
+      } else if (coupon.discount_type === 2) {
         // 百分比折扣（如8.5折）
         const discountRate = parseFloat(coupon.discount_value) / 10;
         couponDiscount = productAmount * (1 - discountRate);

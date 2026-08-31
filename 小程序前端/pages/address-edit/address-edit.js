@@ -1,7 +1,10 @@
-// pages/address-edit/address-edit.js
-const api = require('../../utils/request');
+// pages/address-edit/address-edit.js - 重构后的地址编辑页面
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     addressId: null,
     formData: {
@@ -18,139 +21,158 @@ Page({
 
   onLoad(options) {
     if (options.id) {
-      this.setData({
-        addressId: options.id
-      });
-      this.loadAddress(options.id);
+      this.setData({ addressId: options.id })
+      this.loadAddress(options.id)
     }
   },
 
-  // 加载地址详情
+  /**
+   * 加载地址详情
+   */
   async loadAddress(id) {
     try {
-      const res = await api.get(`/addresses/${id}`, {}, false);
-      const address = res
-      
+      const address = await this.loadData(
+        () => app.api.address.getAddressDetail(id),
+        { showLoading: true }
+      )
+
       this.setData({
         formData: {
-          consignee: address.consignee,
-          phone: address.phone,
-          province: address.province,
-          city: address.city,
-          district: address.district,
-          detail: address.detail || address.address,
+          consignee: address.consignee || '',
+          phone: address.phone || '',
+          province: address.province || '',
+          city: address.city || '',
+          district: address.district || '',
+          detail: address.detail || address.address || '',
           is_default: !!address.is_default
         },
-        regions: [address.province, address.city, address.district]
-      });
+        regions: [
+          address.province || '请选择',
+          address.city || '请选择',
+          address.district || '请选择'
+        ]
+      })
     } catch (error) {
-      console.error('加载地址失败:', error);
+      // 错误已统一处理
     }
   },
 
-  // 姓名输入
+  /**
+   * 收货人输入
+   */
   onConsigneeInput(e) {
     this.setData({
       'formData.consignee': e.detail.value
-    });
+    })
   },
 
-  // 手机号输入
+  /**
+   * 手机号输入
+   */
   onPhoneInput(e) {
+    // 确保手机号是字符串格式，并去除非数字字符
+    const phone = String(e.detail.value || '').replace(/\D/g, '')
     this.setData({
-      'formData.phone': e.detail.value
-    });
+      'formData.phone': phone
+    })
   },
 
-  // 地区选择
+  /**
+   * 地区选择
+   */
   onRegionChange(e) {
-    const regions = e.detail.value;
+    const regions = e.detail.value
     this.setData({
       regions,
       'formData.province': regions[0],
       'formData.city': regions[1],
       'formData.district': regions[2]
-    });
+    })
   },
 
-  // 详细地址输入
+  /**
+   * 详细地址输入
+   */
   onDetailInput(e) {
     this.setData({
       'formData.detail': e.detail.value
-    });
+    })
   },
 
-  // 设为默认
+  /**
+   * 设为默认切换
+   */
   onDefaultChange(e) {
     this.setData({
       'formData.is_default': e.detail.value
-    });
+    })
   },
 
-  // 保存地址
+  /**
+   * 表单验证
+   */
+  validateForm() {
+    const { formData } = this.data
+
+    if (!formData.consignee || !formData.consignee.trim()) {
+      throw new Error('请填写收货人姓名')
+    }
+
+    // 确保手机号是字符串格式
+    const phone = String(formData.phone || '')
+    console.log('[地址编辑] 验证手机号:', phone, '类型:', typeof phone)
+    
+    if (!/^1[3-9]\d{9}$/.test(phone)) {
+      throw new Error('请填写正确的手机号')
+    }
+
+    if (!formData.province || formData.province === '请选择' ||
+        !formData.city || formData.city === '请选择' ||
+        !formData.district || formData.district === '请选择') {
+      throw new Error('请选择省市区')
+    }
+
+    if (!formData.detail || !formData.detail.trim()) {
+      throw new Error('请填写详细地址')
+    }
+
+    return true
+  },
+
+  /**
+   * 保存地址
+   */
   async onSave() {
-    const { formData, addressId } = this.data;
-    
-    // 验证
-    if (!formData.consignee) {
-      wx.showToast({
-        title: '请填写收货人姓名',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    if (!/^1[3-9]\d{9}$/.test(formData.phone)) {
-      wx.showToast({
-        title: '请填写正确的手机号',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    if (!formData.province || !formData.city || !formData.district) {
-      wx.showToast({
-        title: '请选择省市区',
-        icon: 'none'
-      });
-      return;
-    }
-    
-    if (!formData.detail) {
-      wx.showToast({
-        title: '请填写详细地址',
-        icon: 'none'
-      });
-      return;
-    }
+    console.log('[地址编辑] 点击保存按钮')
     
     try {
-      wx.showLoading({ title: '保存中...' });
-      
+      // 验证表单
+      console.log('[地址编辑] 开始验证表单')
+      this.validateForm()
+      console.log('[地址编辑] 表单验证通过')
+
+      const { formData, addressId } = this.data
+      console.log('[地址编辑] 准备提交数据:', { formData, addressId })
+
+      // 提交数据
       if (addressId) {
-        // 更新地址
-        await api.put(`/addresses/${addressId}`, formData, false);
+        console.log('[地址编辑] 更新地址:', addressId)
+        const result = await app.api.address.updateAddress(addressId, formData)
+        console.log('[地址编辑] 更新成功:', result)
       } else {
-        // 新增地址
-        await api.post('/addresses', formData, false);
+        console.log('[地址编辑] 创建新地址')
+        const result = await app.api.address.createAddress(formData)
+        console.log('[地址编辑] 创建成功:', result)
       }
+
+      errorHandler.showSuccess('保存成功')
       
-      wx.showToast({
-        title: '保存成功',
-        icon: 'success'
-      });
-      
-      setTimeout(() => {
-        wx.navigateBack();
-      }, 1500);
+      this.$setTimeout(() => {
+        wx.navigateBack()
+      }, 1500)
     } catch (error) {
-      console.error('保存地址失败:', error);
-      wx.showToast({
-        title: '保存失败',
-        icon: 'none'
-      });
-    } finally {
-      wx.hideLoading();
+      console.error('[地址编辑] 保存失败:', error)
+      errorHandler.handle(error)
     }
   }
-});
+}))

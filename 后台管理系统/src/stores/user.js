@@ -4,7 +4,18 @@ import { ref } from 'vue'
 
 export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('admin_token') || '')
-  const userInfo = ref(JSON.parse(localStorage.getItem('admin_info') || '{}'))
+  
+  // 安全地解析用户信息
+  let savedUserInfo = {}
+  try {
+    const saved = localStorage.getItem('admin_info')
+    if (saved && saved !== 'undefined') {
+      savedUserInfo = JSON.parse(saved)
+    }
+  } catch (e) {
+    console.error('解析用户信息失败:', e)
+  }
+  const userInfo = ref(savedUserInfo)
 
   function setToken(newToken) {
     token.value = newToken

@@ -50,18 +50,18 @@
     </view>
 
     <!-- 空状态 -->
-    <view class="empty" wx:if="{{!loading && refundList.length === 0}}">
-      <image class="empty-image" src="/images/empty.png" mode="aspectFit"></image>
+    <view class="empty" wx:if="{{!_listLoading && refundList.length === 0}}">
+      <text class="empty-icon">📭</text>
       <text class="empty-text">暂无退款记录</text>
     </view>
 
     <!-- 加载中 -->
-    <view class="loading" wx:if="{{loading}}">
+    <view class="loading" wx:if="{{_listLoading}}">
       <text>加载中...</text>
     </view>
 
     <!-- 没有更多 -->
-    <view class="no-more" wx:if="{{!loading && refundList.length > 0 && !hasMore}}">
+    <view class="no-more" wx:if="{{!_listLoading && refundList.length > 0 && !_listHasMore}}">
       <text>没有更多了</text>
     </view>
   </view>

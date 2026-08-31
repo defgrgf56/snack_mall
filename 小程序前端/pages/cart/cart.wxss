@@ -126,10 +126,29 @@
   align-items: center;
 }
 
+.price-box {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
 .item-price {
   font-size: 32rpx;
   color: #ff6b00;
   font-weight: bold;
+}
+
+.item-price.activity {
+  font-size: 32rpx;
+  color: #ff6b00;
+  font-weight: bold;
+}
+
+.item-price.original {
+  font-size: 24rpx;
+  color: #999;
+  font-weight: normal;
+  text-decoration: line-through;
 }
 
 /* 数量控制 */

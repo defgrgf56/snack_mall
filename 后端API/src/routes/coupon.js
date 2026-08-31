@@ -35,12 +35,11 @@ router.get('/available', async (req, res) => {
 
 /**
  * 领取优惠券
- * POST /api/coupons/receive
- * Body: { coupon_id }
+ * POST /api/coupons/:id/receive
  */
-router.post('/receive', authenticateToken, async (req, res) => {
+router.post('/:id/receive', authenticateToken, async (req, res) => {
   try {
-    const { coupon_id } = req.body;
+    const coupon_id = parseInt(req.params.id);
     
     if (!coupon_id) {
       return res.json({
@@ -118,11 +117,11 @@ router.post('/receive', authenticateToken, async (req, res) => {
 /**
  * 获取我的优惠券列表
  * GET /api/coupons/my
- * Query: status (0:未使用 1:已使用 2:已过期)
+ * Query: status (0:未使用 1:已使用 2:已过期), order_amount (订单金额，用于筛选可用优惠券)
  */
 router.get('/my', authenticateToken, async (req, res) => {
   try {
-    const { status } = req.query;
+    const { status, order_amount } = req.query;
     const where = { user_id: req.userId };
     
     // 如果指定了状态，添加状态过滤
@@ -147,8 +146,29 @@ router.get('/my', authenticateToken, async (req, res) => {
     });
     
     // 格式化数据
+    const now = new Date();
+    const orderAmount = order_amount ? parseFloat(order_amount) : 0;
+    
     const formattedCoupons = userCoupons.map(uc => {
       const couponData = uc.coupon ? uc.coupon.toJSON() : null;
+      
+      // 如果提供了订单金额，标记是否可用
+      let canUse = true;
+      if (orderAmount > 0 && couponData) {
+        // 检查是否过期
+        if (new Date(uc.expire_time) < now) {
+          canUse = false;
+        }
+        // 检查金额是否满足
+        if (orderAmount < couponData.min_amount) {
+          canUse = false;
+        }
+        // 检查状态
+        if (uc.status !== 0) {
+          canUse = false;
+        }
+      }
+      
       return {
         id: uc.id,
         user_id: uc.user_id,
@@ -157,7 +177,8 @@ router.get('/my', authenticateToken, async (req, res) => {
         receive_time: uc.receive_time,
         use_time: uc.use_time,
         expire_time: uc.expire_time,
-        coupon: couponData
+        coupon: couponData,
+        can_use: canUse
       };
     });
     

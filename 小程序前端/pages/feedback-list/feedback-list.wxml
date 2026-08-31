@@ -1,0 +1,98 @@
+<!--pages/feedback-list/feedback-list.wxml-->
+<view class="feedback-list-page">
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{feedbackList.length === 0 && !_listLoading}}">
+    <text class="empty-icon">📭</text>
+    <text class="empty-text">还没有反馈记录</text>
+    <button class="empty-btn" bindtap="onNavigateToFeedback">去反馈</button>
+  </view>
+
+  <!-- 反馈列表 -->
+  <view class="feedback-list" wx:else>
+    <view 
+      class="feedback-item"
+      wx:for="{{feedbackList}}"
+      wx:key="id"
+      bindtap="onViewDetail"
+      data-id="{{item.id}}"
+    >
+      <view class="feedback-header">
+        <view class="type-tag">{{typeMap[item.type]}}</view>
+        <view class="status-tag" style="color: {{statusMap[item.status].color}}">
+          {{statusMap[item.status].text}}
+        </view>
+      </view>
+
+      <view class="feedback-content">{{item.content}}</view>
+
+      <view class="feedback-images" wx:if="{{item.images && item.images.length > 0}}">
+        <image 
+          class="feedback-image"
+          wx:for="{{item.images}}"
+          wx:for-item="img"
+          wx:key="index"
+          src="{{img}}"
+          mode="aspectFill"
+        />
+      </view>
+
+      <view class="feedback-reply" wx:if="{{item.reply}}">
+        <view class="reply-label">回复：</view>
+        <view class="reply-content">{{item.reply}}</view>
+      </view>
+
+      <view class="feedback-footer">
+        <text class="feedback-time">{{formatTime(item.created_at)}}</text>
+        <view class="feedback-actions">
+          <text 
+            class="action-delete" 
+            catchtap="onDelete" 
+            data-id="{{item.id}}"
+            data-index="{{index}}"
+          >
+            删除
+          </text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载状态 -->
+  <view class="loading-more" wx:if="{{_listLoading}}">
+    <text>加载中...</text>
+  </view>
+  <view class="no-more" wx:elif="{{!_listHasMore && feedbackList.length > 0}}">
+    <text>没有更多了</text>
+  </view>
+
+  <!-- 底部占位 -->
+  <view class="bottom-placeholder"></view>
+
+  <!-- 提交反馈按钮 -->
+  <view class="submit-bar">
+    <button class="submit-btn" bindtap="onNavigateToFeedback">
+      提交新反馈
+    </button>
+  </view>
+</view>
+
+<wxs module="methods">
+  var formatTime = function(dateStr) {
+    var date = getDate(dateStr)
+    var now = getDate()
+    var diff = now.getTime() - date.getTime()
+    
+    if (diff < 60000) return '刚刚'
+    if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
+    if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
+    if (diff < 604800000) return Math.floor(diff / 86400000) + '天前'
+    
+    var month = date.getMonth() + 1
+    var day = date.getDate()
+    return month + '-' + day
+  }
+  
+  module.exports = {
+    formatTime: formatTime
+  }
+</wxs>

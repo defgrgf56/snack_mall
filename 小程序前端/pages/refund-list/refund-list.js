@@ -1,7 +1,9 @@
-// pages/refund-list/refund-list.js
-const { request } = require('../../utils/request');
+// pages/refund-list/refund-list.js - 重构后的退款列表页面
+const createPageMixin = require('../../mixins/page-mixin')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     tabs: [
       { label: '全部', value: '' },
@@ -11,136 +13,82 @@ Page({
       { label: '已拒绝', value: '2' }
     ],
     currentTab: '',
-    refundList: [],
-    page: 1,
-    pageSize: 10,
-    loading: false,
-    hasMore: true
+    refundList: []
   },
 
   onLoad(options) {
     // 可以通过参数指定默认tab
     if (options.status) {
-      this.setData({
-        currentTab: options.status
-      });
+      this.setData({ currentTab: options.status })
     }
-    this.loadRefundList();
+    this.loadRefundList(true)
   },
 
   onShow() {
-    // 刷新列表
-    this.refreshList();
-  },
-
-  onPullDownRefresh() {
-    this.refreshList().then(() => {
-      wx.stopPullDownRefresh();
-    });
-  },
-
-  onReachBottom() {
-    if (!this.data.loading && this.data.hasMore) {
-      this.loadMore();
-    }
+    // 页面显示时不自动刷新，避免重复加载
   },
 
   /**
    * 切换标签
    */
   switchTab(e) {
-    const { tab } = e.currentTarget.dataset;
-    if (tab === this.data.currentTab) return;
+    const { tab } = e.currentTarget.dataset
+    if (tab === this.data.currentTab) return
 
-    this.setData({
-      currentTab: tab,
-      refundList: [],
-      page: 1,
-      hasMore: true
-    });
-    this.loadRefundList();
-  },
-
-  /**
-   * 刷新列表
-   */
-  async refreshList() {
-    this.setData({
-      refundList: [],
-      page: 1,
-      hasMore: true
-    });
-    await this.loadRefundList();
-  },
-
-  /**
-   * 加载更多
-   */
-  async loadMore() {
-    this.setData({
-      page: this.data.page + 1
-    });
-    await this.loadRefundList();
+    this.setData({ currentTab: tab })
+    this.loadRefundList(true)
   },
 
   /**
    * 加载退款列表
    */
-  async loadRefundList() {
-    if (this.data.loading) return;
-
-    this.setData({ loading: true });
-
+  async loadRefundList(reset = false) {
     try {
-      const params = {
-        page: this.data.page,
-        pageSize: this.data.pageSize
-      };
-
-      // 添加状态筛选
-      if (this.data.currentTab !== '') {
-        params.status = this.data.currentTab;
-      }
-
-      const res = await request({
-        url: '/refunds',
-        method: 'GET',
-        data: params
-      });
-
-      if (res.code === 200) {
-        const newList = this.data.page === 1 
-          ? res.data.list 
-          : [...this.data.refundList, ...res.data.list];
-
-        this.setData({
-          refundList: newList,
-          hasMore: res.data.pagination.page < res.data.pagination.totalPages
-        });
-      } else {
-        wx.showToast({
-          title: res.message || '加载失败',
-          icon: 'none'
-        });
-      }
+      const items = await this.loadList(
+        (page, pageSize) => this.fetchRefundList(page, pageSize),
+        { reset, listKey: 'refundList' }
+      )
     } catch (error) {
-      console.error('加载退款列表失败:', error);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
-    } finally {
-      this.setData({ loading: false });
+      // 错误已统一处理
     }
+  },
+
+  /**
+   * 获取退款数据
+   */
+  async fetchRefundList(page, pageSize) {
+    const params = { page, limit: pageSize }
+
+    // 添加状态筛选
+    if (this.data.currentTab !== '') {
+      params.status = this.data.currentTab
+    }
+
+    return await app.api.refund.getRefundList(params)
+  },
+
+  /**
+   * 加载更多
+   */
+  async loadMoreData() {
+    await this.loadRefundList(false)
+  },
+
+  /**
+   * 下拉刷新
+   */
+  async onPullDownRefresh() {
+    await this.loadRefundList(true)
+    wx.stopPullDownRefresh()
   },
 
   /**
    * 跳转详情页
    */
   goDetail(e) {
-    const { id } = e.currentTarget.dataset;
+    const { id } = e.currentTarget.dataset
     wx.navigateTo({
       url: `/pages/refund-detail/refund-detail?id=${id}`
-    });
+    })
   }
-});
+}))

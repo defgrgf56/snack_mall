@@ -26,7 +26,17 @@
         <text class="item-name">{{item.product.name}}</text>
         
         <view class="item-footer">
-          <text class="item-price">¥{{item.product.price}}</text>
+          <view class="price-box">
+            <!-- 如果有活动价格，显示活动价格和原价 -->
+            <block wx:if="{{item.actual_price && item.actual_price != item.product.price}}">
+              <text class="item-price activity">¥{{item.actual_price}}</text>
+              <text class="item-price original">¥{{item.product.price}}</text>
+            </block>
+            <!-- 没有活动价格，只显示原价 -->
+            <block wx:else>
+              <text class="item-price">¥{{item.product.price}}</text>
+            </block>
+          </view>
           
           <!-- 数量选择器 -->
           <view class="quantity-control">

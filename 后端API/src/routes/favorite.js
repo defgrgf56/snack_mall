@@ -1,8 +1,9 @@
 // src/routes/favorite.js - 商品收藏路由
 const express = require('express');
 const router = express.Router();
-const { Favorite, Product, ProductImage } = require('../models');
+const { Favorite, Product, ProductImage, ActivityProduct } = require('../models');
 const { authenticateToken } = require('../middleware/auth');
+const { Op } = require('sequelize');
 const { success, error } = require('../utils/response');
 
 /**
@@ -36,12 +37,15 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // 添加收藏
-    await Favorite.create({
+    const favorite = await Favorite.create({
       user_id: req.user.id,
       product_id
     });
 
-    success(res, null, '收藏成功');
+    success(res, { 
+      id: favorite.id,
+      product_id: favorite.product_id 
+    }, '收藏成功');
 
   } catch (err) {
     console.error('添加收藏失败:', err);
@@ -124,6 +128,22 @@ router.get('/', authenticateToken, async (req, res) => {
               as: 'images',
               attributes: ['id', 'url'],
               limit: 1
+            },
+            {
+              model: ActivityProduct,
+              as: 'activityProducts',
+              required: false,
+              attributes: ['activity_id', 'discount', 'special_price'],
+              include: [{
+                association: 'activity',
+                required: true,
+                attributes: ['id', 'title', 'start_time', 'end_time', 'status'],
+                where: {
+                  status: 1,
+                  start_time: { [Op.lte]: new Date() },
+                  end_time: { [Op.gte]: new Date() }
+                }
+              }]
             }
           ]
         }
@@ -133,23 +153,45 @@ router.get('/', authenticateToken, async (req, res) => {
       offset: (parseInt(page) - 1) * parseInt(pageSize)
     });
 
-    // 过滤掉商品已下架的收藏
+    // 过滤掉商品已下架的收藏，并计算实际价格
     const list = rows
       .filter(item => item.product && item.product.status === 1)
-      .map(item => ({
-        id: item.id,
-        product_id: item.product_id,
-        created_at: item.created_at,
-        product: {
-          id: item.product.id,
-          name: item.product.name,
-          cover: item.product.cover,
-          price: item.product.price,
-          original_price: item.product.original_price,
-          stock: item.product.stock,
-          sales: item.product.sales
+      .map(item => {
+        const product = item.product;
+        let actual_price = product.price;
+        let has_activity = false;
+
+        // 如果有活动价格，计算实际价格（activityProducts是数组，取第一个有效的活动）
+        const activityProduct = product.activityProducts && product.activityProducts.length > 0 
+          ? product.activityProducts[0] 
+          : null;
+        
+        if (activityProduct && activityProduct.activity) {
+          has_activity = true;
+          if (activityProduct.special_price) {
+            actual_price = activityProduct.special_price;
+          } else if (activityProduct.discount) {
+            actual_price = (product.price * activityProduct.discount / 10).toFixed(2);
+          }
         }
-      }));
+
+        return {
+          id: item.id,
+          product_id: item.product_id,
+          created_at: item.created_at,
+          product: {
+            id: product.id,
+            name: product.name,
+            cover: product.cover,
+            price: product.price,
+            original_price: product.original_price,
+            actual_price: parseFloat(actual_price),
+            has_activity,
+            stock: product.stock,
+            sales: product.sales
+          }
+        };
+      });
 
     success(res, {
       list,

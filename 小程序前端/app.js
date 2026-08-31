@@ -1,89 +1,77 @@
-// app.js
-const { api } = require('./config/api.js')
+// app.js - 重构后的应用入口
 
-// 获取API基础地址
-function getApiBase() {
-  // 统一使用localhost,开发工具测试
-  return 'http://localhost:3000/api'
-  
-  // 如果要真机预览,请手动改成你的IP:
-  // return 'http://10.105.120.132:3000/api'
-}
+const Store = require('./store/index')
+const api = require('./services/api/index')
+const logger = require('./utils/logger')
 
 App({
-  globalData: {
-    userInfo: null,
-    token: null,
-    apiBase: getApiBase(), // 自动根据环境选择API地址
-    cartCount: 0
+  // 全局状态管理
+  store: null,
+  
+  // 全局 API 服务
+  api: api,
+
+  onLaunch(options) {
+    logger.info('小程序启动', options)
+    
+    // 初始化状态管理
+    this.store = new Store()
+    
+    // 延迟检查登录状态，确保 app 完全初始化
+    setTimeout(() => {
+      this.checkLoginStatus()
+    }, 100)
   },
 
-  onLaunch() {
-    console.log('小程序启动')
-    
-    // 检查登录状态
-    this.checkLogin()
+  onShow(options) {
+    logger.info('小程序显示', options)
+  },
+
+  onHide() {
+    logger.info('小程序隐藏')
+  },
+
+  onError(error) {
+    logger.error('小程序错误', error)
   },
 
   /**
    * 检查登录状态
    */
-  checkLogin() {
-    const token = wx.getStorageSync('token')
-    if (token) {
-      this.globalData.token = token
-      // 验证token是否有效
-      this.validateToken()
+  async checkLoginStatus() {
+    if (!this.store.isLoggedIn()) {
+      logger.info('未登录')
+      return
     }
-  },
 
-  /**
-   * 验证token有效性
-   */
-  async validateToken() {
     try {
-      const res = await api.getUserInfo()
+      // 验证 token 有效性
+      const userInfo = await api.auth.getUserInfo()
+      this.store.setUserInfo(userInfo)
       
-      if (res.code === 200) {
-        this.globalData.userInfo = res.data
-        // 更新购物车数量
-        this.updateCartCount()
-      } else {
-        // token失效，清除登录信息
-        this.logout()
-      }
+      // 更新购物车数量
+      this.store.updateCartCount()
+      
+      logger.info('登录状态有效', userInfo)
     } catch (error) {
-      console.error('验证token失败:', error)
-      this.logout()
+      logger.error('Token 验证失败', error)
+      // Token 失效会由 errorHandler 自动处理
     }
   },
 
   /**
    * 开发环境快速登录
    */
-  devLogin() {
-    return new Promise(async (resolve, reject) => {
-      try {
-        const res = await api.devLogin()
-        
-        if (res.code === 200) {
-          const { token, userInfo } = res.data
-          this.globalData.token = token
-          this.globalData.userInfo = userInfo
-          wx.setStorageSync('token', token)
-          wx.setStorageSync('userInfo', userInfo)
-          
-          // 更新购物车数量
-          this.updateCartCount()
-          
-          resolve(userInfo)
-        } else {
-          reject(res.message || '开发登录失败')
-        }
-      } catch (error) {
-        reject(error)
-      }
-    })
+  async devLogin() {
+    try {
+      const result = await api.auth.devLogin()
+      this.store.setAuth(result.token, result.userInfo)
+      this.store.updateCartCount()
+      
+      return result.userInfo
+    } catch (error) {
+      throw error
+    }
   },
 
   /**
@@ -91,61 +79,24 @@ App({
    */
   login() {
     return new Promise((resolve, reject) => {
-      wx.showLoading({ title: '登录中...' })
-      
       wx.login({
-        success: (res) => {
-          if (res.code) {
-            // 发送code到后端换取token
-            wx.request({
-              url: `${this.globalData.apiBase}/auth/login`,
-              method: 'POST',
-              data: {
-                code: res.code
-              },
-              success: (response) => {
-                wx.hideLoading()
-                
-                if (response.data.code === 200) {
-                  const { token, userInfo } = response.data.data
-                  this.globalData.token = token
-                  this.globalData.userInfo = userInfo
-                  wx.setStorageSync('token', token)
-                  wx.setStorageSync('userInfo', userInfo)
-                  
-                  // 更新购物车数量
-                  this.updateCartCount()
-                  
-                  wx.showToast({
-                    title: '登录成功',
-                    icon: 'success'
-                  })
-                  
-                  resolve(userInfo)
-                } else {
-                  wx.showToast({
-                    title: response.data.message || '登录失败',
-                    icon: 'none'
-                  })
-                  reject(response.data.message)
-                }
-              },
-              fail: (error) => {
-                wx.hideLoading()
-                wx.showToast({
-                  title: '网络请求失败',
-                  icon: 'none'
-                })
-                reject(error)
-              }
-            })
-          } else {
-            wx.hideLoading()
-            reject('获取code失败')
+        success: async (res) => {
+          if (!res.code) {
+            reject(new Error('获取 code 失败'))
+            return
+          }
+
+          try {
+            const result = await api.auth.login(res.code)
+            this.store.setAuth(result.token, result.userInfo)
+            this.store.updateCartCount()
+            
+            resolve(result.userInfo)
+          } catch (error) {
+            reject(error)
           }
         },
         fail: (error) => {
-          wx.hideLoading()
           reject(error)
         }
       })
@@ -156,57 +107,13 @@ App({
    * 退出登录
    */
   logout() {
-    this.globalData.token = null
-    this.globalData.userInfo = null
-    this.globalData.cartCount = 0
-    wx.removeStorageSync('token')
-    wx.removeStorageSync('userInfo')
-    // 清除购物车徽标
-    wx.removeTabBarBadge({ index: 2 })
+    this.store.logout()
   },
 
   /**
    * 更新购物车数量
    */
-  async updateCartCount() {
-    const token = this.globalData.token
-    if (!token) {
-      this.globalData.cartCount = 0
-      // 更新自定义TabBar
-      this.updateCustomTabBar(0)
-      return
-    }
-
-    try {
-      const res = await api.getCartCount()
-      
-      if (res.code === 200) {
-        this.globalData.cartCount = res.data.count
-        // 更新自定义TabBar
-        this.updateCustomTabBar(res.data.count)
-      }
-    } catch (error) {
-      console.error('获取购物车数量失败:', error)
-    }
-  },
-
-  /**
-   * 更新自定义TabBar购物车数量
-   */
-  updateCustomTabBar(count) {
-    // 更新全局数据
-    this.globalData.cartCount = count
-    
-    // 获取所有页面
-    const pages = getCurrentPages()
-    
-    // 更新所有页面的TabBar
-    pages.forEach(page => {
-      if (typeof page.getTabBar === 'function' && page.getTabBar()) {
-        page.getTabBar().setData({
-          cartCount: count
-        })
-      }
-    })
+  updateCartCount() {
+    return this.store.updateCartCount()
   }
 })

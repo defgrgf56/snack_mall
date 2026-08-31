@@ -1,0 +1,24 @@
+<!-- components/page-state/page-state.wxml -->
+<view class="page-state" wx:if="{{state !== 'loaded'}}">
+  <!-- 加载中 -->
+  <view class="state-loading" wx:if="{{state === 'loading'}}">
+    <view class="loading-icon"></view>
+    <text class="loading-text">{{loadingText || '加载中...'}}</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="state-empty" wx:elif="{{state === 'empty'}}">
+    <text class="empty-icon">📭</text>
+    <text class="empty-text">{{emptyText || '暂无数据'}}</text>
+    <button wx:if="{{showEmptyButton}}" class="empty-button" bindtap="onEmptyButtonTap">
+      {{emptyButtonText || '去逛逛'}}
+    </button>
+  </view>
+
+  <!-- 错误状态 -->
+  <view class="state-error" wx:elif="{{state === 'error'}}">
+    <text class="error-icon">⚠️</text>
+    <text class="error-text">{{errorMessage || '加载失败'}}</text>
+    <button class="error-button" bindtap="onRetry">重新加载</button>
+  </view>
+</view>

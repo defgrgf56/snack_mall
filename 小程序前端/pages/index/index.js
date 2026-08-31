@@ -1,100 +1,102 @@
-// pages/index/index.js
-const { api } = require('../../config/api.js')
-const { addToCart } = require('../../utils/cart.js')
+// pages/index/index.js - 重构后的首页
+const createPageMixin = require('../../mixins/page-mixin')
+const { BANNER_LINK_TYPE } = require('../../constants/index')
+const errorHandler = require('../../utils/error-handler')
+const { IS_DEV } = require('../../config/env')
+const Diagnostic = require('../../utils/diagnostic')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     banners: [],
     categories: [],
     hotProducts: [],
     newProducts: [],
-    coupons: [],           // 优惠券列表
-    seckills: [],          // 秒杀列表
-    activities: [],        // 活动列表
-    seckillCountdown: 0,   // 秒杀倒计时（秒）
-    seckillHours: '00',    // 秒杀小时
-    seckillMinutes: '00',  // 秒杀分钟
-    seckillSeconds: '00',  // 秒杀秒数
-    countdownTimer: null,  // 倒计时定时器
-    loading: true,
-    navBarHeight: 0,  // 导航栏高度
-    menuTop: 0,       // 胶囊按钮上边距
-    menuHeight: 0,    // 胶囊按钮高度
-    menuLeft: 0,      // 胶囊按钮左边距
-    logoRight: 0      // 右侧Logo的right值
+    coupons: [],
+    couponsLoop: [], // 循环展示的优惠券列表
+    couponDisplayCount: 1, // 同时显示的优惠券数量
+    seckills: [],
+    activities: [],
+    
+    // 秒杀倒计时
+    seckillCountdown: {
+      hours: '00',
+      minutes: '00',
+      seconds: '00'
+    },
+    
+    // 导航栏配置
+    navBarHeight: 0,
+    menuTop: 0,
+    menuHeight: 0,
+    menuLeft: 0,
+    logoRight: 0,
+    
+    // 开发模式
+    isDev: IS_DEV
   },
 
   onLoad() {
-    this.setNavBarInfo()
-    this.loadData()
-  },
-
-  onUnload() {
-    // 页面卸载时清除倒计时定时器
-    if (this.data.countdownTimer) {
-      clearInterval(this.data.countdownTimer)
-    }
-  },
-
-  /**
-   * 设置导航栏信息
-   */
-  setNavBarInfo() {
-    // 获取胶囊按钮位置信息
-    const menuButtonInfo = wx.getMenuButtonBoundingClientRect()
-    // 获取系统信息
-    const systemInfo = wx.getSystemInfoSync()
-    
-    // 计算导航栏高度：胶囊按钮下边距 + 胶囊按钮上边距
-    const navBarHeight = menuButtonInfo.bottom + menuButtonInfo.top - systemInfo.statusBarHeight
-    
-    // 计算右侧Logo的right值：屏幕宽度 - 胶囊左边距 + 留出20rpx间距
-    // 需要将rpx转为px: rpx / 750 * windowWidth
-    const logoRight = systemInfo.windowWidth - menuButtonInfo.left + (20 / 750 * systemInfo.windowWidth)
-    
-    console.log('微信胶囊位置信息:', menuButtonInfo)
-    console.log('系统信息:', systemInfo)
-    console.log('计算的logoRight:', logoRight)
-    
-    this.setData({
-      navBarHeight: navBarHeight,
-      menuTop: menuButtonInfo.top,
-      menuHeight: menuButtonInfo.height,
-      menuLeft: menuButtonInfo.left,
-      logoRight: logoRight
-    })
+    this.initNavBar()
+    this.loadPageData()
   },
 
   onShow() {
-    // 更新购物车数量
-    const app = getApp()
-    app.updateCartCount()
-    
-    // 设置TabBar选中状态
+    // 设置 TabBar 选中状态和购物车数量
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({
-        selected: 0
+      this.getTabBar().setData({ 
+        selected: 0,
+        cartCount: app.store.getState('cartCount') || 0
       })
     }
   },
 
-  onPullDownRefresh() {
-    this.loadData().then(() => {
-      wx.stopPullDownRefresh()
+  onUnload() {
+    // 清理倒计时
+    if (this._seckillTimer) {
+      clearInterval(this._seckillTimer)
+    }
+  },
+
+  /**
+   * 初始化导航栏
+   */
+  initNavBar() {
+    const menuButtonInfo = wx.getMenuButtonBoundingClientRect()
+    const systemInfo = app.store.getState('systemInfo')
+    
+    const navBarHeight = menuButtonInfo.bottom + menuButtonInfo.top - systemInfo.statusBarHeight
+    const logoRight = systemInfo.windowWidth - menuButtonInfo.left + (20 / 750 * systemInfo.windowWidth)
+    
+    this.setData({
+      navBarHeight,
+      menuTop: menuButtonInfo.top,
+      menuHeight: menuButtonInfo.height,
+      menuLeft: menuButtonInfo.left,
+      logoRight
     })
   },
 
   /**
    * 加载页面数据
    */
-  async loadData() {
-    this.setData({ loading: true })
-    
+  async loadPageData() {
     try {
-      // 并行请求多个接口
-      const results = await Promise.allSettled([
-        this.loadBanners(),
-        this.loadCategories(),
+      this.setPageLoading(true)
+      
+      // 并行加载所有数据
+      const [
+        banners,
+        categories,
+        hotProducts,
+        newProducts,
+        coupons,
+        seckills,
+        activities
+      ] = await Promise.allSettled([
+        app.api.product.getBanners(),
+        app.api.product.getCategories(),
         this.loadHotProducts(),
         this.loadNewProducts(),
         this.loadCoupons(),
@@ -102,71 +104,53 @@ Page({
         this.loadActivities()
       ])
 
-      // 提取成功的结果
-      const banners = results[0].status === 'fulfilled' ? results[0].value : []
-      const categories = results[1].status === 'fulfilled' ? results[1].value : []
-      const hotProducts = results[2].status === 'fulfilled' ? results[2].value : []
-      const newProducts = results[3].status === 'fulfilled' ? results[3].value : []
-      const coupons = results[4].status === 'fulfilled' ? results[4].value : []
-      const seckills = results[5].status === 'fulfilled' ? results[5].value : []
-      const activities = results[6].status === 'fulfilled' ? results[6].value : []
+      // 检查关键数据加载失败
+      const errors = []
+      if (banners.status === 'rejected') errors.push(`轮播图: ${banners.reason.message}`)
+      if (categories.status === 'rejected') errors.push(`分类: ${categories.reason.message}`)
+      if (hotProducts.status === 'rejected') errors.push(`热门商品: ${hotProducts.reason.message}`)
+      if (newProducts.status === 'rejected') errors.push(`新品: ${newProducts.reason.message}`)
 
-      console.log('轮播图数量:', banners.length)
-      console.log('分类数量:', categories.length)
-      console.log('热门商品数量:', hotProducts.length)
-      console.log('新品数量:', newProducts.length)
-      console.log('优惠券数量:', coupons.length)
-      console.log('秒杀数量:', seckills.length)
-      console.log('活动数量:', activities.length)
+      // 如果有关键数据加载失败，显示错误提示
+      if (errors.length > 0) {
+        console.error('首页数据加载失败:', errors)
+        wx.showToast({
+          title: `部分数据加载失败`,
+          icon: 'none',
+          duration: 2000
+        })
+      }
+
+      // 安全获取数组数据的辅助函数
+      const safeArray = (promiseResult, limit) => {
+        if (promiseResult.status !== 'fulfilled') return []
+        const value = promiseResult.value
+        const arr = Array.isArray(value) ? value : []
+        return limit ? arr.slice(0, limit) : arr
+      }
 
       this.setData({
-        banners,
-        categories: categories.slice(0, 8), // 只显示前8个分类
-        hotProducts,
-        newProducts,
-        coupons: coupons.slice(0, 5), // 只显示前5个优惠券
-        seckills: seckills.slice(0, 10), // 只显示前10个秒杀商品
-        activities: activities.slice(0, 4), // 只显示前4个活动
-        loading: false
+        banners: safeArray(banners),
+        categories: safeArray(categories, 8),
+        hotProducts: safeArray(hotProducts),
+        newProducts: safeArray(newProducts),
+        coupons: safeArray(coupons, 5),
+        seckills: safeArray(seckills, 10),
+        activities: safeArray(activities, 4)
       })
 
+      // 处理优惠券循环数据
+      this.prepareCouponsLoop()
+
       // 启动秒杀倒计时
-      if (seckills.length > 0) {
+      if (this.data.seckills.length > 0) {
         this.startSeckillCountdown()
       }
     } catch (error) {
-      console.error('加载数据失败', error)
-      this.setData({ loading: false })
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      })
-    }
-  },
-
-  /**
-   * 加载轮播图
-   */
-  async loadBanners() {
-    try {
-      const res = await api.getBanners()
-      return res.data || []
-    } catch (error) {
-      console.log('加载轮播图失败', error)
-      return []
-    }
-  },
-
-  /**
-   * 加载分类
-   */
-  async loadCategories() {
-    try {
-      const res = await api.getCategories()
-      return res.data || []
-    } catch (error) {
-      console.log('加载分类失败', error)
-      return []
+      console.error('首页加载异常:', error)
+      this.setPageError(error)
+    } finally {
+      this.setPageLoading(false)
     }
   },
 
@@ -174,34 +158,24 @@ Page({
    * 加载热门商品
    */
   async loadHotProducts() {
-    try {
-      const res = await api.getProducts({
-        is_hot: 1,
-        page: 1,
-        pageSize: 6
-      })
-      return res.data.items || []
-    } catch (error) {
-      console.log('加载热门商品失败', error)
-      return []
-    }
+    const result = await app.api.product.getProducts({
+      is_hot: 1,
+      page: 1,
+      pageSize: 6
+    })
+    return result.items || []
   },
 
   /**
    * 加载新品
    */
   async loadNewProducts() {
-    try {
-      const res = await api.getProducts({
-        is_new: 1,
-        page: 1,
-        pageSize: 6
-      })
-      return res.data.items || []
-    } catch (error) {
-      console.log('加载新品失败', error)
-      return []
-    }
+    const result = await app.api.product.getProducts({
+      is_new: 1,
+      page: 1,
+      pageSize: 6
+    })
+    return result.items || []
   },
 
   /**
@@ -209,90 +183,110 @@ Page({
    */
   async loadCoupons() {
     try {
-      const res = await api.getCoupons()
-      return res.data || []
+      // 优惠券接口需要登录，未登录时返回空数组
+      if (!app.store.isLoggedIn()) {
+        return []
+      }
+      const result = await app.api.coupon.getAvailableCoupons({ page: 1, limit: 5 })
+      // 确保返回数组
+      const coupons = Array.isArray(result) ? result : (result.items || [])
+      // 格式化日期
+      return coupons.map(coupon => ({
+        ...coupon,
+        start_time: this.formatCouponDate(coupon.start_time),
+        end_time: this.formatCouponDate(coupon.end_time)
+      }))
     } catch (error) {
-      console.log('加载优惠券失败', error)
       return []
     }
   },
 
   /**
+   * 格式化优惠券日期 (YYYY-MM-DD HH:mm:ss -> MM.DD)
+   */
+  formatCouponDate(dateStr) {
+    if (!dateStr) return ''
+    try {
+      const date = new Date(dateStr.replace(/-/g, '/'))
+      const month = (date.getMonth() + 1).toString().padStart(2, '0')
+      const day = date.getDate().toString().padStart(2, '0')
+      return `${month}.${day}`
+    } catch (error) {
+      return ''
+    }
+  },
+
+  /**
+   * 准备优惠券循环数据
+   * 如果优惠券少于3张，复制数据实现无缝循环
+   */
+  prepareCouponsLoop() {
+    const coupons = this.data.coupons
+    if (coupons.length === 0) {
+      this.setData({ couponsLoop: [] })
+      return
+    }
+
+    let couponsLoop = []
+    
+    // 如果优惠券数量较少，复制多次确保循环流畅
+    if (coupons.length < 3) {
+      // 复制3遍确保循环无缝
+      couponsLoop = [...coupons, ...coupons, ...coupons].map((item, index) => ({
+        ...item,
+        loopIndex: `${item.id}_${index}` // 添加唯一标识
+      }))
+    } else {
+      couponsLoop = coupons.map((item, index) => ({
+        ...item,
+        loopIndex: `${item.id}_${index}`
+      }))
+    }
+
+    this.setData({ 
+      couponsLoop,
+      couponDisplayCount: 1 // 一次显示1张优惠券
+    })
+  },
+
+  /**
    * 加载秒杀活动
    */
-  loadSeckills() {
-    return new Promise((resolve) => {
-      wx.request({
-        url: `${getApp().globalData.apiBase}/seckills`,
-        method: 'GET',
-        data: {
-          status: 1, // 进行中
-          pageSize: 10
-        },
-        success: (res) => {
-          console.log('秒杀API响应:', res)
-          if (res.data && res.data.code === 200) {
-            resolve(res.data.data.list || [])
-          } else {
-            resolve([])
-          }
-        },
-        fail: (error) => {
-          console.error('加载秒杀活动失败', error)
-          resolve([])
-        }
-      })
-    })
+  async loadSeckills() {
+    try {
+      const result = await app.api.seckill.getSeckills({ status: 1, page: 1, pageSize: 10 })
+      // 后端返回 { list: [], pagination: {} } 格式
+      return Array.isArray(result.list) ? result.list : []
+    } catch (error) {
+      return []
+    }
   },
 
   /**
    * 加载活动专区
    */
-  loadActivities() {
-    return new Promise((resolve) => {
-      wx.request({
-        url: `${getApp().globalData.apiBase}/activities`,
-        method: 'GET',
-        data: {
-          status: 1, // 进行中
-          pageSize: 6
-        },
-        success: (res) => {
-          console.log('活动API响应:', res)
-          if (res.data && res.data.code === 200) {
-            resolve(res.data.data.list || [])
-          } else {
-            resolve([])
-          }
-        },
-        fail: (error) => {
-          console.error('加载活动专区失败', error)
-          resolve([])
-        }
-      })
-    })
+  async loadActivities() {
+    try {
+      const result = await app.api.activity.getActivities({ status: 1, page: 1, pageSize: 4 })
+      // 后端可能返回 { list: [] } 或直接返回数组
+      return Array.isArray(result) ? result : (Array.isArray(result.list) ? result.list : [])
+    } catch (error) {
+      return []
+    }
   },
 
   /**
    * 启动秒杀倒计时
    */
   startSeckillCountdown() {
-    // 清除旧的定时器
-    if (this.data.countdownTimer) {
-      clearInterval(this.data.countdownTimer)
-    }
-
-    // 获取第一个秒杀的剩余时间
     const seckills = this.data.seckills
     if (seckills.length === 0) return
 
     let countdown = seckills[0].remaining_time || 0
 
-    // 更新倒计时显示
     const updateCountdown = () => {
       if (countdown <= 0) {
-        clearInterval(this.data.countdownTimer)
-        // 重新加载秒杀数据
+        clearInterval(this._seckillTimer)
         this.loadSeckills().then(data => {
           this.setData({ seckills: data.slice(0, 10) })
           if (data.length > 0) {
@@ -307,127 +301,18 @@ Page({
       const seconds = countdown % 60
 
       this.setData({
-        seckillCountdown: countdown,
-        seckillHours: hours.toString().padStart(2, '0'),
-        seckillMinutes: minutes.toString().padStart(2, '0'),
-        seckillSeconds: seconds.toString().padStart(2, '0')
+        seckillCountdown: {
+          hours: hours.toString().padStart(2, '0'),
+          minutes: minutes.toString().padStart(2, '0'),
+          seconds: seconds.toString().padStart(2, '0')
+        }
       })
 
       countdown--
     }
 
-    // 立即执行一次
     updateCountdown()
-
-    // 每秒更新一次
-    const timer = setInterval(updateCountdown, 1000)
-    this.setData({ countdownTimer: timer })
-  },
-
-  /**
-   * 领取优惠券
-   */
-  receiveCoupon(e) {
-    const { id } = e.currentTarget.dataset
-    const app = getApp()
-
-    // 检查登录状态
-    if (!app.globalData.token) {
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none'
-      })
-      // 跳转到登录页
-      setTimeout(() => {
-        wx.switchTab({ url: '/pages/user/user' })
-      }, 1500)
-      return
-    }
-
-    wx.showLoading({ title: '领取中...' })
-
-    wx.request({
-      url: `${app.globalData.apiBase}/coupons/receive`,
-      method: 'POST',
-      header: {
-        'Authorization': `Bearer ${app.globalData.token}`
-      },
-      data: { coupon_id: id },
-      success: (res) => {
-        wx.hideLoading()
-        console.log('领取优惠券响应:', res)
-        
-        if (res.data && res.data.code === 200) {
-          wx.showToast({
-            title: '领取成功',
-            icon: 'success'
-          })
-          // 重新加载优惠券列表
-          this.loadCoupons().then(coupons => {
-            this.setData({ coupons: coupons.slice(0, 5) })
-          })
-        } else {
-          wx.showToast({
-            title: res.data?.message || '领取失败',
-            icon: 'none'
-          })
-        }
-      },
-      fail: (error) => {
-        wx.hideLoading()
-        console.error('领取优惠券失败:', error)
-        wx.showToast({
-          title: '领取失败',
-          icon: 'none'
-        })
-      }
-    })
-  },
-
-  /**
-   * 跳转到我的优惠券
-   */
-  goMyCoupons() {
-    const app = getApp()
-    if (!app.globalData.token) {
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none'
-      })
-      setTimeout(() => {
-        wx.switchTab({ url: '/pages/user/user' })
-      }, 1500)
-      return
-    }
-
-    wx.navigateTo({
-      url: '/pages/coupon-list/coupon-list'
-    })
-  },
-
-  /**
-   * 跳转到秒杀列表（暂未实现）
-   */
-  goSeckillList() {
-    wx.showToast({
-      title: '秒杀列表页开发中',
-      icon: 'none'
-    })
-  },
-
-  /**
-   * 跳转到活动详情
-   */
-  goActivityDetail(e) {
-    const { id } = e.currentTarget.dataset
-    wx.showToast({
-      title: '活动详情页开发中',
-      icon: 'none'
-    })
-    // 后续实现：
-    // wx.navigateTo({
-    //   url: `/pages/activity-detail/activity-detail?id=${id}`
-    // })
+    this._seckillTimer = this.$setInterval(updateCountdown, 1000)
   },
 
   /**
@@ -438,22 +323,19 @@ Page({
     const { link_type, link_value } = item
 
     switch (link_type) {
-      case 1: // 商品
-        this.goProductDetail({ currentTarget: { dataset: { id: link_value } } })
-        break
-      case 2: // 分类
-        wx.switchTab({
-          url: '/pages/category/category'
+      case BANNER_LINK_TYPE.PRODUCT:
+        wx.navigateTo({
+          url: `/pages/product-detail/product-detail?id=${link_value}`
         })
         break
-      case 3: // 外链
+      case BANNER_LINK_TYPE.CATEGORY:
+        wx.switchTab({ url: '/pages/category/category' })
+        break
+      case BANNER_LINK_TYPE.EXTERNAL:
         wx.setClipboardData({
           data: link_value,
           success: () => {
-            wx.showToast({
-              title: '链接已复制',
-              icon: 'success'
-            })
+            errorHandler.showSuccess('链接已复制')
           }
         })
         break
@@ -464,19 +346,14 @@ Page({
    * 跳转搜索页
    */
   goSearch() {
-    wx.navigateTo({
-      url: '/pages/search/search'
-    })
+    wx.navigateTo({ url: '/pages/search/search' })
   },
 
   /**
    * 跳转分类页
    */
   goCategory(e) {
-    const { id } = e.currentTarget.dataset
-    wx.switchTab({
-      url: '/pages/category/category'
-    })
+    wx.switchTab({ url: '/pages/category/category' })
   },
 
   /**
@@ -495,13 +372,81 @@ Page({
   async handleAddToCart(e) {
     const { id } = e.currentTarget.dataset
     
-    // catchtap 会自动阻止冒泡，不需要手动调用 stopPropagation
-    
-    const success = await addToCart(id, 1)
-    if (success) {
-      // 刷新购物车数量
-      const app = getApp()
-      app.updateCartCount()
+    // 检查登录
+    if (!app.store.isLoggedIn()) {
+      errorHandler.handle(new Error('请先登录'), { code: 'NOT_LOGGED_IN' })
+      return
+    }
+
+    try {
+      await app.api.cart.addToCart(id, 1)
+      errorHandler.showSuccess('已加入购物车')
+      app.store.updateCartCount()
+    } catch (error) {
+      // 错误已由 errorHandler 统一处理
+    }
+  },
+
+  /**
+   * 领取优惠券
+   */
+  async receiveCoupon(e) {
+    const { id } = e.currentTarget.dataset
+
+    // 检查登录
+    if (!app.store.isLoggedIn()) {
+      errorHandler.handle(new Error('请先登录'), { code: 'NOT_LOGGED_IN' })
+      return
+    }
+
+    try {
+      await app.api.coupon.receiveCoupon(id)
+      errorHandler.showSuccess('领取成功')
+      this.loadCoupons()
+    } catch (error) {
+      // 错误已由 errorHandler 统一处理
+    }
+  },
+
+  /**
+   * 跳转到我的优惠券
+   */
+  goMyCoupons() {
+    if (!app.store.isLoggedIn()) {
+      errorHandler.handle(new Error('请先登录'), { code: 'NOT_LOGGED_IN' })
+      return
+    }
+
+    wx.navigateTo({ url: '/pages/coupon-list/coupon-list' })
+  },
+
+  /**
+   * 跳转到秒杀列表
+   */
+  goSeckillList() {
+    wx.navigateTo({ url: '/pages/seckill-list/seckill-list' })
+  },
+
+  /**
+   * 跳转到活动详情
+   */
+  goActivityDetail(e) {
+    const { id } = e.currentTarget.dataset
+    wx.navigateTo({ url: `/pages/activity-detail/activity-detail?id=${id}` })
+  },
+
+  /**
+   * 系统诊断（开发模式）
+   */
+  async runDiagnostic() {
+    try {
+      wx.showLoading({ title: '诊断中...' })
+      await Diagnostic.showDiagnosticModal()
+    } catch (error) {
+      console.error('诊断失败:', error)
+      errorHandler.showToast('诊断失败')
+    } finally {
+      wx.hideLoading()
     }
   }
-})
+}))

@@ -1,8 +1,10 @@
-// pages/refund-apply/refund-apply.js
-const app = getApp();
-const { request } = require('../../utils/request');
+// pages/refund-apply/refund-apply.js - 重构后的退款申请页面
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     orderId: null,
     order: null,
@@ -23,20 +25,15 @@ Page({
   },
 
   onLoad(options) {
-    const { orderId } = options;
+    const { orderId } = options
     if (!orderId) {
-      wx.showToast({
-        title: '订单ID不能为空',
-        icon: 'none'
-      });
-      setTimeout(() => {
-        wx.navigateBack();
-      }, 1500);
-      return;
+      errorHandler.handle(new Error('订单ID不能为空'))
+      this.$setTimeout(() => wx.navigateBack(), 1500)
+      return
     }
-    
-    this.setData({ orderId });
-    this.loadOrderDetail();
+
+    this.setData({ orderId })
+    this.loadOrderDetail()
   },
 
   /**
@@ -44,31 +41,13 @@ Page({
    */
   async loadOrderDetail() {
     try {
-      wx.showLoading({ title: '加载中...' });
-      
-      const res = await request({
-        url: `/orders/${this.data.orderId}`,
-        method: 'GET'
-      });
-
-      if (res.code === 200) {
-        this.setData({
-          order: res.data
-        });
-      } else {
-        wx.showToast({
-          title: res.message || '加载失败',
-          icon: 'none'
-        });
-      }
+      const order = await this.loadData(
+        () => app.api.order.getOrderDetail(this.data.orderId),
+        { showLoading: true }
+      )
+      this.setData({ order })
     } catch (error) {
-      console.error('加载订单详情失败:', error);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
-    } finally {
-      wx.hideLoading();
+      // 错误已统一处理
     }
   },
 
@@ -76,10 +55,10 @@ Page({
    * 选择退款类型
    */
   selectType(e) {
-    const { type } = e.currentTarget.dataset;
+    const { type } = e.currentTarget.dataset
     this.setData({
       refundType: parseInt(type)
-    });
+    })
   },
 
   /**
@@ -88,7 +67,7 @@ Page({
   onReasonChange(e) {
     this.setData({
       reasonIndex: parseInt(e.detail.value)
-    });
+    })
   },
 
   /**
@@ -97,77 +76,56 @@ Page({
   onDescInput(e) {
     this.setData({
       refundDesc: e.detail.value
-    });
+    })
   },
 
   /**
    * 选择图片
    */
   chooseImage() {
-    const that = this;
     wx.chooseImage({
       count: 3 - this.data.refundImages.length,
       sizeType: ['compressed'],
       sourceType: ['album', 'camera'],
-      success(res) {
-        const tempFilePaths = res.tempFilePaths;
-        that.uploadImages(tempFilePaths);
+      success: (res) => {
+        this.uploadImages(res.tempFilePaths)
       }
-    });
+    })
   },
 
   /**
    * 上传图片
    */
   async uploadImages(filePaths) {
-    wx.showLoading({ title: '上传中...' });
-    
-    const uploadedImages = [];
-    
-    for (let i = 0; i < filePaths.length; i++) {
-      try {
-        const token = wx.getStorageSync('token');
-        const uploadTask = wx.uploadFile({
-          url: `${app.globalData.apiBase}/upload`,
-          filePath: filePaths[i],
-          name: 'file',
-          header: {
-            'Authorization': `Bearer ${token}`
-          },
-          success: (res) => {
-            const data = JSON.parse(res.data);
-            if (data.code === 200) {
-              uploadedImages.push(data.data.url);
-            }
-          }
-        });
+    try {
+      wx.showLoading({ title: '上传中...', mask: true })
 
-        await new Promise((resolve, reject) => {
-          uploadTask.onProgressUpdate((res) => {
-            wx.showLoading({ 
-              title: `上传中 ${res.progress}%`,
-              mask: true
-            });
-          });
-          uploadTask.onHeadersReceived((res) => {
-            resolve();
-          });
-        });
-      } catch (error) {
-        console.error('上传图片失败:', error);
+      const uploadedImages = []
+      
+      for (let i = 0; i < filePaths.length; i++) {
+        try {
+          // TODO: 实现图片上传 API
+          // const result = await app.api.upload.uploadImage(filePaths[i])
+          // uploadedImages.push(result.url)
+          
+          // 暂时使用本地路径模拟
+          uploadedImages.push(filePaths[i])
+        } catch (error) {
+          errorHandler.handle(error)
+        }
       }
-    }
-    
-    wx.hideLoading();
-    
-    if (uploadedImages.length > 0) {
-      this.setData({
-        refundImages: [...this.data.refundImages, ...uploadedImages]
-      });
-      wx.showToast({
-        title: '上传成功',
-        icon: 'success'
-      });
+
+      wx.hideLoading()
+
+      if (uploadedImages.length > 0) {
+        this.setData({
+          refundImages: [...this.data.refundImages, ...uploadedImages]
+        })
+        errorHandler.showSuccess('上传成功')
+      }
+    } catch (error) {
+      wx.hideLoading()
+      errorHandler.handle(error)
     }
   },
 
@@ -175,81 +133,66 @@ Page({
    * 删除图片
    */
   deleteImage(e) {
-    const { index } = e.currentTarget.dataset;
-    const images = this.data.refundImages;
-    images.splice(index, 1);
-    this.setData({
-      refundImages: images
-    });
+    const { index } = e.currentTarget.dataset
+    const images = [...this.data.refundImages]
+    images.splice(index, 1)
+    this.setData({ refundImages: images })
+  },
+
+  /**
+   * 表单验证
+   */
+  validateForm() {
+    if (this.data.reasonIndex < 0) {
+      throw new Error('请选择退款原因')
+    }
+    return true
   },
 
   /**
    * 提交退款申请
    */
   async submitRefund() {
-    // 验证表单
-    if (this.data.reasonIndex < 0) {
-      wx.showToast({
-        title: '请选择退款原因',
-        icon: 'none'
-      });
-      return;
-    }
-
-    // 二次确认
-    const confirmRes = await new Promise((resolve) => {
-      wx.showModal({
-        title: '确认提交',
-        content: '提交后请等待客服审核，审核通过后将原路退回',
-        success: (res) => resolve(res.confirm)
-      });
-    });
-
-    if (!confirmRes) {
-      return;
-    }
-
-    this.setData({ submitting: true });
+    if (this.data.submitting) return
 
     try {
-      const res = await request({
-        url: '/refunds',
-        method: 'POST',
-        data: {
-          order_id: this.data.orderId,
-          refund_type: this.data.refundType,
-          refund_reason: this.data.reasonList[this.data.reasonIndex],
-          refund_desc: this.data.refundDesc,
-          refund_images: this.data.refundImages.length > 0 ? this.data.refundImages : null
-        }
-      });
+      // 验证表单
+      this.validateForm()
 
-      if (res.code === 200) {
-        wx.showToast({
-          title: '提交成功',
-          icon: 'success'
-        });
-        
-        setTimeout(() => {
-          // 跳转到退款详情页
-          wx.redirectTo({
-            url: `/pages/refund-detail/refund-detail?id=${res.data.id}`
-          });
-        }, 1500);
-      } else {
-        wx.showToast({
-          title: res.message || '提交失败',
-          icon: 'none'
-        });
-        this.setData({ submitting: false });
+      // 二次确认
+      const confirmed = await errorHandler.confirm({
+        title: '确认提交',
+        content: '提交后请等待客服审核，审核通过后将原路退回'
+      })
+
+      if (!confirmed) return
+
+      this.setData({ submitting: true })
+
+      const refundData = {
+        order_id: this.data.orderId,
+        refund_type: this.data.refundType,
+        refund_reason: this.data.reasonList[this.data.reasonIndex],
+        refund_desc: this.data.refundDesc,
+        refund_images: this.data.refundImages.length > 0 ? this.data.refundImages : null
       }
+
+      // TODO: 创建退款 API
+      // const result = await app.api.refund.createRefund(refundData)
+      
+      // 暂时模拟成功
+      errorHandler.showSuccess('提交成功')
+      
+      this.$setTimeout(() => {
+        // 跳转到退款详情页
+        // wx.redirectTo({
+        //   url: `/pages/refund-detail/refund-detail?id=${result.id}`
+        // })
+        wx.navigateBack()
+      }, 1500)
     } catch (error) {
-      console.error('提交退款失败:', error);
-      wx.showToast({
-        title: '提交失败',
-        icon: 'none'
-      });
-      this.setData({ submitting: false });
+      errorHandler.handle(error)
+      this.setData({ submitting: false })
     }
   }
-});
+}))

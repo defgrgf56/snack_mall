@@ -1,7 +1,10 @@
-// pages/order-confirm/order-confirm.js
-const api = require('../../utils/request');
+// pages/order-confirm/order-confirm.js - 重构后的订单确认页面
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     selectedAddress: null,
     products: [],
@@ -13,177 +16,177 @@ Page({
     pointsDiscount: 0,
     totalPrice: 0,
     finalPrice: 0,
-    cartIds: null // 保存购物车ID，用于提交订单后清空购物车
+    cartIds: null // 购物车ID，用于提交后清空
   },
 
   onLoad(options) {
     // 从购物车结算
     if (options.cartIds) {
-      this.loadFromCart(options.cartIds);
+      this.setData({ cartIds: options.cartIds })
+      this.loadFromCart(options.cartIds)
     }
     // 直接购买
     else if (options.productId) {
-      this.loadFromProduct(options.productId, options.quantity, options.spec);
+      this.loadFromProduct(options.productId, options.quantity, options.spec)
     }
-    
-    this.loadDefaultAddress();
+
+    this.loadDefaultAddress()
   },
 
-  // 从购物车加载
+  /**
+   * 从购物车加载商品
+   */
   async loadFromCart(cartIds) {
     try {
-      console.log('=== 开始加载购物车商品 ===');
-      console.log('cartIds:', cartIds);
-      
-      const res = await api.get('/cart/settle', { ids: cartIds }, false);
-      console.log('结算接口返回:', res);
-      
-      const items = res.items || [];
-      console.log('商品列表:', items);
-      
-      this.setData({
-        products: items,
-        cartIds: cartIds // 保存购物车ID
-      });
-      
-      console.log('设置后的products:', this.data.products);
-      this.calculatePrice();
+      const result = await this.loadData(
+        () => app.api.cart.settle(cartIds),
+        { showLoading: true }
+      )
+
+      const items = result.items || []
+      this.setData({ products: items })
+      this.calculatePrice()
     } catch (error) {
-      console.error('加载购物车商品失败:', error);
-      wx.showToast({
-        title: '加载商品失败',
-        icon: 'none'
-      });
+      // 错误已统一处理
     }
   },
 
-  // 从商品直接购买
+  /**
+   * 从商品直接购买
+   */
   async loadFromProduct(productId, quantity, spec) {
     try {
-      console.log('=== 开始加载商品 ===');
-      console.log('productId:', productId);
-      console.log('quantity:', quantity);
-      console.log('spec:', spec);
-      
-      const res = await api.get(`/products/${productId}`, {}, false);
-      const product = res;
-      
-      console.log('商品信息:', product);
-      
+      const product = await this.loadData(
+        () => app.api.product.getProductDetail(productId),
+        { showLoading: true }
+      )
+
       const productData = [{
         product_id: product.id,
         product,
         quantity: parseInt(quantity) || 1,
         spec: spec || ''
-      }];
-      
-      console.log('商品数据:', productData);
-      
-      this.setData({
-        products: productData
-      });
-      
-      console.log('设置后的products:', this.data.products);
-      this.calculatePrice();
+      }]
+
+      this.setData({ products: productData })
+      this.calculatePrice()
     } catch (error) {
-      console.error('加载商品失败:', error);
-      wx.showToast({
-        title: '加载商品失败',
-        icon: 'none'
-      });
+      // 错误已统一处理
     }
   },
 
-  // 加载默认地址
+  /**
+   * 加载默认地址
+   */
   async loadDefaultAddress() {
     try {
-      const res = await api.get('/addresses/default', {}, false);
-      console.log('=== 默认地址数据 ===', res);
-      if (res) {
-        this.setData({
-          selectedAddress: res
-        });
-        console.log('selectedAddress:', this.data.selectedAddress);
-      } else {
-        console.log('没有默认地址');
+      const address = await app.api.address.getDefaultAddress()
+      if (address) {
+        this.setData({ selectedAddress: address })
       }
     } catch (error) {
-      console.error('加载默认地址失败:', error);
+      // 静默失败，没有默认地址很正常
     }
   },
 
-  // 选择地址
+  /**
+   * 选择地址
+   */
   onSelectAddress() {
+    const currentId = this.data.selectedAddress?.id
     wx.navigateTo({
-      url: '/pages/address-list/address-list?select=1'
-    });
+      url: `/pages/address-list/address-list?select=1${currentId ? `&currentId=${currentId}` : ''}`
+    })
   },
 
-  // 配送方式切换
+  /**
+   * 地址选中回调（从地址列表页返回）
+   */
+  async onAddressSelected(addressId) {
+    try {
+      const address = await app.api.address.getAddressDetail(addressId)
+      this.setData({ selectedAddress: address })
+    } catch (error) {
+      // 错误已统一处理
+    }
+  },
+
+  /**
+   * 配送方式切换
+   */
   onDeliveryTypeChange(e) {
     this.setData({
       deliveryType: parseInt(e.detail.value)
-    });
+    })
+    this.calculatePrice()
   },
 
-  // 备注输入
+  /**
+   * 备注输入
+   */
   onRemarkInput(e) {
     this.setData({
       remark: e.detail.value
-    });
+    })
   },
 
-  // 选择优惠券
+  /**
+   * 选择优惠券
+   */
   onSelectCoupon() {
+    const { totalPrice, couponId } = this.data
     wx.navigateTo({
-      url: '/pages/coupon-select/coupon-select'
-    });
+      url: `/pages/coupon-select/coupon-select?orderAmount=${totalPrice}${couponId ? `&currentCouponId=${couponId}` : ''}`
+    })
   },
 
-  // 计算价格
+  /**
+   * 计算价格
+   */
   calculatePrice() {
-    const products = this.data.products;
-    let totalPrice = 0;
-    
+    const products = this.data.products
+    let totalPrice = 0
+
     products.forEach(item => {
-      const price = parseFloat(item.product.price) || 0;
-      const quantity = parseInt(item.quantity) || 0;
-      totalPrice += price * quantity;
-    });
-    
-    const couponDiscount = parseFloat(this.data.couponDiscount) || 0;
-    const pointsDiscount = parseFloat(this.data.pointsDiscount) || 0;
-    const finalPrice = Math.max(0, totalPrice - couponDiscount - pointsDiscount);
-    
-    console.log('=== 价格计算 ===');
-    console.log('商品列表:', products);
-    console.log('商品总价:', totalPrice);
-    console.log('优惠券折扣:', couponDiscount);
-    console.log('积分折扣:', pointsDiscount);
-    console.log('最终价格:', finalPrice);
-    
+      const price = parseFloat(item.product.price) || 0
+      const quantity = parseInt(item.quantity) || 0
+      totalPrice += price * quantity
+    })
+
+    const couponDiscount = parseFloat(this.data.couponDiscount) || 0
+    const pointsDiscount = parseFloat(this.data.pointsDiscount) || 0
+    const finalPrice = Math.max(0, totalPrice - couponDiscount - pointsDiscount)
+
     this.setData({
       totalPrice: totalPrice.toFixed(2),
       finalPrice: finalPrice.toFixed(2)
-    });
+    })
   },
 
-  // 提交订单
-  async onSubmit() {
-    const { selectedAddress, deliveryType, products, remark, couponId, pointsUsed, cartIds } = this.data;
-    
-    // 验证地址
+  /**
+   * 表单验证
+   */
+  validateForm() {
+    const { selectedAddress, deliveryType } = this.data
+
+    // 快递配送必须选择地址
     if (deliveryType === 1 && !selectedAddress) {
-      wx.showToast({
-        title: '请选择收货地址',
-        icon: 'none'
-      });
-      return;
+      throw new Error('请选择收货地址')
     }
-    
+
+    return true
+  },
+
+  /**
+   * 提交订单
+   */
+  async onSubmit() {
     try {
-      wx.showLoading({ title: '提交中...' });
-      
+      // 验证表单
+      this.validateForm()
+
+      const { selectedAddress, deliveryType, products, remark, couponId, pointsUsed, cartIds } = this.data
+
       const orderData = {
         address_id: selectedAddress?.id,
         delivery_type: deliveryType,
@@ -195,35 +198,25 @@ Page({
           quantity: item.quantity,
           spec: item.spec
         }))
-      };
-      
-      // 如果是从购物车结算，传递cart_ids用于清空购物车
-      if (cartIds) {
-        orderData.cart_ids = cartIds.split(',').map(id => parseInt(id));
       }
-      
-      const res = await api.post('/orders', orderData, false);
-      
-      wx.hideLoading();
-      
-      wx.showToast({
-        title: '订单创建成功',
-        icon: 'success'
-      });
-      
-      // 跳转到订单详情或支付页
-      setTimeout(() => {
+
+      // 如果从购物车结算，传递cart_ids用于清空购物车
+      if (cartIds) {
+        orderData.cart_ids = cartIds.split(',').map(id => parseInt(id))
+      }
+
+      const result = await app.api.order.createOrder(orderData)
+
+      errorHandler.showSuccess('订单创建成功')
+
+      // 跳转到订单列表的待付款tab
+      this.$setTimeout(() => {
         wx.redirectTo({
-          url: `/pages/order-detail/order-detail?id=${res.order_id}`
-        });
-      }, 1500);
+          url: `/pages/order-list/order-list?status=1`
+        })
+      }, 1500)
     } catch (error) {
-      console.error('提交订单失败:', error);
-      wx.hideLoading();
-      wx.showToast({
-        title: error.message || '提交失败',
-        icon: 'none'
-      });
+      errorHandler.handle(error)
     }
   }
-});
+}))

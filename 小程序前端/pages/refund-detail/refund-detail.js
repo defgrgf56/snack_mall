@@ -1,7 +1,10 @@
-// pages/refund-detail/refund-detail.js
-const { request } = require('../../utils/request');
+// pages/refund-detail/refund-detail.js - 重构后的退款详情页面
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     refundId: null,
     refund: {},
@@ -32,26 +35,21 @@ Page({
   },
 
   onLoad(options) {
-    const { id } = options;
+    const { id } = options
     if (!id) {
-      wx.showToast({
-        title: '退款ID不能为空',
-        icon: 'none'
-      });
-      setTimeout(() => {
-        wx.navigateBack();
-      }, 1500);
-      return;
+      errorHandler.handle(new Error('退款ID不能为空'))
+      this.$setTimeout(() => wx.navigateBack(), 1500)
+      return
     }
-    
-    this.setData({ refundId: id });
-    this.loadRefundDetail();
+
+    this.setData({ refundId: id })
+    this.loadRefundDetail()
   },
 
   onShow() {
     // 刷新数据
     if (this.data.refundId) {
-      this.loadRefundDetail();
+      this.loadRefundDetail()
     }
   },
 
@@ -60,31 +58,13 @@ Page({
    */
   async loadRefundDetail() {
     try {
-      wx.showLoading({ title: '加载中...' });
-      
-      const res = await request({
-        url: `/refunds/${this.data.refundId}`,
-        method: 'GET'
-      });
-
-      if (res.code === 200) {
-        this.setData({
-          refund: res.data
-        });
-      } else {
-        wx.showToast({
-          title: res.message || '加载失败',
-          icon: 'none'
-        });
-      }
+      const refund = await this.loadData(
+        () => app.api.refund.getRefundDetail(this.data.refundId),
+        { showLoading: true }
+      )
+      this.setData({ refund })
     } catch (error) {
-      console.error('加载退款详情失败:', error);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
-    } finally {
-      wx.hideLoading();
+      // 错误已统一处理
     }
   },
 
@@ -92,61 +72,33 @@ Page({
    * 预览图片
    */
   previewImage(e) {
-    const { url } = e.currentTarget.dataset;
+    const { url } = e.currentTarget.dataset
     wx.previewImage({
-      urls: this.data.refund.refund_images,
+      urls: this.data.refund.refund_images || [],
       current: url
-    });
+    })
   },
 
   /**
    * 取消退款
    */
   async cancelRefund() {
-    const confirmRes = await new Promise((resolve) => {
-      wx.showModal({
-        title: '确认取消',
-        content: '确定要取消退款申请吗？',
-        success: (res) => resolve(res.confirm)
-      });
-    });
+    const confirmed = await errorHandler.confirm({
+      title: '确认取消',
+      content: '确定要取消退款申请吗？'
+    })
 
-    if (!confirmRes) {
-      return;
-    }
+    if (!confirmed) return
 
     try {
-      wx.showLoading({ title: '处理中...' });
-      
-      const res = await request({
-        url: `/refunds/${this.data.refundId}/cancel`,
-        method: 'PUT'
-      });
+      await app.api.refund.cancelRefund(this.data.refundId)
+      errorHandler.showSuccess('已取消')
 
-      if (res.code === 200) {
-        wx.showToast({
-          title: '已取消',
-          icon: 'success'
-        });
-        
-        // 刷新数据
-        setTimeout(() => {
-          this.loadRefundDetail();
-        }, 1500);
-      } else {
-        wx.showToast({
-          title: res.message || '取消失败',
-          icon: 'none'
-        });
-      }
+      this.$setTimeout(() => {
+        this.loadRefundDetail()
+      }, 1500)
     } catch (error) {
-      console.error('取消退款失败:', error);
-      wx.showToast({
-        title: '取消失败',
-        icon: 'none'
-      });
-    } finally {
-      wx.hideLoading();
+      // 错误已统一处理
     }
   },
 
@@ -154,9 +106,10 @@ Page({
    * 联系客服
    */
   contactService() {
-    wx.showToast({
-      title: '客服功能开发中',
-      icon: 'none'
-    });
+    errorHandler.showModal({
+      title: '联系客服',
+      content: '客服电话：400-123-4567',
+      showCancel: false
+    })
   }
-});
+}))

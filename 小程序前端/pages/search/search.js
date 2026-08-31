@@ -1,286 +1,332 @@
-// pages/search/search.js
-const api = require('../../utils/request');
+// pages/search/search.js - 重构后的搜索页面
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
+const { STORAGE_KEY } = require('../../constants/index')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     keyword: '',
     history: [],
     hotKeywords: [],
-    suggestions: [], // 搜索联想词
-    showSuggestions: false, // 是否显示联想列表
-    searching: false,
-    searched: false,
+    suggestions: [],
+    showSuggestions: false,
     products: [],
-    autoFocus: false,
-    statusBarHeight: 0,
-    navBarHeight: 0,
-    sortType: 'default', // 排序类型：default, price_asc, price_desc, sales, rating
+    searched: false,  // 是否已执行搜索
+    
+    // 排序
+    sortType: 'default',
     sortOptions: [
       { value: 'default', label: '综合' },
       { value: 'sales', label: '销量' },
       { value: 'price_asc', label: '价格↑' },
-      { value: 'price_desc', label: '价格↓' },
-      { value: 'rating', label: '好评' }
-    ]
+      { value: 'price_desc', label: '价格↓' }
+    ],
+    
+    // 导航栏
+    statusBarHeight: 0,
+    navBarHeight: 0,
+    autoFocus: true
   },
 
   onLoad(options) {
-    this.setNavBarInfo();
-    this.loadHistory();
-    this.loadHotKeywords();
+    this.setNavBarInfo()
+    this.loadHistory()
+    this.loadHotKeywords()
   },
 
-  // 设置导航栏信息（自适应设备）
+  /**
+   * 设置导航栏信息
+   */
   setNavBarInfo() {
-    const systemInfo = wx.getSystemInfoSync();
-    const menuButton = wx.getMenuButtonBoundingClientRect();
+    const systemInfo = app.store.getState('systemInfo')
+    const menuButton = wx.getMenuButtonBoundingClientRect()
     
-    // 状态栏高度
-    const statusBarHeight = systemInfo.statusBarHeight;
-    
-    // 导航栏高度 = 胶囊底部位置 - 状态栏高度 + 胶囊高度 + 额外间距
-    const navBarHeight = (menuButton.top - statusBarHeight) + menuButton.height + 10;
+    const statusBarHeight = systemInfo.statusBarHeight
+    const navBarHeight = (menuButton.top - statusBarHeight) + menuButton.height + 10
     
     this.setData({
       statusBarHeight,
       navBarHeight
-    });
+    })
   },
 
-  // 加载搜索历史（从后端）
+  /**
+   * 加载搜索历史
+   */
   async loadHistory() {
     try {
-      const res = await api.get('/search/history?limit=10');
-      const history = res.map(item => item.keyword);
-      this.setData({ history });
+      // TODO: 从后端获取搜索历史
+      // const result = await app.api.xxx.getSearchHistory()
+      // this.setData({ history: result })
+      
+      // 暂时使用本地存储
+      const history = wx.getStorageSync(STORAGE_KEY.SEARCH_HISTORY) || []
+      this.setData({ history })
     } catch (error) {
-      console.error('加载搜索历史失败:', error);
-      // 降级使用本地存储
-      const history = wx.getStorageSync('search_history') || [];
-      this.setData({ history });
+      // 静默失败
     }
   },
 
-  // 加载热门搜索词（从后端）
+  /**
+   * 加载热门搜索词
+   */
   async loadHotKeywords() {
     try {
-      const res = await api.get('/search/hot?limit=10');
-      const hotKeywords = res.map(item => item.keyword);
-      this.setData({ hotKeywords });
-    } catch (error) {
-      console.error('加载热门搜索失败:', error);
-      // 使用默认热门词
+      // TODO: 从后端获取热门搜索
+      // const result = await app.api.xxx.getHotKeywords()
+      // this.setData({ hotKeywords: result })
+      
+      // 暂时使用默认值
       this.setData({
         hotKeywords: ['坚果', '巧克力', '饼干', '零食大礼包']
-      });
+      })
+    } catch (error) {
+      // 静默失败
     }
   },
 
-  // 保存搜索历史（到后端）
+  /**
+   * 保存搜索历史
+   */
   async saveHistory(keyword) {
     try {
-      await api.post('/search/history', { keyword });
-      // 重新加载历史列表
-      this.loadHistory();
+      // TODO: 保存到后端
+      // await app.api.xxx.saveSearchHistory(keyword)
+      
+      // 暂时使用本地存储
+      let history = this.data.history
+      history = history.filter(item => item !== keyword)
+      history.unshift(keyword)
+      history = history.slice(0, 10)
+      
+      wx.setStorageSync(STORAGE_KEY.SEARCH_HISTORY, history)
+      this.setData({ history })
     } catch (error) {
-      console.error('保存搜索历史失败:', error);
-      // 降级使用本地存储
-      let history = this.data.history;
-      history = history.filter(item => item !== keyword);
-      history.unshift(keyword);
-      history = history.slice(0, 10);
-      wx.setStorageSync('search_history', history);
-      this.setData({ history });
+      // 静默失败
     }
   },
 
-  // 输入关键词
+  /**
+   * 输入关键词
+   */
   async onKeywordInput(e) {
-    const keyword = e.detail.value;
-    this.setData({ keyword });
+    const keyword = e.detail.value
+    this.setData({ keyword })
 
     // 如果输入为空，隐藏联想
     if (!keyword.trim()) {
-      this.setData({ 
+      this.setData({
         showSuggestions: false,
         suggestions: []
-      });
-      return;
+      })
+      return
     }
 
     // 防抖：延迟请求联想词
-    if (this.suggestTimer) {
-      clearTimeout(this.suggestTimer);
+    if (this._suggestTimer) {
+      clearTimeout(this._suggestTimer)
     }
 
-    this.suggestTimer = setTimeout(async () => {
+    this._suggestTimer = this.$setTimeout(async () => {
       try {
-        const suggestions = await api.get('/search/suggest', { keyword: keyword.trim(), limit: 8 });
-        this.setData({ 
-          suggestions,
-          showSuggestions: suggestions.length > 0
-        });
+        // TODO: 调用搜索建议 API
+        // const suggestions = await app.api.xxx.getSearchSuggestions(keyword.trim())
+        // this.setData({
+        //   suggestions,
+        //   showSuggestions: suggestions.length > 0
+        // })
       } catch (error) {
-        console.error('获取搜索联想失败:', error);
-        this.setData({ 
-          showSuggestions: false,
-          suggestions: []
-        });
+        // 静默失败
       }
-    }, 300);
+    }, 300)
   },
 
-  // 点击联想词
+  /**
+   * 点击联想词
+   */
   onSuggestionTap(e) {
-    const keyword = e.currentTarget.dataset.keyword;
+    const { keyword } = e.currentTarget.dataset
     this.setData({
       keyword,
       showSuggestions: false
-    });
-    this.onSearch();
+    })
+    this.onSearch()
   },
 
-  // 清除输入框
+  /**
+   * 清除输入框
+   */
   onClearInput() {
     this.setData({
       keyword: '',
       autoFocus: true,
       showSuggestions: false,
-      suggestions: []
-    });
+      suggestions: [],
+      searched: false,  // 清除搜索状态
+      products: []      // 清空商品列表
+    })
   },
 
-  // 搜索
+  /**
+   * 执行搜索
+   */
   async onSearch() {
-    const keyword = this.data.keyword.trim();
+    const keyword = this.data.keyword.trim()
     
     if (!keyword) {
-      wx.showToast({
-        title: '请输入搜索关键词',
-        icon: 'none'
-      });
-      return;
+      errorHandler.handle(new Error('请输入搜索关键词'))
+      return
     }
-    
-    this.setData({
-      searching: true,
-      searched: false,
-      showSuggestions: false
-    });
-    
-    // 保存搜索历史
-    this.saveHistory(keyword);
-    
-    try {
-      wx.showLoading({ title: '搜索中...' });
-      
-      const res = await api.get('/products', {
-        keyword,
-        sort_by: this.data.sortType,
-        page: 1,
-        limit: 50
-      }, false);
-      
-      this.setData({
-        products: res.items || [],
-        searched: true
-      });
-    } catch (error) {
-      console.error('搜索失败:', error);
-      this.setData({
-        products: [],
-        searched: true
-      });
-    } finally {
-      wx.hideLoading();
-      this.setData({ searching: false });
-    }
+
+    // 保存历史
+    this.saveHistory(keyword)
+
+    // 隐藏联想
+    this.setData({ 
+      showSuggestions: false,
+      searched: true  // 标记已执行搜索
+    })
+
+    // 执行搜索
+    await this.loadProducts()
   },
 
-  // 切换排序
-  onSortChange(e) {
-    const sortType = e.currentTarget.dataset.sort;
-    if (sortType === this.data.sortType) return;
+  /**
+   * 加载商品列表
+   */
+  async loadProducts() {
+    const keyword = this.data.keyword.trim()
+    if (!keyword) return
 
-    this.setData({ sortType });
-
-    // 如果已经搜索过，重新搜索
-    if (this.data.searched && this.data.keyword.trim()) {
-      this.onSearch();
-    }
-  },
-
-  // 点击历史或热门
-  onHistoryTap(e) {
-    const keyword = e.currentTarget.dataset.keyword;
-    this.setData({
+    const params = {
       keyword,
-      showSuggestions: false
-    });
-    this.onSearch();
-  },
+      page: 1,
+      limit: 20
+    }
 
-  // 删除单条历史记录
-  async onDeleteHistory(e) {
-    const index = e.currentTarget.dataset.index;
-    const keyword = this.data.history[index];
-    
+    // 根据排序类型添加参数
+    switch (this.data.sortType) {
+      case 'sales':
+        params.order_by = 'sales'
+        params.order = 'desc'
+        break
+      case 'price_asc':
+        params.order_by = 'price'
+        params.order = 'asc'
+        break
+      case 'price_desc':
+        params.order_by = 'price'
+        params.order = 'desc'
+        break
+    }
+
     try {
-      // 从后端删除
-      const historyList = await api.get('/search/history?limit=100');
-      const item = historyList.find(h => h.keyword === keyword);
-      if (item) {
-        await api.delete(`/search/history/${item.id}`);
-      }
-      
-      // 更新界面
-      const history = [...this.data.history];
-      history.splice(index, 1);
-      this.setData({ history });
+      const result = await this.loadData(
+        () => app.api.product.getProducts(params),
+        { showLoading: true }
+      )
+
+      const products = result.items || []
+      this.setData({ products })
+      this.setPageEmpty(products.length === 0)
     } catch (error) {
-      console.error('删除搜索历史失败:', error);
-      wx.showToast({
-        title: '删除失败',
-        icon: 'none'
-      });
+      // 错误已统一处理
     }
   },
 
-  // 清空历史
-  onClearHistory() {
-    wx.showModal({
-      title: '提示',
-      content: '确定清空搜索历史吗？',
-      success: async (res) => {
-        if (res.confirm) {
-          try {
-            await api.delete('/search/history');
-            this.setData({ history: [] });
-            wx.showToast({
-              title: '已清空',
-              icon: 'success'
-            });
-          } catch (error) {
-            console.error('清空搜索历史失败:', error);
-            // 降级使用本地清空
-            wx.removeStorageSync('search_history');
-            this.setData({ history: [] });
-          }
-        }
-      }
-    });
+  /**
+   * 排序切换
+   */
+  onSortChange(e) {
+    const { sort } = e.currentTarget.dataset
+    this.setData({ sortType: sort })
+    this.loadProducts()
   },
 
-  // 取消搜索
+  /**
+   * 点击历史记录
+   */
+  onHistoryTap(e) {
+    const { keyword } = e.currentTarget.dataset
+    this.setData({ keyword })
+    this.onSearch()
+  },
+
+  /**
+   * 点击热门搜索
+   */
+  onHotKeywordTap(e) {
+    const { keyword } = e.currentTarget.dataset
+    this.setData({ keyword })
+    this.onSearch()
+  },
+
+  /**
+   * 清空搜索历史
+   */
+  async onClearHistory() {
+    const confirmed = await errorHandler.confirm({
+      content: '确定清空搜索历史吗？'
+    })
+
+    if (!confirmed) return
+
+    try {
+      // TODO: 清空后端历史
+      // await app.api.xxx.clearSearchHistory()
+      
+      // 清空本地历史
+      wx.removeStorageSync(STORAGE_KEY.SEARCH_HISTORY)
+      this.setData({ history: [] })
+      errorHandler.showSuccess('已清空')
+    } catch (error) {
+      // 错误已统一处理
+    }
+  },
+
+  /**
+   * 取消搜索（返回上一页）
+   */
   onCancel() {
-    wx.navigateBack();
+    wx.navigateBack()
   },
 
-  // 商品详情
+  /**
+   * 商品点击
+   */
   onProductTap(e) {
-    const id = e.currentTarget.dataset.id;
+    const { id } = e.currentTarget.dataset
     wx.navigateTo({
       url: `/pages/product-detail/product-detail?id=${id}`
-    });
+    })
+  },
+
+  /**
+   * 加入购物车
+   */
+  async onAddToCart(e) {
+    const { id } = e.currentTarget.dataset
+
+    if (!app.store.isLoggedIn()) {
+      errorHandler.handle(new Error('请先登录'), { code: 'NOT_LOGGED_IN' })
+      return
+    }
+
+    try {
+      await app.api.cart.addToCart(id, 1)
+      errorHandler.showSuccess('已加入购物车')
+      app.store.updateCartCount()
+    } catch (error) {
+      // 错误已统一处理
+    }
+  },
+
+  /**
+   * 返回
+   */
+  onBack() {
+    wx.navigateBack()
   }
-});
+}))

@@ -1,10 +1,10 @@
-<!--pages/address-list/address-list.wxml-->
+  <!--pages/address-list/address-list.wxml-->
 <view class="address-container">
   <!-- 地址列表 -->
-  <scroll-view class="address-list" scroll-y wx:if="{{addresses.length > 0}}">
+  <scroll-view class="address-list" scroll-y wx:if="{{addressList.length > 0}}">
     <view 
       class="address-item"
-      wx:for="{{addresses}}"
+      wx:for="{{addressList}}"
       wx:key="id"
       data-id="{{item.id}}"
       bindtap="onSelectAddress"

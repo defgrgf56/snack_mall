@@ -1,82 +1,76 @@
-// pages/product-detail/product-detail.js
-const { api } = require('../../config/api.js')
-const { addToCart } = require('../../utils/cart.js')
-const { formatPrice } = require('../../utils/format.js')
+// pages/product-detail/product-detail.js - 重构后的商品详情页
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     productId: null,
     product: null,
     quantity: 1,
-    loading: true,
-    isFavorited: false, // 是否已收藏
-    favoriteId: null    // 收藏ID
+    isFavorited: false,
+    favoriteId: null
   },
 
   onLoad(options) {
-    if (options.id) {
-      this.setData({ productId: options.id })
-      this.loadProductDetail()
-      this.checkFavoriteStatus() // 检查收藏状态
-    } else {
-      wx.showToast({
-        title: '商品不存在',
-        icon: 'none'
-      })
-      setTimeout(() => {
-        wx.navigateBack()
-      }, 1500)
+    if (!options.id) {
+      errorHandler.handle(new Error('商品不存在'))
+      setTimeout(() => wx.navigateBack(), 1500)
+      return
     }
-  },
 
-  onShow() {
-    // 更新购物车数量
-    const app = getApp()
-    app.updateCartCount()
+    this.setData({ productId: options.id })
+    this.loadProductDetail()
+    this.checkFavoriteStatus()
   },
 
   /**
    * 加载商品详情
    */
   async loadProductDetail() {
-    this.setData({ loading: true })
-    
     try {
-      const res = await api.getProductDetail(this.data.productId)
-      
-      if (res.code === 200) {
-        // 处理图片数组
-        let images = []
-        if (res.data.images) {
-          images = typeof res.data.images === 'string' 
-            ? JSON.parse(res.data.images) 
-            : res.data.images
-        }
-        if (images.length === 0 && res.data.cover) {
-          images = [res.data.cover]
-        }
-        
-        this.setData({
-          product: {
-            ...res.data,
-            images: images
-          },
-          loading: false
-        })
-      } else {
-        wx.showToast({
-          title: res.message || '加载失败',
-          icon: 'none'
-        })
-        this.setData({ loading: false })
+      const product = await this.loadData(
+        () => app.api.product.getProductDetail(this.data.productId),
+        { showLoading: true }
+      )
+
+      // 处理图片数组
+      let images = []
+      if (product.images) {
+        images = typeof product.images === 'string' 
+          ? JSON.parse(product.images) 
+          : product.images
       }
-    } catch (error) {
-      console.error('加载商品详情失败', error)
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
+      if (images.length === 0 && product.cover) {
+        images = [product.cover]
+      }
+
+      this.setData({
+        product: {
+          ...product,
+          images
+        }
       })
-      this.setData({ loading: false })
+    } catch (error) {
+      // 错误已统一处理
+    }
+  },
+
+  /**
+   * 检查收藏状态
+   */
+  async checkFavoriteStatus() {
+    if (!app.store.isLoggedIn()) return
+
+    try {
+      const result = await app.api.favorite.checkFavorite(this.data.productId)
+      this.setData({
+        isFavorited: result.is_favorited,
+        favoriteId: result.favorite_id
+      })
+    } catch (error) {
+      // 静默失败
     }
   },
 
@@ -85,9 +79,7 @@ Page({
    */
   handleMinus() {
     if (this.data.quantity > 1) {
-      this.setData({
-        quantity: this.data.quantity - 1
-      })
+      this.setData({ quantity: this.data.quantity - 1 })
     }
   },
 
@@ -96,18 +88,13 @@ Page({
    */
   handlePlus() {
     const { product, quantity } = this.data
-    
+
     if (quantity >= product.stock) {
-      wx.showToast({
-        title: '库存不足',
-        icon: 'none'
-      })
+      errorHandler.handle(new Error('库存不足'))
       return
     }
-    
-    this.setData({
-      quantity: quantity + 1
-    })
+
+    this.setData({ quantity: quantity + 1 })
   },
 
   /**
@@ -116,15 +103,12 @@ Page({
   handleQuantityInput(e) {
     const value = parseInt(e.detail.value) || 1
     const { product } = this.data
-    
+
     if (value < 1) {
       this.setData({ quantity: 1 })
     } else if (value > product.stock) {
       this.setData({ quantity: product.stock })
-      wx.showToast({
-        title: '库存不足',
-        icon: 'none'
-      })
+      errorHandler.handle(new Error('库存不足'))
     } else {
       this.setData({ quantity: value })
     }
@@ -134,13 +118,22 @@ Page({
    * 加入购物车
    */
   async handleAddToCart() {
+    if (!app.store.isLoggedIn()) {
+      errorHandler.handle(new Error('请先登录'), { code: 'NOT_LOGGED_IN' })
+      return
+    }
+
     const { productId, quantity } = this.data
-    
-    const success = await addToCart(productId, quantity)
-    
-    if (success) {
+
+    try {
+      await app.api.cart.addToCart(productId, quantity)
+      errorHandler.showSuccess('已加入购物车')
+      app.store.updateCartCount()
+      
       // 重置数量
       this.setData({ quantity: 1 })
+    } catch (error) {
+      // 错误已统一处理
     }
   },
 
@@ -148,56 +141,18 @@ Page({
    * 立即购买
    */
   async handleBuyNow() {
+    if (!app.store.isLoggedIn()) {
+      errorHandler.handle(new Error('请先登录'), { code: 'NOT_LOGGED_IN' })
+      return
+    }
+
     const { productId, quantity } = this.data
-    
-    // 先加入购物车
-    const success = await addToCart(productId, quantity)
-    
-    if (success) {
-      // 跳转到购物车
-      wx.switchTab({
-        url: '/pages/cart/cart'
-      })
-    }
-  },
-
-  /**
-   * 返回首页
-   */
-  goHome() {
-    wx.switchTab({
-      url: '/pages/index/index'
-    })
-  },
-
-  /**
-   * 跳转购物车
-   */
-  goCart() {
-    wx.switchTab({
-      url: '/pages/cart/cart'
-    })
-  },
-
-  /**
-   * 检查收藏状态
-   */
-  async checkFavoriteStatus() {
-    const app = getApp();
-    if (!app.globalData.token) {
-      return;
-    }
 
     try {
-      const { request } = require('../../utils/request');
-      const res = await request(`/favorites/check/${this.data.productId}`, 'GET', {}, true);
-
-      this.setData({
-        isFavorited: res.is_favorited || false,
-        favoriteId: res.favorite_id || null
-      });
+      await app.api.cart.addToCart(productId, quantity)
+      wx.switchTab({ url: '/pages/cart/cart' })
     } catch (error) {
-      console.error('检查收藏状态失败:', error);
+      // 错误已统一处理
     }
   },
 
@@ -205,53 +160,43 @@ Page({
    * 收藏/取消收藏
    */
   async handleFavorite() {
-    const app = getApp();
-    if (!app.globalData.token) {
-      wx.showToast({
-        title: '请先登录',
-        icon: 'none'
-      });
-      return;
+    if (!app.store.isLoggedIn()) {
+      errorHandler.handle(new Error('请先登录'), { code: 'NOT_LOGGED_IN' })
+      return
     }
 
     try {
-      const { request } = require('../../utils/request');
-      
       if (this.data.isFavorited) {
         // 取消收藏
-        await request(`/favorites/product/${this.data.productId}`, 'DELETE', {}, true);
-
-        this.setData({
-          isFavorited: false,
-          favoriteId: null
-        });
-        wx.showToast({
-          title: '取消收藏',
-          icon: 'success'
-        });
+        await app.api.favorite.deleteFavorite(this.data.favoriteId)
+        this.setData({ isFavorited: false, favoriteId: null })
+        errorHandler.showSuccess('取消收藏')
       } else {
         // 添加收藏
-        await request('/favorites', 'POST', {
-          product_id: this.data.productId
-        }, true);
-
-        this.setData({
-          isFavorited: true
-        });
-        wx.showToast({
-          title: '收藏成功',
-          icon: 'success'
-        });
-        // 重新检查收藏状态获取ID
-        this.checkFavoriteStatus();
+        const result = await app.api.favorite.addFavorite(this.data.productId)
+        this.setData({ 
+          isFavorited: true,
+          favoriteId: result.id || result.favorite_id
+        })
+        errorHandler.showSuccess('收藏成功')
       }
     } catch (error) {
-      console.error('收藏操作失败:', error);
-      wx.showToast({
-        title: error.message || '操作失败',
-        icon: 'none'
-      });
+      // 错误已统一处理
     }
+  },
+
+  /**
+   * 返回首页
+   */
+  goHome() {
+    wx.switchTab({ url: '/pages/index/index' })
+  },
+
+  /**
+   * 跳转购物车
+   */
+  goCart() {
+    wx.switchTab({ url: '/pages/cart/cart' })
   },
 
   /**
@@ -265,4 +210,4 @@ Page({
       imageUrl: product.cover
     }
   }
-})
+}))

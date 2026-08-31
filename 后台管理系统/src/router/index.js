@@ -107,23 +107,20 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  const userStore = useUserStore()
+  console.log('路由导航:', to.path)
   
   // 设置页面标题
   document.title = to.meta.title ? `${to.meta.title} - 零食商城后台` : '零食商城后台管理系统'
   
   // 登录页直接放行
   if (to.path === '/login') {
-    if (userStore.token) {
-      next('/')
-    } else {
-      next()
-    }
+    next()
     return
   }
   
   // 检查登录状态
-  if (!userStore.token) {
+  const token = localStorage.getItem('admin_token')
+  if (!token) {
     next('/login')
     return
   }

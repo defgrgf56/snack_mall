@@ -1,113 +1,95 @@
-// pages/review-list/review-list.js
-Page({
+// pages/review-list/review-list.js - 重构后的评价列表页面
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
+
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     productId: null,
     reviews: [],
     stats: null,
     filterRating: '', // 筛选评分
-    showImageOnly: false, // 只看有图
-    page: 1,
-    pageSize: 10,
-    hasMore: true,
-    loading: false
+    showImageOnly: false // 只看有图
   },
 
   onLoad(options) {
     if (options.productId) {
       this.setData({ productId: options.productId })
       this.loadStats()
-      this.loadReviews()
+      this.loadReviews(true)
     }
   },
 
-  onPullDownRefresh() {
-    this.setData({
-      page: 1,
-      reviews: [],
-      hasMore: true
-    })
-    this.loadStats()
-    this.loadReviews().then(() => {
-      wx.stopPullDownRefresh()
-    })
-  },
-
-  onReachBottom() {
-    if (!this.data.loading && this.data.hasMore) {
-      this.setData({
-        page: this.data.page + 1
-      })
-      this.loadReviews()
-    }
+  onShow() {
+    // 页面显示时不自动刷新
   },
 
   /**
    * 加载评价统计
    */
-  loadStats() {
-    const app = getApp()
-    
-    wx.request({
-      url: `${app.globalData.apiBase}/reviews/product/${this.data.productId}/stats`,
-      method: 'GET',
-      success: (res) => {
-        if (res.data && res.data.code === 200) {
-          this.setData({ stats: res.data.data })
-        }
-      }
-    })
+  async loadStats() {
+    try {
+      const stats = await app.api.review.getReviewStats(this.data.productId)
+      this.setData({ stats })
+    } catch (error) {
+      // 静默失败
+    }
   },
 
   /**
    * 加载评价列表
    */
-  loadReviews() {
-    return new Promise((resolve) => {
-      if (this.data.loading) {
-        resolve()
-        return
+  async loadReviews(reset = false) {
+    try {
+      const items = await this.loadList(
+        (page, pageSize) => this.fetchReviews(page, pageSize),
+        { reset, listKey: 'reviews' }
+      )
+
+      // 格式化时间
+      let reviews = this.data.reviews.map(review => ({
+        ...review,
+        created_at: this.formatTime(review.created_at)
+      }))
+
+      // 如果开启只看有图，过滤
+      if (this.data.showImageOnly) {
+        reviews = reviews.filter(review => review.images && review.images.length > 0)
       }
 
-      this.setData({ loading: true })
+      this.setData({ reviews })
+    } catch (error) {
+      // 错误已统一处理
+    }
+  },
 
-      const app = getApp()
-      const { productId, page, pageSize, filterRating } = this.data
+  /**
+   * 获取评价数据
+   */
+  async fetchReviews(page, pageSize) {
+    const params = {
+      page,
+      limit: pageSize,
+      rating: this.data.filterRating || undefined
+    }
+    return await app.api.review.getProductReviews(this.data.productId, params)
+  },
 
-      wx.request({
-        url: `${app.globalData.apiBase}/reviews/product/${productId}`,
-        method: 'GET',
-        data: {
-          page,
-          pageSize,
-          rating: filterRating
-        },
-        success: (res) => {
-          if (res.data && res.data.code === 200) {
-            const newReviews = res.data.data.list || []
-            const allReviews = page === 1 ? newReviews : [...this.data.reviews, ...newReviews]
-            
-            // 格式化时间
-            const formattedReviews = allReviews.map(review => ({
-              ...review,
-              created_at: this.formatTime(review.created_at)
-            }))
+  /**
+   * 加载更多
+   */
+  async loadMoreData() {
+    await this.loadReviews(false)
+  },
 
-            this.setData({
-              reviews: formattedReviews,
-              hasMore: newReviews.length >= pageSize,
-              loading: false
-            })
-          } else {
-            this.setData({ loading: false })
-          }
-          resolve()
-        },
-        fail: () => {
-          this.setData({ loading: false })
-          resolve()
-        }
-      })
-    })
+  /**
+   * 下拉刷新
+   */
+  async onPullDownRefresh() {
+    await this.loadStats()
+    await this.loadReviews(true)
+    wx.stopPullDownRefresh()
   },
 
   /**
@@ -115,19 +97,11 @@ Page({
    */
   onFilterTap(e) {
     const { rating } = e.currentTarget.dataset
-    
-    if (rating === this.data.filterRating) {
-      return
-    }
 
-    this.setData({
-      filterRating: rating,
-      page: 1,
-      reviews: [],
-      hasMore: true
-    })
+    if (rating === this.data.filterRating) return
 
-    this.loadReviews()
+    this.setData({ filterRating: rating })
+    this.loadReviews(true)
   },
 
   /**
@@ -137,22 +111,7 @@ Page({
     this.setData({
       showImageOnly: !this.data.showImageOnly
     })
-
-    // 过滤有图评价
-    if (this.data.showImageOnly) {
-      const imageReviews = this.data.reviews.filter(review => 
-        review.images && review.images.length > 0
-      )
-      this.setData({ reviews: imageReviews })
-    } else {
-      // 重新加载全部
-      this.setData({
-        page: 1,
-        reviews: [],
-        hasMore: true
-      })
-      this.loadReviews()
-    }
+    this.loadReviews(true)
   },
 
   /**
@@ -160,8 +119,8 @@ Page({
    */
   onPreviewImage(e) {
     const { images, index } = e.currentTarget.dataset
-    const urls = images.map(img => img.image_url)
-    
+    const urls = images.map(img => img.image_url || img)
+
     wx.previewImage({
       urls,
       current: urls[index]
@@ -171,36 +130,29 @@ Page({
   /**
    * 点赞
    */
-  onLikeTap(e) {
+  async onLikeTap(e) {
     const { id } = e.currentTarget.dataset
-    const app = getApp()
 
-    wx.request({
-      url: `${app.globalData.apiBase}/reviews/${id}/like`,
-      method: 'POST',
-      success: (res) => {
-        if (res.data && res.data.code === 200) {
-          // 更新点赞数
-          const reviews = this.data.reviews.map(review => {
-            if (review.id === id) {
-              return {
-                ...review,
-                likes: res.data.data.likes
-              }
-            }
-            return review
-          })
+    try {
+      const result = await app.api.review.likeReview(id)
 
-          this.setData({ reviews })
-
-          wx.showToast({
-            title: '点赞成功',
-            icon: 'success',
-            duration: 1000
-          })
+      // 更新点赞数
+      const reviews = this.data.reviews.map(review => {
+        if (review.id === id) {
+          return {
+            ...review,
+            likes: result.likes,
+            is_liked: true
+          }
         }
-      }
-    })
+        return review
+      })
+
+      this.setData({ reviews })
+      errorHandler.showSuccess('点赞成功')
+    } catch (error) {
+      // 错误已统一处理
+    }
   },
 
   /**
@@ -230,4 +182,4 @@ Page({
       return `${year}-${month}-${day}`
     }
   }
-})
+}))

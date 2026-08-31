@@ -13,7 +13,6 @@ const couponRoutes = require('./coupon');
 const bannerRoutes = require('./banner');
 const categoryRoutes = require('./category');
 const adminRoutes = require('./admin');
-const pointsRoutes = require('./points');
 const uploadRoutes = require('./upload');
 const refundRoutes = require('./refund');
 const notificationRoutes = require('./notification');
@@ -22,12 +21,8 @@ const seckillRoutes = require('./seckill');
 const activityRoutes = require('./activity');
 const reviewRoutes = require('./review');
 const searchRoutes = require('./search');
-const pointsExchangeRoutes = require('./points-exchange');
-const lotteryRoutes = require('./lottery');
-const checkInRoutes = require('./check-in');
-const pointsTaskRoutes = require('./points-task');
-const pointsRankingRoutes = require('./points-ranking');
-const pointsTransferRoutes = require('./points-transfer');
+const feedbackRoutes = require('./feedback');
+const configRoutes = require('./config');
 
 // 注册路由
 router.use('/auth', authRoutes);
@@ -40,7 +35,6 @@ router.use('/coupons', couponRoutes);
 router.use('/banners', bannerRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/admin', adminRoutes);
-router.use('/points', pointsRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/refunds', refundRoutes);
 router.use('/notifications', notificationRoutes);
@@ -49,12 +43,8 @@ router.use('/seckills', seckillRoutes);
 router.use('/activities', activityRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/search', searchRoutes);
-router.use('/points-exchange', pointsExchangeRoutes);
-router.use('/lottery', lotteryRoutes);
-router.use('/check-in', checkInRoutes);
-router.use('/points-task', pointsTaskRoutes);
-router.use('/points-ranking', pointsRankingRoutes);
-router.use('/points-transfer', pointsTransferRoutes);
+router.use('/feedbacks', feedbackRoutes);
+router.use('/config', configRoutes);
 
 // 根路由
 router.get('/', (req, res) => {

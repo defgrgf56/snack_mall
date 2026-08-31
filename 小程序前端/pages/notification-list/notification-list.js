@@ -1,7 +1,10 @@
-// pages/notification-list/notification-list.js
-const { request } = require('../../utils/request');
+// pages/notification-list/notification-list.js - 重构后的通知列表页面
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     tabs: [
       { label: '全部', value: '' },
@@ -12,121 +15,77 @@ Page({
     currentTab: '',
     notificationList: [],
     unreadCount: 0,
+    
+    // 列表分页
     page: 1,
     pageSize: 10,
-    loading: false,
     hasMore: true
   },
 
   onLoad(options) {
-    this.loadNotifications();
-    this.loadUnreadCount();
+    this.loadUnreadCount()
   },
 
   onShow() {
-    // 刷新未读数量
-    this.loadUnreadCount();
-  },
-
-  onPullDownRefresh() {
-    this.refreshList().then(() => {
-      wx.stopPullDownRefresh();
-    });
-  },
-
-  onReachBottom() {
-    if (!this.data.loading && this.data.hasMore) {
-      this.loadMore();
-    }
+    this.loadNotifications()
+    this.loadUnreadCount()
   },
 
   /**
    * 切换标签
    */
   switchTab(e) {
-    const { tab } = e.currentTarget.dataset;
-    if (tab === this.data.currentTab) return;
+    const { tab } = e.currentTarget.dataset
+    if (tab === this.data.currentTab) return
 
-    this.setData({
+    this.setData({ 
       currentTab: tab,
-      notificationList: [],
       page: 1,
-      hasMore: true
-    });
-    this.loadNotifications();
-  },
-
-  /**
-   * 刷新列表
-   */
-  async refreshList() {
-    this.setData({
-      notificationList: [],
-      page: 1,
-      hasMore: true
-    });
-    await this.loadNotifications();
-    await this.loadUnreadCount();
-  },
-
-  /**
-   * 加载更多
-   */
-  async loadMore() {
-    this.setData({
-      page: this.data.page + 1
-    });
-    await this.loadNotifications();
+      hasMore: true,
+      notificationList: []
+    })
+    this.loadNotifications()
   },
 
   /**
    * 加载通知列表
    */
   async loadNotifications() {
-    if (this.data.loading) return;
+    // 没有更多数据
+    if (!this.data.hasMore) {
+      return
+    }
 
-    this.setData({ loading: true });
+    const params = {
+      page: this.data.page,
+      limit: this.data.pageSize
+    }
+
+    // 添加类型筛选
+    if (this.data.currentTab !== '') {
+      params.type = this.data.currentTab
+    }
 
     try {
-      const params = {
-        page: this.data.page,
-        pageSize: this.data.pageSize
-      };
+      const result = await this.loadData(
+        () => app.api.notification.getNotifications(params),
+        { showLoading: this.data.page === 1 }
+      )
 
-      // 添加类型筛选
-      if (this.data.currentTab !== '') {
-        params.type = this.data.currentTab;
-      }
+      const items = result.list || []
+      const notificationList = this.data.page === 1 
+        ? items 
+        : [...this.data.notificationList, ...items]
 
-      const res = await request({
-        url: '/notifications',
-        method: 'GET',
-        data: params
-      });
+      this.setData({
+        notificationList,
+        page: this.data.page + 1,
+        hasMore: items.length >= this.data.pageSize
+      })
 
-      if (res.code === 200) {
-        const newList = this.data.page === 1 
-          ? res.data.list 
-          : [...this.data.notificationList, ...res.data.list];
-
-        this.setData({
-          notificationList: newList,
-          hasMore: res.data.pagination.page < res.data.pagination.totalPages
-        });
-      } else {
-        wx.showToast({
-          title: res.message || '加载失败',
-          icon: 'none'
-        });
-      }
+      this.setPageEmpty(notificationList.length === 0)
     } catch (error) {
-      console.error('加载通知列表失败:', error);
-      wx.showToast({
-        title: '加载失败',
-        icon: 'none'
-      });
-    } finally {
-      this.setData({ loading: false });
+      // 错误已统一处理
     }
   },
 
@@ -135,30 +94,45 @@ Page({
    */
   async loadUnreadCount() {
     try {
-      const res = await request({
-        url: '/notifications/unread-count',
-        method: 'GET'
-      });
+      const result = await app.api.notification.getUnreadCount()
+      const count = result.count || 0
+      
+      this.setData({ unreadCount: count })
 
-      if (res.code === 200) {
-        this.setData({
-          unreadCount: res.data.count
-        });
-
-        // 更新TabBar角标
-        if (res.data.count > 0) {
-          wx.setTabBarBadge({
-            index: 3, // 我的Tab索引
-            text: res.data.count > 99 ? '99+' : String(res.data.count)
-          });
-        } else {
-          wx.removeTabBarBadge({
-            index: 3
-          });
-        }
+      // 更新TabBar角标
+      if (count > 0) {
+        wx.setTabBarBadge({
+          index: 3,
+          text: count > 99 ? '99+' : String(count)
+        })
+      } else {
+        wx.removeTabBarBadge({ index: 3 })
       }
     } catch (error) {
-      console.error('加载未读数量失败:', error);
+      // 静默失败
+    }
+  },
+
+  /**
+   * 下拉刷新
+   */
+  async onPullDownRefresh() {
+    this.setData({
+      page: 1,
+      hasMore: true,
+      notificationList: []
+    })
+    await this.loadNotifications()
+    await this.loadUnreadCount()
+    wx.stopPullDownRefresh()
+  },
+
+  /**
+   * 上拉加载更多
+   */
+  async onReachBottom() {
+    if (this.data.hasMore && !this.data._pageLoading) {
+      await this.loadNotifications()
     }
   },
 
@@ -166,18 +140,18 @@ Page({
    * 点击消息
    */
   async onItemTap(e) {
-    const { item } = e.currentTarget.dataset;
+    const { item } = e.currentTarget.dataset
 
-    // 如果未读,标记为已读
+    // 如果未读，标记为已读
     if (item.is_read === 0) {
-      await this.markRead(item.id);
+      await this.markRead(item.id)
     }
 
     // 跳转到相关页面
     if (item.type === 'order' && item.related_id) {
       wx.navigateTo({
         url: `/pages/order-detail/order-detail?id=${item.related_id}`
-      });
+      })
     }
   },
 
@@ -186,27 +160,22 @@ Page({
    */
   async markRead(id) {
     try {
-      const res = await request({
-        url: `/notifications/${id}/read`,
-        method: 'PUT'
-      });
+      await app.api.notification.markRead(id)
 
-      if (res.code === 200) {
-        // 更新本地数据
-        const list = this.data.notificationList.map(item => {
-          if (item.id === id) {
-            return { ...item, is_read: 1 };
-          }
-          return item;
-        });
-        
-        this.setData({
-          notificationList: list,
-          unreadCount: Math.max(0, this.data.unreadCount - 1)
-        });
-      }
+      // 更新本地数据
+      const list = this.data.notificationList.map(item => {
+        if (item.id === id) {
+          return { ...item, is_read: 1 }
+        }
+        return item
+      })
+
+      this.setData({
+        notificationList: list,
+        unreadCount: Math.max(0, this.data.unreadCount - 1)
+      })
     } catch (error) {
-      console.error('标记已读失败:', error);
+      // 静默失败
     }
   },
 
@@ -215,26 +184,19 @@ Page({
    */
   async markAllRead() {
     try {
-      const res = await request({
-        url: '/notifications/read-all',
-        method: 'PUT'
-      });
-
-      if (res.code === 200) {
-        wx.showToast({
-          title: '全部已读',
-          icon: 'success'
-        });
-
-        // 刷新列表
-        this.refreshList();
-      }
+      await app.api.notification.markAllRead()
+      errorHandler.showSuccess('全部已读')
+      
+      // 刷新列表
+      this.setData({
+        page: 1,
+        hasMore: true,
+        notificationList: []
+      })
+      await this.loadNotifications()
+      await this.loadUnreadCount()
     } catch (error) {
-      console.error('标记全部已读失败:', error);
-      wx.showToast({
-        title: '操作失败',
-        icon: 'none'
-      });
+      // 错误已统一处理
     }
   },
 
@@ -242,39 +204,28 @@ Page({
    * 删除消息
    */
   async deleteNotification(e) {
-    const { id } = e.currentTarget.dataset;
+    const { id } = e.currentTarget.dataset
 
-    const confirmRes = await new Promise((resolve) => {
-      wx.showModal({
-        title: '确认删除',
-        content: '确定删除这条消息吗?',
-        success: (res) => resolve(res.confirm)
-      });
-    });
+    const confirmed = await errorHandler.confirm({
+      title: '确认删除',
+      content: '确定删除这条消息吗?'
+    })
 
-    if (!confirmRes) return;
+    if (!confirmed) return
 
     try {
-      const res = await request({
-        url: `/notifications/${id}`,
-        method: 'DELETE'
-      });
+      await app.api.notification.deleteNotification(id)
+      errorHandler.showSuccess('删除成功')
 
-      if (res.code === 200) {
-        wx.showToast({
-          title: '删除成功',
-          icon: 'success'
-        });
-
-        // 刷新列表
-        this.refreshList();
-      }
+      // 刷新列表
+      this.setData({
+        page: 1,
+        hasMore: true,
+        notificationList: []
+      })
+      await this.loadNotifications()
     } catch (error) {
-      console.error('删除消息失败:', error);
-      wx.showToast({
-        title: '删除失败',
-        icon: 'none'
-      });
+      // 错误已统一处理
     }
   },
 
@@ -282,37 +233,26 @@ Page({
    * 清空已读消息
    */
   async clearRead() {
-    const confirmRes = await new Promise((resolve) => {
-      wx.showModal({
-        title: '确认清空',
-        content: '确定清空所有已读消息吗?',
-        success: (res) => resolve(res.confirm)
-      });
-    });
+    const confirmed = await errorHandler.confirm({
+      title: '确认清空',
+      content: '确定清空所有已读消息吗?'
+    })
 
-    if (!confirmRes) return;
+    if (!confirmed) return
 
     try {
-      const res = await request({
-        url: '/notifications/clear-read',
-        method: 'DELETE'
-      });
+      await app.api.notification.clearRead()
+      errorHandler.showSuccess('清空成功')
 
-      if (res.code === 200) {
-        wx.showToast({
-          title: '清空成功',
-          icon: 'success'
-        });
-
-        // 刷新列表
-        this.refreshList();
-      }
+      // 刷新列表
+      this.setData({
+        page: 1,
+        hasMore: true,
+        notificationList: []
+      })
+      await this.loadNotifications()
     } catch (error) {
-      console.error('清空消息失败:', error);
-      wx.showToast({
-        title: '清空失败',
-        icon: 'none'
-      });
+      // 错误已统一处理
     }
   }
-});
+}))

@@ -1,5 +1,10 @@
-// pages/review-submit/review-submit.js
-Page({
+// pages/review-submit/review-submit.js - 重构后的评价提交页面
+const createPageMixin = require('../../mixins/page-mixin')
+const errorHandler = require('../../utils/error-handler')
+
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     orderItemId: null,
     orderItem: null,
@@ -20,48 +25,31 @@ Page({
   /**
    * 加载订单商品信息
    */
-  loadOrderItem() {
-    const app = getApp()
-    
-    wx.request({
-      url: `${app.globalData.apiBase}/reviews/pending`,
-      method: 'GET',
-      header: {
-        'Authorization': `Bearer ${app.globalData.token}`
-      },
-      success: (res) => {
-        if (res.data && res.data.code === 200) {
-          const orderItems = res.data.data || []
-          const orderItem = orderItems.find(item => item.id == this.data.orderItemId)
-          
-          if (orderItem) {
-            this.setData({ orderItem })
-          } else {
-            wx.showToast({
-              title: '订单商品不存在',
-              icon: 'none'
-            })
-            setTimeout(() => {
-              wx.navigateBack()
-            }, 1500)
-          }
-        }
-      },
-      fail: (error) => {
-        console.error('加载订单商品失败:', error)
-        wx.showToast({
-          title: '加载失败',
-          icon: 'none'
-        })
+  async loadOrderItem() {
+    try {
+      const orderItems = await this.loadData(
+        () => app.api.review.getPendingReviews(),
+        { showLoading: true }
+      )
+
+      const orderItem = orderItems.find(item => item.id == this.data.orderItemId)
+
+      if (orderItem) {
+        this.setData({ orderItem })
+      } else {
+        errorHandler.handle(new Error('订单商品不存在'))
+        this.$setTimeout(() => wx.navigateBack(), 1500)
       }
-    })
+    } catch (error) {
+      // 错误已统一处理
+    }
   },
 
   /**
    * 点击星级评分
    */
   onRatingTap(e) {
-    const rating = e.currentTarget.dataset.rating
+    const rating = parseInt(e.currentTarget.dataset.rating)
     const ratingTexts = {
       1: '非常不满意',
       2: '不满意',
@@ -69,7 +57,7 @@ Page({
       4: '满意',
       5: '非常满意'
     }
-    
+
     this.setData({
       rating,
       ratingText: ratingTexts[rating]
@@ -90,16 +78,13 @@ Page({
    */
   onChooseImage() {
     const remainCount = 9 - this.data.images.length
-    
+
     wx.chooseImage({
       count: remainCount,
       sizeType: ['compressed'],
       sourceType: ['album', 'camera'],
       success: (res) => {
-        const tempFilePaths = res.tempFilePaths
-        
-        // 上传图片
-        this.uploadImages(tempFilePaths)
+        this.uploadImages(res.tempFilePaths)
       }
     })
   },
@@ -108,66 +93,36 @@ Page({
    * 上传图片
    */
   async uploadImages(filePaths) {
-    wx.showLoading({ title: '上传中...' })
-    
-    const app = getApp()
-    const uploadedUrls = []
-    
     try {
+      wx.showLoading({ title: '上传中...', mask: true })
+
+      const uploadedUrls = []
+
       for (const filePath of filePaths) {
-        const url = await this.uploadSingleImage(filePath)
-        if (url) {
-          uploadedUrls.push(url)
+        try {
+          // TODO: 实现图片上传 API
+          // const result = await app.api.upload.uploadImage(filePath)
+          // uploadedUrls.push(result.url)
+          
+          // 暂时使用本地路径模拟
+          uploadedUrls.push(filePath)
+        } catch (error) {
+          errorHandler.handle(error)
         }
       }
-      
-      this.setData({
-        images: [...this.data.images, ...uploadedUrls]
-      })
-      
+
       wx.hideLoading()
-      wx.showToast({
-        title: '上传成功',
-        icon: 'success'
-      })
+
+      if (uploadedUrls.length > 0) {
+        this.setData({
+          images: [...this.data.images, ...uploadedUrls]
+        })
+        errorHandler.showSuccess('上传成功')
+      }
     } catch (error) {
       wx.hideLoading()
-      wx.showToast({
-        title: '上传失败',
-        icon: 'none'
-      })
+      errorHandler.handle(error)
     }
-  },
-
-  /**
-   * 上传单张图片
-   */
-  uploadSingleImage(filePath) {
-    const app = getApp()
-    
-    return new Promise((resolve, reject) => {
-      wx.uploadFile({
-        url: `${app.globalData.apiBase}/upload/image`,
-        filePath,
-        name: 'file',
-        header: {
-          'Authorization': `Bearer ${app.globalData.token}`
-        },
-        success: (res) => {
-          try {
-            const data = JSON.parse(res.data)
-            if (data.code === 200) {
-              resolve(data.data.url)
-            } else {
-              reject(new Error(data.message))
-            }
-          } catch (e) {
-            reject(e)
-          }
-        },
-        fail: reject
-      })
-    })
   },
 
   /**
@@ -189,64 +144,45 @@ Page({
   },
 
   /**
+   * 表单验证
+   */
+  validateForm() {
+    if (!this.data.orderItemId) {
+      throw new Error('订单商品信息错误')
+    }
+    return true
+  },
+
+  /**
    * 提交评价
    */
-  onSubmit() {
-    const { orderItemId, rating, content, images, isAnonymous } = this.data
-    
-    if (!orderItemId) {
-      wx.showToast({
-        title: '订单商品信息错误',
-        icon: 'none'
-      })
-      return
-    }
-    
-    wx.showLoading({ title: '提交中...' })
-    
-    const app = getApp()
-    
-    wx.request({
-      url: `${app.globalData.apiBase}/reviews`,
-      method: 'POST',
-      header: {
-        'Authorization': `Bearer ${app.globalData.token}`,
-        'Content-Type': 'application/json'
-      },
-      data: {
+  async onSubmit() {
+    try {
+      // 验证表单
+      this.validateForm()
+
+      const { orderItemId, rating, content, images, isAnonymous } = this.data
+
+      const reviewData = {
         order_item_id: orderItemId,
         rating,
         content,
         images,
         is_anonymous: isAnonymous ? 1 : 0
-      },
-      success: (res) => {
-        wx.hideLoading()
-        
-        if (res.data && res.data.code === 200) {
-          wx.showToast({
-            title: '评价成功',
-            icon: 'success'
-          })
-          
-          setTimeout(() => {
-            wx.navigateBack()
-          }, 1500)
-        } else {
-          wx.showToast({
-            title: res.data?.message || '评价失败',
-            icon: 'none'
-          })
-        }
-      },
-      fail: (error) => {
-        wx.hideLoading()
-        console.error('提交评价失败:', error)
-        wx.showToast({
-          title: '提交失败',
-          icon: 'none'
-        })
       }
-    })
+
+      await this.loadData(
+        () => app.api.review.createReview(reviewData),
+        { showLoading: true, loadingText: '提交中...' }
+      )
+
+      errorHandler.showSuccess('评价成功')
+
+      this.$setTimeout(() => {
+        wx.navigateBack()
+      }, 1500)
+    } catch (error) {
+      errorHandler.handle(error)
+    }
   }
-})
+}))

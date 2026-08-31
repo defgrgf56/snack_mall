@@ -46,12 +46,6 @@ module.exports = (sequelize) => {
       allowNull: false,
       comment: '会员等级 1-5'
     },
-    points: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0,
-      allowNull: false,
-      comment: '积分余额'
-    },
     balance: {
       type: DataTypes.DECIMAL(10, 2),
       defaultValue: 0.00,

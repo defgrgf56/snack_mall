@@ -33,7 +33,13 @@
         <view class="product-item" wx:for="{{item.items}}" wx:key="id" wx:for-item="product">
           <image class="product-image" src="{{product.product.cover}}" mode="aspectFill" />
           <view class="product-info">
-            <text class="product-name">{{product.product.name}}</text>
+            <view class="product-name-row">
+              <text class="product-name">{{product.product.name}}</text>
+              <view class="countdown-badge" wx:if="{{item.status === 1 && item.countdown}}">
+                <text class="hourglass">⏳</text>
+                <text class="countdown-text">{{item.countdown}}</text>
+              </view>
+            </view>
             <text class="product-spec" wx:if="{{product.spec}}">{{product.spec}}</text>
             <view class="product-footer">
               <text class="product-price">¥{{product.price}}</text>
@@ -46,7 +52,7 @@
       <!-- 订单信息 -->
       <view class="order-info">
         <text class="order-time">{{item.created_at}}</text>
-        <text class="order-total">共{{item.item_count}}件商品 实付：<text class="price">¥{{item.total_amount}}</text></text>
+        <text class="order-total">共{{item.item_count}}件商品 实付：<text class="price">¥{{item.pay_amount}}</text></text>
       </view>
 
       <!-- 订单操作 -->

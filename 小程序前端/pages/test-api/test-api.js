@@ -1,16 +1,20 @@
-// pages/test-api/test-api.js
-const { api } = require('../../config/api.js')
-const { quickLogin } = require('../../utils/auth.js')
+// pages/test-api/test-api.js - 重构后的API测试页面
+const createPageMixin = require('../../mixins/page-mixin')
+const envConfig = require('../../config/env')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     testResults: [],
     backendStatus: '未检测',
-    apiUrl: 'http://localhost:3000/api'
+    apiUrl: ''
   },
 
   onLoad() {
-    console.log('API测试页面加载')
+    // 在 onLoad 时获取 API 地址，确保模块已完全加载
+    const apiUrl = envConfig.apiConfig ? envConfig.apiConfig.baseUrl : envConfig.API_BASE_URL
+    this.setData({ apiUrl })
     this.checkBackend()
   },
 
@@ -19,18 +23,18 @@ Page({
    */
   async checkBackend() {
     this.addResult('正在检查后端服务...')
-    
+
     try {
       const res = await new Promise((resolve, reject) => {
         wx.request({
-          url: 'http://localhost:3000/api/categories',
+          url: `${this.data.apiUrl}/categories`,
           method: 'GET',
           success: resolve,
           fail: reject,
           timeout: 5000
         })
       })
-      
+
       if (res.statusCode === 200) {
         this.setData({ backendStatus: '✅ 运行中' })
         this.addResult('✅ 后端服务正常运行')
@@ -46,176 +50,110 @@ Page({
   },
 
   /**
-   * 测试1：获取商品分类（无需登录）
+   * 测试获取商品分类
    */
   async testCategories() {
     this.addResult('开始测试：获取商品分类...')
-    
+
     try {
-      const res = await api.getCategories()
-      
-      if (res.code === 200) {
-        this.addResult(`✅ 成功：获取到 ${res.data.length} 个分类`)
-        console.log('分类数据:', res.data)
-      } else {
-        this.addResult(`❌ 失败：${res.message}`)
-      }
+      const result = await app.api.product.getCategories()
+      this.addResult(`✅ 成功：获取到 ${result.length} 个分类`)
     } catch (error) {
-      this.addResult(`❌ 错误：${error.message || error}`)
+      this.addResult(`❌ 失败：${error.message}`)
     }
   },
 
   /**
-   * 测试2：获取商品列表（无需登录）
+   * 测试获取商品列表
    */
   async testProducts() {
     this.addResult('开始测试：获取商品列表...')
-    
+
     try {
-      const res = await api.getProducts({ page: 1, pageSize: 5 })
-      
-      if (res.code === 200) {
-        this.addResult(`✅ 成功：获取到 ${res.data.items.length} 个商品`)
-        console.log('商品数据:', res.data)
-      } else {
-        this.addResult(`❌ 失败：${res.message}`)
-      }
+      const result = await app.api.product.getProducts({ page: 1, pageSize: 5 })
+      this.addResult(`✅ 成功：获取到 ${result.items.length} 个商品`)
     } catch (error) {
-      this.addResult(`❌ 错误：${error.message || error}`)
+      this.addResult(`❌ 失败：${error.message}`)
     }
   },
 
   /**
-   * 测试3：开发快速登录
+   * 测试开发快速登录
    */
   async testDevLogin() {
     this.addResult('开始测试：开发快速登录...')
     this.addResult(`请求地址: ${this.data.apiUrl}/auth/dev-login`)
-    
+
     try {
-      // 直接使用wx.request测试，便于调试
-      const res = await new Promise((resolve, reject) => {
-        wx.request({
-          url: 'http://localhost:3000/api/auth/dev-login',
-          method: 'POST',
-          header: {
-            'Content-Type': 'application/json'
-          },
-          success: resolve,
-          fail: reject,
-          timeout: 10000
-        })
-      })
+      const result = await app.api.auth.devLogin()
       
-      console.log('登录响应:', res)
-      
-      if (res.statusCode === 200 && res.data.code === 200) {
-        const { token, userInfo } = res.data.data
-        
-        // 保存登录信息
-        const app = getApp()
-        app.globalData.token = token
-        app.globalData.userInfo = userInfo
-        wx.setStorageSync('token', token)
-        wx.setStorageSync('userInfo', userInfo)
-        
-        this.addResult(`✅ 成功：登录用户 ${userInfo.nickname}`)
-        this.addResult(`Token: ${token.substring(0, 20)}...`)
-        console.log('用户信息:', userInfo)
-      } else {
-        this.addResult(`❌ 失败：${res.data.message || '未知错误'}`)
-        console.error('登录失败响应:', res)
-      }
+      this.addResult(`✅ 成功：登录用户 ${result.userInfo.nickname}`)
+      this.addResult(`Token: ${result.token.substring(0, 20)}...`)
     } catch (error) {
-      this.addResult(`❌ 错误：${error.errMsg || error}`)
-      console.error('登录错误:', error)
-      
-      // 详细的错误信息
-      if (error.errMsg) {
-        if (error.errMsg.includes('fail')) {
-          this.addResult('💡 网络请求失败，请检查:')
-          this.addResult('1. 后端服务是否启动')
-          this.addResult('2. 是否勾选"不校验合法域名"')
-        }
+      this.addResult(`❌ 失败：${error.message}`)
+
+      if (error.message && error.message.includes('fail')) {
+        this.addResult('💡 网络请求失败，请检查:')
+        this.addResult('1. 后端服务是否启动')
+        this.addResult('2. 是否勾选"不校验合法域名"')
       }
     }
   },
 
   /**
-   * 测试4：获取购物车（需要登录）
+   * 测试获取购物车
    */
   async testCart() {
     this.addResult('开始测试：获取购物车...')
-    
-    const app = getApp()
-    if (!app.globalData.token) {
+
+    if (!app.store.getState().token) {
       this.addResult('⚠️ 请先登录')
       return
     }
-    
+
     try {
-      const res = await api.getCart()
-      
-      if (res.code === 200) {
-        this.addResult(`✅ 成功：购物车有 ${res.data.length} 个商品`)
-        console.log('购物车数据:', res.data)
-      } else {
-        this.addResult(`❌ 失败：${res.message}`)
-      }
+      const result = await app.api.cart.getCart()
+      this.addResult(`✅ 成功：购物车有 ${result.length} 个商品`)
     } catch (error) {
-      this.addResult(`❌ 错误：${error.message || error}`)
+      this.addResult(`❌ 失败：${error.message}`)
     }
   },
 
   /**
-   * 测试5：获取地址列表（需要登录）
+   * 测试获取地址列表
    */
   async testAddresses() {
     this.addResult('开始测试：获取地址列表...')
-    
-    const app = getApp()
-    if (!app.globalData.token) {
+
+    if (!app.store.getState().token) {
       this.addResult('⚠️ 请先登录')
       return
     }
-    
+
     try {
-      const res = await api.getAddresses()
-      
-      if (res.code === 200) {
-        this.addResult(`✅ 成功：有 ${res.data.length} 个地址`)
-        console.log('地址数据:', res.data)
-      } else {
-        this.addResult(`❌ 失败：${res.message}`)
-      }
+      const result = await app.api.address.getAddresses()
+      this.addResult(`✅ 成功：有 ${result.length} 个地址`)
     } catch (error) {
-      this.addResult(`❌ 错误：${error.message || error}`)
+      this.addResult(`❌ 失败：${error.message}`)
     }
   },
 
   /**
-   * 测试6：获取订单列表（需要登录）
+   * 测试获取订单列表
    */
   async testOrders() {
     this.addResult('开始测试：获取订单列表...')
-    
-    const app = getApp()
-    if (!app.globalData.token) {
+
+    if (!app.store.getState().token) {
       this.addResult('⚠️ 请先登录')
       return
     }
-    
+
     try {
-      const res = await api.getOrders({ page: 1, limit: 5 })
-      
-      if (res.code === 200) {
-        this.addResult(`✅ 成功：有 ${res.data.items.length} 个订单`)
-        console.log('订单数据:', res.data)
-      } else {
-        this.addResult(`❌ 失败：${res.message}`)
-      }
+      const result = await app.api.order.getOrders({ page: 1, limit: 5 })
+      this.addResult(`✅ 成功：有 ${result.items.length} 个订单`)
     } catch (error) {
-      this.addResult(`❌ 错误：${error.message || error}`)
+      this.addResult(`❌ 失败：${error.message}`)
     }
   },
 
@@ -224,36 +162,32 @@ Page({
    */
   async runAllTests() {
     this.setData({ testResults: [] })
-    
+
     this.addResult('========== 开始运行所有测试 ==========')
     this.addResult(`API地址: ${this.data.apiUrl}`)
     this.addResult(`时间: ${new Date().toLocaleString()}`)
     this.addResult('')
-    
-    // 先检查后端
+
     await this.checkBackend()
     await this.wait(500)
-    
-    // 测试无需登录的接口
+
     await this.testCategories()
     await this.wait(500)
-    
+
     await this.testProducts()
     await this.wait(500)
-    
-    // 测试登录
+
     await this.testDevLogin()
     await this.wait(1000)
-    
-    // 测试需要登录的接口
+
     await this.testCart()
     await this.wait(500)
-    
+
     await this.testAddresses()
     await this.wait(500)
-    
+
     await this.testOrders()
-    
+
     this.addResult('')
     this.addResult('========== 所有测试完成 ==========')
   },
@@ -272,10 +206,9 @@ Page({
     const time = new Date().toLocaleTimeString()
     const results = this.data.testResults
     results.push(`[${time}] ${message}`)
-    
+
     this.setData({ testResults: results })
-    
-    // 滚动到底部
+
     setTimeout(() => {
       wx.pageScrollTo({
         scrollTop: 10000,
@@ -290,4 +223,4 @@ Page({
   wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms))
   }
-})
+}))

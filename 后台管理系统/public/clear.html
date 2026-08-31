@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>清理缓存</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>正在清理浏览器缓存...</h1>
+    <p id="status">处理中...</p>
+  </div>
+  <script>
+    const status = document.getElementById('status');
+    
+    // 清理所有 localStorage
+    localStorage.clear();
+    status.textContent = '已清理 localStorage';
+    
+    // 1秒后跳转到登录页
+    setTimeout(() => {
+      status.textContent = '正在跳转...';
+      window.location.href = '/login';
+    }, 1000);
+  </script>
+</body>
+</html>

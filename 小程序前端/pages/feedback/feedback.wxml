@@ -1,0 +1,71 @@
+<!--pages/feedback/feedback.wxml-->
+<view class="feedback-page">
+  <!-- 反馈类型 -->
+  <view class="form-section">
+    <view class="section-title">反馈类型 <text class="required">*</text></view>
+    <view class="type-grid">
+      <view 
+        class="type-item {{selectedType === item.id ? 'active' : ''}}"
+        wx:for="{{typeList}}"
+        wx:key="id"
+        bindtap="onSelectType"
+        data-type="{{item.id}}"
+      >
+        <text>{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 反馈内容 -->
+  <view class="form-section">
+    <view class="section-title">反馈内容 <text class="required">*</text></view>
+    <textarea
+      class="content-input"
+      placeholder="请详细描述您的问题或建议，至少10个字"
+      value="{{content}}"
+      bindinput="onContentInput"
+      maxlength="500"
+      placeholder-style="color: #999"
+    />
+    <view class="char-count">{{content.length}}/500</view>
+  </view>
+
+  <!-- 图片上传 -->
+  <view class="form-section">
+    <view class="section-title">上传图片（选填）</view>
+    <view class="image-upload">
+      <view class="image-list">
+        <view class="image-item" wx:for="{{images}}" wx:key="index">
+          <image class="image" src="{{item}}" mode="aspectFill" bindtap="onPreviewImage" data-url="{{item}}" />
+          <view class="delete-btn" bindtap="onDeleteImage" data-index="{{index}}">
+            <text>✕</text>
+          </view>
+        </view>
+        <view class="image-item upload-btn" wx:if="{{images.length < maxImages}}" bindtap="onChooseImage">
+          <text class="upload-icon">📷</text>
+          <text class="upload-text">上传图片</text>
+        </view>
+      </view>
+      <view class="upload-tip">最多上传{{maxImages}}张图片</view>
+    </view>
+  </view>
+
+  <!-- 联系方式 -->
+  <view class="form-section">
+    <view class="section-title">联系方式（选填）</view>
+    <input
+      class="contact-input"
+      placeholder="手机号或微信号，方便我们联系您"
+      value="{{contact}}"
+      bindinput="onContactInput"
+      maxlength="50"
+    />
+  </view>
+
+  <!-- 提交按钮 -->
+  <view class="submit-section">
+    <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">
+      {{submitting ? '提交中...' : '提交反馈'}}
+    </button>
+  </view>
+</view>

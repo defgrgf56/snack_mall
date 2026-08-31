@@ -120,10 +120,16 @@ router.get('/:id', authenticateToken, async (req, res) => {
  */
 router.post('/', authenticateToken, async (req, res) => {
   try {
+    console.log('[地址创建] 收到请求:', {
+      userId: req.userId,
+      body: req.body
+    });
+
     const { consignee, phone, province, city, district, detail, is_default = 0 } = req.body;
     
     // 验证必填字段
     if (!consignee || !phone || !province || !city || !district || !detail) {
+      console.log('[地址创建] 验证失败: 字段不完整');
       return res.json({
         code: 400,
         message: '请填写完整的地址信息',
@@ -133,6 +139,7 @@ router.post('/', authenticateToken, async (req, res) => {
     
     // 验证手机号格式
     if (!/^1[3-9]\d{9}$/.test(phone)) {
+      console.log('[地址创建] 验证失败: 手机号格式错误', phone);
       return res.json({
         code: 400,
         message: '手机号格式不正确',
@@ -161,6 +168,8 @@ router.post('/', authenticateToken, async (req, res) => {
       address: detail,
       is_default: isDefault
     });
+
+    console.log('[地址创建] 成功:', address.id);
 
     res.json({
       code: 200,

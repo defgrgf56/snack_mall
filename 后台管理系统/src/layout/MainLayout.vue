@@ -68,7 +68,7 @@
           <el-dropdown @command="handleCommand">
             <span class="user-info">
               <el-icon><UserFilled /></el-icon>
-              {{ userStore.userInfo.username || '管理员' }}
+              {{ userInfo.username || '管理员' }}
               <el-icon><CaretBottom /></el-icon>
             </span>
             <template #dropdown>
@@ -95,21 +95,35 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useUserStore } from '@/stores/user'
 import { ElMessageBox } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
-const userStore = useUserStore()
 
 const activeMenu = computed(() => route.path)
+
+// 从 localStorage 获取用户信息
+const getUserInfo = () => {
+  try {
+    const saved = localStorage.getItem('admin_info')
+    if (saved && saved !== 'undefined') {
+      return JSON.parse(saved)
+    }
+  } catch (e) {
+    console.error('解析用户信息失败:', e)
+  }
+  return {}
+}
+
+const userInfo = getUserInfo()
 
 const handleCommand = (command) => {
   if (command === 'logout') {
     ElMessageBox.confirm('确定要退出登录吗？', '提示', {
       type: 'warning'
     }).then(() => {
-      userStore.logout()
+      localStorage.removeItem('admin_token')
+      localStorage.removeItem('admin_info')
       router.push('/login')
     })
   }
@@ -156,6 +170,22 @@ const handleCommand = (command) => {
     :deep(.el-menu-item.is-active) {
       background-color: #1890ff;
       color: #fff;
+    }
+    
+    // 二级菜单样式
+    :deep(.el-sub-menu) {
+      .el-menu {
+        background-color: #000c17;
+      }
+      
+      .el-menu-item {
+        background-color: #000c17;
+        min-width: 200px;
+        
+        &:hover {
+          background-color: #1890ff;
+        }
+      }
     }
   }
 }
