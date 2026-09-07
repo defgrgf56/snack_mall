@@ -303,6 +303,8 @@ router.delete('/:id', adminAuth, async (req, res) => {
 // 获取统计数据
 router.get('/statistics', adminAuth, async (req, res) => {
   try {
+    const { sequelize } = require('../models')
+    
     // 获取总销售额
     const totalSales = await Order.sum('total_amount', {
       where: { status: { [Op.in]: [2, 3, 4] } }
@@ -317,6 +319,39 @@ router.get('/statistics', adminAuth, async (req, res) => {
     // 获取商品总数
     const totalProducts = await Product.count()
 
+    // 获取订单状态统计
+    const orderStatsByStatus = await Order.findAll({
+      attributes: [
+        'status',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['status'],
+      raw: true
+    })
+
+    // 映射订单状态
+    const orderStats = {
+      pending: 0,    // status = 1
+      paid: 0,       // status = 2
+      shipped: 0,    // status = 3
+      completed: 0,  // status = 4
+      cancelled: 0   // status = 5
+    }
+
+    orderStatsByStatus.forEach(item => {
+      const statusMap = {
+        1: 'pending',
+        2: 'paid',
+        3: 'shipped',
+        4: 'completed',
+        5: 'cancelled'
+      }
+      const key = statusMap[item.status]
+      if (key) {
+        orderStats[key] = parseInt(item.count)
+      }
+    })
+
     res.json({
       code: 200,
       message: '获取成功',
@@ -324,7 +359,8 @@ router.get('/statistics', adminAuth, async (req, res) => {
         totalSales: parseFloat(totalSales.toFixed(2)),
         totalOrders,
         totalUsers,
-        totalProducts
+        totalProducts,
+        orderStats
       }
     })
   } catch (error) {
@@ -400,7 +436,7 @@ router.get('/hot-products', adminAuth, async (req, res) => {
       include: [{
         model: Product,
         as: 'product',
-        attributes: ['id', 'name', 'price', 'image']
+        attributes: ['id', 'name', 'price', 'cover']
       }],
       group: ['product_id'],
       order: [[sequelize.fn('SUM', sequelize.col('quantity')), 'DESC']],
@@ -412,7 +448,7 @@ router.get('/hot-products', adminAuth, async (req, res) => {
       product_id: item.product_id,
       name: item.product?.name || '未知商品',
       price: item.product?.price || 0,
-      image: item.product?.image || '',
+      cover: item.product?.cover || '',
       total_sales: parseInt(item.get('total_sales'))
     }))
 
@@ -858,6 +894,1462 @@ router.delete('/products/:id', adminAuth, async (req, res) => {
     res.json({
       code: 500,
       message: '删除失败'
+    })
+  }
+})
+
+// ==================== 活动专区管理 ====================
+
+/**
+ * 获取活动列表（管理员）
+ * GET /api/admin/activities
+ */
+router.get('/activities', adminAuth, async (req, res) => {
+  try {
+    const { title, type, status, page = 1, pageSize = 10 } = req.query
+    const { Activity } = require('../models')
+    
+    const offset = (page - 1) * pageSize
+    const limit = parseInt(pageSize)
+    
+    // 构建查询条件
+    const where = {}
+    
+    if (title) {
+      where.title = { [Op.like]: `%${title}%` }
+    }
+    
+    if (type) {
+      where.type = type
+    }
+    
+    if (status !== undefined && status !== '') {
+      where.status = parseInt(status)
+    }
+    
+    const { count, rows } = await Activity.findAndCountAll({
+      where,
+      order: [['sort', 'DESC'], ['created_at', 'DESC']],
+      offset,
+      limit
+    })
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        list: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          pageSize: limit,
+          totalPages: Math.ceil(count / limit)
+        }
+      }
+    })
+  } catch (error) {
+    console.error('获取活动列表失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 获取活动详情（管理员）
+ * GET /api/admin/activities/:id
+ */
+router.get('/activities/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Activity } = require('../models')
+    
+    const activity = await Activity.findByPk(id)
+    
+    if (!activity) {
+      return res.json({
+        code: 404,
+        message: '活动不存在'
+      })
+    }
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: activity
+    })
+  } catch (error) {
+    console.error('获取活动详情失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 创建活动（管理员）
+ * POST /api/admin/activities
+ */
+router.post('/activities', adminAuth, async (req, res) => {
+  try {
+    const { Activity } = require('../models')
+    const activityData = req.body
+    
+    // 验证必填字段
+    if (!activityData.title || !activityData.subtitle || !activityData.cover) {
+      return res.json({
+        code: 400,
+        message: '请填写完整的活动信息'
+      })
+    }
+    
+    // 验证时间
+    if (new Date(activityData.start_time) >= new Date(activityData.end_time)) {
+      return res.json({
+        code: 400,
+        message: '结束时间必须大于开始时间'
+      })
+    }
+    
+    const activity = await Activity.create(activityData)
+    
+    res.json({
+      code: 200,
+      message: '创建成功',
+      data: activity
+    })
+  } catch (error) {
+    console.error('创建活动失败:', error)
+    res.json({
+      code: 500,
+      message: '创建失败'
+    })
+  }
+})
+
+/**
+ * 更新活动（管理员）
+ * PUT /api/admin/activities/:id
+ */
+router.put('/activities/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Activity } = require('../models')
+    const activityData = req.body
+    
+    const activity = await Activity.findByPk(id)
+    
+    if (!activity) {
+      return res.json({
+        code: 404,
+        message: '活动不存在'
+      })
+    }
+    
+    // 验证时间
+    if (activityData.start_time && activityData.end_time) {
+      if (new Date(activityData.start_time) >= new Date(activityData.end_time)) {
+        return res.json({
+          code: 400,
+          message: '结束时间必须大于开始时间'
+        })
+      }
+    }
+    
+    await activity.update(activityData)
+    
+    res.json({
+      code: 200,
+      message: '更新成功',
+      data: activity
+    })
+  } catch (error) {
+    console.error('更新活动失败:', error)
+    res.json({
+      code: 500,
+      message: '更新失败'
+    })
+  }
+})
+
+/**
+ * 删除活动（管理员）
+ * DELETE /api/admin/activities/:id
+ */
+router.delete('/activities/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Activity, ActivityProduct } = require('../models')
+    
+    const activity = await Activity.findByPk(id)
+    
+    if (!activity) {
+      return res.json({
+        code: 404,
+        message: '活动不存在'
+      })
+    }
+    
+    // 删除关联的商品
+    await ActivityProduct.destroy({ where: { activity_id: id } })
+    
+    // 删除活动
+    await activity.destroy()
+    
+    res.json({
+      code: 200,
+      message: '删除成功'
+    })
+  } catch (error) {
+    console.error('删除活动失败:', error)
+    res.json({
+      code: 500,
+      message: '删除失败'
+    })
+  }
+})
+
+/**
+ * 更新活动状态（管理员）
+ * PUT /api/admin/activities/:id/status
+ */
+router.put('/activities/:id/status', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+    const { Activity } = require('../models')
+    
+    const activity = await Activity.findByPk(id)
+    
+    if (!activity) {
+      return res.json({
+        code: 404,
+        message: '活动不存在'
+      })
+    }
+    
+    await activity.update({ status })
+    
+    res.json({
+      code: 200,
+      message: '更新成功',
+      data: activity
+    })
+  } catch (error) {
+    console.error('更新活动状态失败:', error)
+    res.json({
+      code: 500,
+      message: '更新失败'
+    })
+  }
+})
+
+/**
+ * 获取活动商品列表（管理员）
+ * GET /api/admin/activities/:id/products
+ */
+router.get('/activities/:id/products', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { page = 1, pageSize = 100 } = req.query
+    const { ActivityProduct, Product } = require('../models')
+    
+    const offset = (page - 1) * pageSize
+    const limit = parseInt(pageSize)
+    
+    const { count, rows } = await ActivityProduct.findAndCountAll({
+      where: { activity_id: id },
+      include: [{
+        model: Product,
+        as: 'product',
+        attributes: ['id', 'name', 'cover', 'price', 'stock', 'sales']
+      }],
+      order: [['sort', 'DESC']],
+      offset,
+      limit
+    })
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        list: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          pageSize: limit,
+          totalPages: Math.ceil(count / limit)
+        }
+      }
+    })
+  } catch (error) {
+    console.error('获取活动商品失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 批量添加活动商品（管理员）
+ * POST /api/admin/activities/:id/products/batch
+ */
+router.post('/activities/:id/products/batch', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { products } = req.body
+    const { Activity, ActivityProduct, Product } = require('../models')
+    
+    // 验证活动是否存在
+    const activity = await Activity.findByPk(id)
+    if (!activity) {
+      return res.json({
+        code: 404,
+        message: '活动不存在'
+      })
+    }
+    
+    if (!products || !Array.isArray(products) || products.length === 0) {
+      return res.json({
+        code: 400,
+        message: '请选择要添加的商品'
+      })
+    }
+    
+    // 验证商品是否存在
+    const productIds = products.map(p => p.product_id)
+    const existingProducts = await Product.findAll({
+      where: { id: { [Op.in]: productIds } }
+    })
+    
+    if (existingProducts.length !== productIds.length) {
+      return res.json({
+        code: 400,
+        message: '部分商品不存在'
+      })
+    }
+    
+    // 批量创建或更新
+    const results = []
+    for (const item of products) {
+      const [activityProduct, created] = await ActivityProduct.findOrCreate({
+        where: {
+          activity_id: id,
+          product_id: item.product_id
+        },
+        defaults: {
+          discount: item.discount || 10,
+          special_price: item.special_price || null,
+          sort: item.sort || 0
+        }
+      })
+      
+      if (!created) {
+        // 如果已存在，更新数据
+        await activityProduct.update({
+          discount: item.discount || activityProduct.discount,
+          special_price: item.special_price !== undefined ? item.special_price : activityProduct.special_price,
+          sort: item.sort !== undefined ? item.sort : activityProduct.sort
+        })
+      }
+      
+      results.push(activityProduct)
+    }
+    
+    res.json({
+      code: 200,
+      message: '添加成功',
+      data: results
+    })
+  } catch (error) {
+    console.error('批量添加活动商品失败:', error)
+    res.json({
+      code: 500,
+      message: '添加失败'
+    })
+  }
+})
+
+/**
+ * 更新活动商品（管理员）
+ * PUT /api/admin/activities/:id/products/:productId
+ */
+router.put('/activities/:id/products/:productId', adminAuth, async (req, res) => {
+  try {
+    const { id, productId } = req.params
+    const { discount, special_price, sort } = req.body
+    const { ActivityProduct } = require('../models')
+    
+    const activityProduct = await ActivityProduct.findOne({
+      where: {
+        activity_id: id,
+        product_id: productId
+      }
+    })
+    
+    if (!activityProduct) {
+      return res.json({
+        code: 404,
+        message: '活动商品不存在'
+      })
+    }
+    
+    await activityProduct.update({
+      discount: discount !== undefined ? discount : activityProduct.discount,
+      special_price: special_price !== undefined ? special_price : activityProduct.special_price,
+      sort: sort !== undefined ? sort : activityProduct.sort
+    })
+    
+    res.json({
+      code: 200,
+      message: '更新成功',
+      data: activityProduct
+    })
+  } catch (error) {
+    console.error('更新活动商品失败:', error)
+    res.json({
+      code: 500,
+      message: '更新失败'
+    })
+  }
+})
+
+/**
+ * 移除活动商品（管理员）
+ * DELETE /api/admin/activities/:id/products/:productId
+ */
+router.delete('/activities/:id/products/:productId', adminAuth, async (req, res) => {
+  try {
+    const { id, productId } = req.params
+    const { ActivityProduct } = require('../models')
+    
+    const result = await ActivityProduct.destroy({
+      where: {
+        activity_id: id,
+        product_id: productId
+      }
+    })
+    
+    if (result === 0) {
+      return res.json({
+        code: 404,
+        message: '活动商品不存在'
+      })
+    }
+    
+    res.json({
+      code: 200,
+      message: '移除成功'
+    })
+  } catch (error) {
+    console.error('移除活动商品失败:', error)
+    res.json({
+      code: 500,
+      message: '移除失败'
+    })
+  }
+})
+
+/**
+ * 秒杀活动管理 API
+ */
+
+/**
+ * 获取秒杀列表（管理员）
+ * GET /api/admin/seckills
+ */
+router.get('/seckills', adminAuth, async (req, res) => {
+  try {
+    const { page = 1, pageSize = 10, status, keyword } = req.query
+    const { Seckill, Product } = require('../models')
+    
+    const offset = (page - 1) * pageSize
+    const limit = parseInt(pageSize)
+    
+    const where = {}
+    if (status) {
+      where.status = parseInt(status)
+    }
+    if (keyword) {
+      where.title = { [Op.like]: `%${keyword}%` }
+    }
+    
+    const { count, rows } = await Seckill.findAndCountAll({
+      where,
+      include: [{
+        model: Product,
+        as: 'product',
+        attributes: ['id', 'name', 'cover', 'price', 'stock', 'sales']
+      }],
+      order: [['sort', 'DESC'], ['created_at', 'DESC']],
+      offset,
+      limit
+    })
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        list: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          pageSize: limit,
+          totalPages: Math.ceil(count / limit)
+        }
+      }
+    })
+  } catch (error) {
+    console.error('获取秒杀列表失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 获取秒杀详情（管理员）
+ * GET /api/admin/seckills/:id
+ */
+router.get('/seckills/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Seckill, Product } = require('../models')
+    
+    const seckill = await Seckill.findByPk(id, {
+      include: [{
+        model: Product,
+        as: 'product',
+        attributes: ['id', 'name', 'cover', 'price', 'stock', 'sales']
+      }]
+    })
+    
+    if (!seckill) {
+      return res.json({
+        code: 404,
+        message: '秒杀活动不存在'
+      })
+    }
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: seckill
+    })
+  } catch (error) {
+    console.error('获取秒杀详情失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 创建秒杀活动（管理员）
+ * POST /api/admin/seckills
+ */
+router.post('/seckills', adminAuth, async (req, res) => {
+  try {
+    const { Seckill } = require('../models')
+    const {
+      title,
+      product_id,
+      start_time,
+      end_time,
+      original_price,
+      seckill_price,
+      stock,
+      limit_per_user,
+      sort = 0,
+      status = 2
+    } = req.body
+    
+    // 验证必填字段
+    if (!title || !product_id || !start_time || !end_time || 
+        !original_price || !seckill_price || !stock) {
+      return res.json({
+        code: 400,
+        message: '请填写完整信息'
+      })
+    }
+    
+    // 验证价格
+    if (parseFloat(seckill_price) >= parseFloat(original_price)) {
+      return res.json({
+        code: 400,
+        message: '秒杀价必须低于原价'
+      })
+    }
+    
+    // 创建秒杀活动
+    const seckill = await Seckill.create({
+      title,
+      product_id,
+      start_time,
+      end_time,
+      original_price,
+      seckill_price,
+      stock,
+      sold: 0,
+      limit_per_user: limit_per_user || 1,
+      sort,
+      status
+    })
+    
+    res.json({
+      code: 200,
+      message: '创建成功',
+      data: seckill
+    })
+  } catch (error) {
+    console.error('创建秒杀活动失败:', error)
+    res.json({
+      code: 500,
+      message: '创建失败'
+    })
+  }
+})
+
+/**
+ * 更新秒杀活动（管理员）
+ * PUT /api/admin/seckills/:id
+ */
+router.put('/seckills/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Seckill } = require('../models')
+    const {
+      title,
+      product_id,
+      start_time,
+      end_time,
+      original_price,
+      seckill_price,
+      stock,
+      limit_per_user,
+      sort,
+      status
+    } = req.body
+    
+    const seckill = await Seckill.findByPk(id)
+    if (!seckill) {
+      return res.json({
+        code: 404,
+        message: '秒杀活动不存在'
+      })
+    }
+    
+    // 验证价格
+    if (seckill_price && original_price && parseFloat(seckill_price) >= parseFloat(original_price)) {
+      return res.json({
+        code: 400,
+        message: '秒杀价必须低于原价'
+      })
+    }
+    
+    // 更新秒杀活动
+    await seckill.update({
+      title: title || seckill.title,
+      product_id: product_id || seckill.product_id,
+      start_time: start_time || seckill.start_time,
+      end_time: end_time || seckill.end_time,
+      original_price: original_price !== undefined ? original_price : seckill.original_price,
+      seckill_price: seckill_price !== undefined ? seckill_price : seckill.seckill_price,
+      stock: stock !== undefined ? stock : seckill.stock,
+      limit_per_user: limit_per_user !== undefined ? limit_per_user : seckill.limit_per_user,
+      sort: sort !== undefined ? sort : seckill.sort,
+      status: status !== undefined ? status : seckill.status
+    })
+    
+    res.json({
+      code: 200,
+      message: '更新成功',
+      data: seckill
+    })
+  } catch (error) {
+    console.error('更新秒杀活动失败:', error)
+    res.json({
+      code: 500,
+      message: '更新失败'
+    })
+  }
+})
+
+/**
+ * 删除秒杀活动（管理员）
+ * DELETE /api/admin/seckills/:id
+ */
+router.delete('/seckills/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Seckill } = require('../models')
+    
+    const seckill = await Seckill.findByPk(id)
+    if (!seckill) {
+      return res.json({
+        code: 404,
+        message: '秒杀活动不存在'
+      })
+    }
+    
+    await seckill.destroy()
+    
+    res.json({
+      code: 200,
+      message: '删除成功'
+    })
+  } catch (error) {
+    console.error('删除秒杀活动失败:', error)
+    res.json({
+      code: 500,
+      message: '删除失败'
+    })
+  }
+})
+
+/**
+ * 更新秒杀状态（管理员）
+ * PUT /api/admin/seckills/:id/status
+ */
+router.put('/seckills/:id/status', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+    const { Seckill } = require('../models')
+    
+    if (![0, 1, 2].includes(parseInt(status))) {
+      return res.json({
+        code: 400,
+        message: '无效的状态值'
+      })
+    }
+    
+    const seckill = await Seckill.findByPk(id)
+    if (!seckill) {
+      return res.json({
+        code: 404,
+        message: '秒杀活动不存在'
+      })
+    }
+    
+    await seckill.update({ status: parseInt(status) })
+    
+    res.json({
+      code: 200,
+      message: '状态更新成功',
+      data: seckill
+    })
+  } catch (error) {
+    console.error('更新秒杀状态失败:', error)
+    res.json({
+      code: 500,
+      message: '状态更新失败'
+    })
+  }
+})
+
+// ==================== 用户管理 ====================
+
+/**
+ * 获取用户列表（管理员）
+ * GET /api/admin/users
+ */
+router.get('/users', adminAuth, async (req, res) => {
+  try {
+    const { page = 1, pageSize = 10, nickname, phone, level, status } = req.query
+    
+    const offset = (page - 1) * pageSize
+    const limit = parseInt(pageSize)
+    
+    const where = {}
+    
+    if (nickname) {
+      where.nickname = { [Op.like]: `%${nickname}%` }
+    }
+    
+    if (phone) {
+      where.phone = { [Op.like]: `%${phone}%` }
+    }
+    
+    if (level !== undefined && level !== '') {
+      where.level = parseInt(level)
+    }
+    
+    if (status !== undefined && status !== '') {
+      where.status = parseInt(status)
+    }
+    
+    const { count, rows } = await User.findAndCountAll({
+      where,
+      attributes: { exclude: ['openid', 'unionid', 'deleted_at'] },
+      order: [['created_at', 'DESC']],
+      offset,
+      limit
+    })
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        list: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          pageSize: limit,
+          totalPages: Math.ceil(count / limit)
+        }
+      }
+    })
+  } catch (error) {
+    console.error('获取用户列表失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 获取用户详情（管理员）
+ * GET /api/admin/users/:id
+ */
+router.get('/users/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    const user = await User.findByPk(id, {
+      attributes: { exclude: ['openid', 'unionid', 'deleted_at'] }
+    })
+    
+    if (!user) {
+      return res.json({
+        code: 404,
+        message: '用户不存在'
+      })
+    }
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: user
+    })
+  } catch (error) {
+    console.error('获取用户详情失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 更新用户（管理员）
+ * PUT /api/admin/users/:id
+ */
+router.put('/users/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { nickname, phone, gender, level, status, points, balance } = req.body
+    
+    const user = await User.findByPk(id)
+    if (!user) {
+      return res.json({
+        code: 404,
+        message: '用户不存在'
+      })
+    }
+    
+    const updateData = {}
+    if (nickname !== undefined) updateData.nickname = nickname
+    if (phone !== undefined) updateData.phone = phone
+    if (gender !== undefined) updateData.gender = gender
+    if (level !== undefined) updateData.level = level
+    if (status !== undefined) updateData.status = status
+    if (points !== undefined) updateData.points = points
+    if (balance !== undefined) updateData.balance = balance
+    
+    await user.update(updateData)
+    
+    res.json({
+      code: 200,
+      message: '更新成功',
+      data: user
+    })
+  } catch (error) {
+    console.error('更新用户失败:', error)
+    res.json({
+      code: 500,
+      message: '更新失败'
+    })
+  }
+})
+
+/**
+ * 更新用户状态（管理员）
+ * PUT /api/admin/users/:id/status
+ */
+router.put('/users/:id/status', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+    
+    const user = await User.findByPk(id)
+    if (!user) {
+      return res.json({
+        code: 404,
+        message: '用户不存在'
+      })
+    }
+    
+    await user.update({ status: parseInt(status) })
+    
+    res.json({
+      code: 200,
+      message: '状态更新成功',
+      data: user
+    })
+  } catch (error) {
+    console.error('更新用户状态失败:', error)
+    res.json({
+      code: 500,
+      message: '状态更新失败'
+    })
+  }
+})
+
+// ==================== 优惠券管理 ====================
+
+/**
+ * 获取优惠券列表（管理员）
+ * GET /api/admin/coupons
+ */
+router.get('/coupons', adminAuth, async (req, res) => {
+  try {
+    const { page = 1, pageSize = 10, name, type, status } = req.query
+    const { Coupon } = require('../models')
+    
+    const offset = (page - 1) * pageSize
+    const limit = parseInt(pageSize)
+    
+    const where = {}
+    
+    if (name) {
+      where.name = { [Op.like]: `%${name}%` }
+    }
+    
+    if (type !== undefined && type !== '') {
+      where.type = parseInt(type)
+    }
+    
+    if (status !== undefined && status !== '') {
+      where.status = parseInt(status)
+    }
+    
+    const { count, rows } = await Coupon.findAndCountAll({
+      where,
+      order: [['created_at', 'DESC']],
+      offset,
+      limit
+    })
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        list: rows,
+        pagination: {
+          total: count,
+          page: parseInt(page),
+          pageSize: limit,
+          totalPages: Math.ceil(count / limit)
+        }
+      }
+    })
+  } catch (error) {
+    console.error('获取优惠券列表失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 获取优惠券详情（管理员）
+ * GET /api/admin/coupons/:id
+ */
+router.get('/coupons/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Coupon } = require('../models')
+    
+    const coupon = await Coupon.findByPk(id)
+    
+    if (!coupon) {
+      return res.json({
+        code: 404,
+        message: '优惠券不存在'
+      })
+    }
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: coupon
+    })
+  } catch (error) {
+    console.error('获取优惠券详情失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 创建优惠券（管理员）
+ * POST /api/admin/coupons
+ */
+router.post('/coupons', adminAuth, async (req, res) => {
+  try {
+    const { Coupon } = require('../models')
+    const {
+      name,
+      type,
+      discount_type,
+      discount_value,
+      min_amount,
+      total_count,
+      per_limit,
+      start_time,
+      end_time,
+      status = 1
+    } = req.body
+    
+    // 验证必填字段
+    if (!name || !discount_value || !total_count) {
+      return res.json({
+        code: 400,
+        message: '请填写完整信息'
+      })
+    }
+    
+    // 创建优惠券
+    const coupon = await Coupon.create({
+      name,
+      type: type || 1,
+      discount_type: discount_type || 1,
+      discount_value,
+      min_amount: min_amount || 0,
+      total_count,
+      receive_count: 0,
+      used_count: 0,
+      per_limit: per_limit || 1,
+      start_time,
+      end_time,
+      status
+    })
+    
+    res.json({
+      code: 200,
+      message: '创建成功',
+      data: coupon
+    })
+  } catch (error) {
+    console.error('创建优惠券失败:', error)
+    res.json({
+      code: 500,
+      message: '创建失败'
+    })
+  }
+})
+
+/**
+ * 更新优惠券（管理员）
+ * PUT /api/admin/coupons/:id
+ */
+router.put('/coupons/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Coupon } = require('../models')
+    const {
+      name,
+      type,
+      discount_type,
+      discount_value,
+      min_amount,
+      total_count,
+      per_limit,
+      start_time,
+      end_time,
+      status
+    } = req.body
+    
+    const coupon = await Coupon.findByPk(id)
+    if (!coupon) {
+      return res.json({
+        code: 404,
+        message: '优惠券不存在'
+      })
+    }
+    
+    const updateData = {}
+    if (name !== undefined) updateData.name = name
+    if (type !== undefined) updateData.type = type
+    if (discount_type !== undefined) updateData.discount_type = discount_type
+    if (discount_value !== undefined) updateData.discount_value = discount_value
+    if (min_amount !== undefined) updateData.min_amount = min_amount
+    if (total_count !== undefined) updateData.total_count = total_count
+    if (per_limit !== undefined) updateData.per_limit = per_limit
+    if (start_time !== undefined) updateData.start_time = start_time
+    if (end_time !== undefined) updateData.end_time = end_time
+    if (status !== undefined) updateData.status = status
+    
+    await coupon.update(updateData)
+    
+    res.json({
+      code: 200,
+      message: '更新成功',
+      data: coupon
+    })
+  } catch (error) {
+    console.error('更新优惠券失败:', error)
+    res.json({
+      code: 500,
+      message: '更新失败'
+    })
+  }
+})
+
+/**
+ * 删除优惠券（管理员）
+ * DELETE /api/admin/coupons/:id
+ */
+router.delete('/coupons/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Coupon } = require('../models')
+    
+    const coupon = await Coupon.findByPk(id)
+    if (!coupon) {
+      return res.json({
+        code: 404,
+        message: '优惠券不存在'
+      })
+    }
+    
+    await coupon.destroy()
+    
+    res.json({
+      code: 200,
+      message: '删除成功'
+    })
+  } catch (error) {
+    console.error('删除优惠券失败:', error)
+    res.json({
+      code: 500,
+      message: '删除失败'
+    })
+  }
+})
+
+/**
+ * 更新优惠券状态（管理员）
+ * PUT /api/admin/coupons/:id/status
+ */
+router.put('/coupons/:id/status', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+    const { Coupon } = require('../models')
+    
+    const coupon = await Coupon.findByPk(id)
+    if (!coupon) {
+      return res.json({
+        code: 404,
+        message: '优惠券不存在'
+      })
+    }
+    
+    await coupon.update({ status: parseInt(status) })
+    
+    res.json({
+      code: 200,
+      message: '状态更新成功',
+      data: coupon
+    })
+  } catch (error) {
+    console.error('更新优惠券状态失败:', error)
+    res.json({
+      code: 500,
+      message: '状态更新失败'
+    })
+  }
+})
+
+// ==================== 轮播图管理 ====================
+
+/**
+ * 获取轮播图列表（管理员）
+ * GET /api/admin/banners
+ */
+router.get('/banners', adminAuth, async (req, res) => {
+  try {
+    const { page, pageSize, status } = req.query
+    const { Banner } = require('../models')
+    
+    const where = {}
+    
+    if (status !== undefined && status !== '') {
+      where.status = parseInt(status)
+    }
+    
+    // 如果提供分页参数
+    if (page && pageSize) {
+      const offset = (page - 1) * pageSize
+      const limit = parseInt(pageSize)
+      
+      const { count, rows } = await Banner.findAndCountAll({
+        where,
+        order: [['sort', 'DESC'], ['created_at', 'DESC']],
+        offset,
+        limit
+      })
+      
+      return res.json({
+        code: 200,
+        message: '获取成功',
+        data: {
+          list: rows,
+          pagination: {
+            total: count,
+            page: parseInt(page),
+            pageSize: limit,
+            totalPages: Math.ceil(count / limit)
+          }
+        }
+      })
+    }
+    
+    // 不分页，返回所有数据
+    const banners = await Banner.findAll({
+      where,
+      order: [['sort', 'DESC'], ['created_at', 'DESC']]
+    })
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        list: banners,
+        total: banners.length
+      }
+    })
+  } catch (error) {
+    console.error('获取轮播图列表失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 获取轮播图详情（管理员）
+ * GET /api/admin/banners/:id
+ */
+router.get('/banners/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Banner } = require('../models')
+    
+    const banner = await Banner.findByPk(id)
+    
+    if (!banner) {
+      return res.json({
+        code: 404,
+        message: '轮播图不存在'
+      })
+    }
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: banner
+    })
+  } catch (error) {
+    console.error('获取轮播图详情失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+/**
+ * 创建轮播图（管理员）
+ * POST /api/admin/banners
+ */
+router.post('/banners', adminAuth, async (req, res) => {
+  try {
+    const { Banner } = require('../models')
+    const {
+      title,
+      image,
+      link_type,
+      link_value,
+      sort = 0,
+      status = 1
+    } = req.body
+    
+    // 验证必填字段
+    if (!title || !image) {
+      return res.json({
+        code: 400,
+        message: '请填写完整信息'
+      })
+    }
+    
+    // 创建轮播图
+    const banner = await Banner.create({
+      title,
+      image,
+      link_type: link_type || 1,
+      link_value,
+      sort,
+      status
+    })
+    
+    res.json({
+      code: 200,
+      message: '创建成功',
+      data: banner
+    })
+  } catch (error) {
+    console.error('创建轮播图失败:', error)
+    res.json({
+      code: 500,
+      message: '创建失败'
+    })
+  }
+})
+
+/**
+ * 更新轮播图（管理员）
+ * PUT /api/admin/banners/:id
+ */
+router.put('/banners/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Banner } = require('../models')
+    const {
+      title,
+      image,
+      link_type,
+      link_value,
+      sort,
+      status
+    } = req.body
+    
+    const banner = await Banner.findByPk(id)
+    if (!banner) {
+      return res.json({
+        code: 404,
+        message: '轮播图不存在'
+      })
+    }
+    
+    const updateData = {}
+    if (title !== undefined) updateData.title = title
+    if (image !== undefined) updateData.image = image
+    if (link_type !== undefined) updateData.link_type = link_type
+    if (link_value !== undefined) updateData.link_value = link_value
+    if (sort !== undefined) updateData.sort = sort
+    if (status !== undefined) updateData.status = status
+    
+    await banner.update(updateData)
+    
+    res.json({
+      code: 200,
+      message: '更新成功',
+      data: banner
+    })
+  } catch (error) {
+    console.error('更新轮播图失败:', error)
+    res.json({
+      code: 500,
+      message: '更新失败'
+    })
+  }
+})
+
+/**
+ * 删除轮播图（管理员）
+ * DELETE /api/admin/banners/:id
+ */
+router.delete('/banners/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Banner } = require('../models')
+    
+    const banner = await Banner.findByPk(id)
+    if (!banner) {
+      return res.json({
+        code: 404,
+        message: '轮播图不存在'
+      })
+    }
+    
+    await banner.destroy()
+    
+    res.json({
+      code: 200,
+      message: '删除成功'
+    })
+  } catch (error) {
+    console.error('删除轮播图失败:', error)
+    res.json({
+      code: 500,
+      message: '删除失败'
+    })
+  }
+})
+
+/**
+ * 更新轮播图状态（管理员）
+ * PUT /api/admin/banners/:id/status
+ */
+router.put('/banners/:id/status', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { status } = req.body
+    const { Banner } = require('../models')
+    
+    const banner = await Banner.findByPk(id)
+    if (!banner) {
+      return res.json({
+        code: 404,
+        message: '轮播图不存在'
+      })
+    }
+    
+    await banner.update({ status: parseInt(status) })
+    
+    res.json({
+      code: 200,
+      message: '状态更新成功',
+      data: banner
+    })
+  } catch (error) {
+    console.error('更新轮播图状态失败:', error)
+    res.json({
+      code: 500,
+      message: '状态更新失败'
     })
   }
 })
