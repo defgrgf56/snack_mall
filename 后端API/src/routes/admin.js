@@ -614,6 +614,192 @@ router.put('/orders/:id', adminAuth, async (req, res) => {
   }
 })
 
+// 发货（管理员）
+router.put('/orders/:id/ship', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { express_company, express_no } = req.body
+
+    if (!express_company || !express_no) {
+      return res.json({
+        code: 400,
+        message: '请填写快递公司和快递单号'
+      })
+    }
+
+    const order = await Order.findByPk(id)
+    if (!order) {
+      return res.json({
+        code: 404,
+        message: '订单不存在'
+      })
+    }
+
+    if (order.status !== 2) {
+      return res.json({
+        code: 400,
+        message: '只能对待发货订单进行发货操作'
+      })
+    }
+
+    await order.update({
+      status: 3,  // 改为已发货
+      ship_company: express_company,
+      ship_no: express_no,
+      ship_time: new Date()
+    })
+
+    res.json({
+      code: 200,
+      message: '发货成功',
+      data: order
+    })
+  } catch (error) {
+    console.error('发货失败:', error)
+    res.json({
+      code: 500,
+      message: '发货失败'
+    })
+  }
+})
+
+// 取消订单（管理员）
+router.put('/orders/:id/cancel', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+
+    const order = await Order.findByPk(id)
+    if (!order) {
+      return res.json({
+        code: 404,
+        message: '订单不存在'
+      })
+    }
+
+    if (order.status !== 1) {
+      return res.json({
+        code: 400,
+        message: '只能取消待付款订单'
+      })
+    }
+
+    await order.update({
+      status: 5,  // 已取消
+      cancel_time: new Date(),
+      cancel_reason: reason || '管理员取消'
+    })
+
+    res.json({
+      code: 200,
+      message: '取消成功',
+      data: order
+    })
+  } catch (error) {
+    console.error('取消订单失败:', error)
+    res.json({
+      code: 500,
+      message: '取消失败'
+    })
+  }
+})
+
+// 退款（管理员）
+router.put('/orders/:id/refund', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { reason } = req.body
+    const { User } = require('../models')
+
+    const order = await Order.findByPk(id)
+    if (!order) {
+      return res.json({
+        code: 404,
+        message: '订单不存在'
+      })
+    }
+
+    if (![2, 3].includes(order.status)) {
+      return res.json({
+        code: 400,
+        message: '只能对待发货或已发货的订单进行退款'
+      })
+    }
+
+    // 如果已支付，需要退款到用户余额
+    if (order.pay_amount && order.pay_amount > 0) {
+      const user = await User.findByPk(order.user_id)
+      if (user) {
+        // 退款到余额
+        await user.increment('balance', { by: order.pay_amount })
+      }
+    }
+
+    await order.update({
+      status: 7,  // 已退款
+      refund_time: new Date(),
+      refund_reason: reason || '管理员退款',
+      remark: reason || '管理员退款'
+    })
+
+    res.json({
+      code: 200,
+      message: '退款成功',
+      data: order
+    })
+  } catch (error) {
+    console.error('退款失败:', error)
+    res.json({
+      code: 500,
+      message: '退款失败'
+    })
+  }
+})
+
+// 获取商品统计数据（管理员）- 必须在 /products 之前
+router.get('/products/stats', adminAuth, async (req, res) => {
+  try {
+    const { Op } = require('sequelize')
+    
+    // 商品总数
+    const totalCount = await Product.count()
+    
+    // 上架商品数
+    const onlineCount = await Product.count({
+      where: { status: 1 }
+    })
+    
+    // 下架商品数
+    const offlineCount = await Product.count({
+      where: { status: 0 }
+    })
+    
+    // 库存告急商品数（库存 < 10）
+    const lowStockCount = await Product.count({
+      where: {
+        stock: { [Op.lt]: 10 }
+      }
+    })
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        totalCount,
+        onlineCount,
+        offlineCount,
+        lowStockCount
+      }
+    })
+  } catch (error) {
+    console.error('获取商品统计失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
 // 获取商品列表（管理员）
 router.get('/products', adminAuth, async (req, res) => {
   try {
@@ -632,6 +818,9 @@ router.get('/products', adminAuth, async (req, res) => {
     }
 
     const { Category } = require('../models')
+    
+    console.log('查询参数:', { page, pageSize, offset, order: [['id', 'DESC']] })
+    
     const { count, rows } = await Product.findAndCountAll({
       where,
       include: [{
@@ -639,10 +828,12 @@ router.get('/products', adminAuth, async (req, res) => {
         as: 'category',
         attributes: ['id', 'name']
       }],
-      order: [['created_at', 'DESC']],
+      order: [['id', 'DESC']],
       limit: parseInt(pageSize),
       offset: parseInt(offset)
     })
+    
+    console.log('查询结果 IDs:', rows.map(p => p.id).join(', '))
 
     res.json({
       code: 200,
@@ -656,6 +847,41 @@ router.get('/products', adminAuth, async (req, res) => {
     })
   } catch (error) {
     console.error('获取商品列表失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
+// 获取单个商品详情（管理员）
+router.get('/products/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { Category } = require('../models')
+    
+    const product = await Product.findByPk(id, {
+      include: [{
+        model: Category,
+        as: 'category',
+        attributes: ['id', 'name']
+      }]
+    })
+    
+    if (!product) {
+      return res.json({
+        code: 404,
+        message: '商品不存在'
+      })
+    }
+    
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: product
+    })
+  } catch (error) {
+    console.error('获取商品详情失败:', error)
     res.json({
       code: 500,
       message: '获取失败'
@@ -836,6 +1062,36 @@ router.post('/products', adminAuth, async (req, res) => {
     res.json({
       code: 500,
       message: '保存失败'
+    })
+  }
+})
+
+// 更新商品（管理员）
+router.put('/products/:id', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const productData = req.body
+    
+    const product = await Product.findByPk(id)
+    if (!product) {
+      return res.json({
+        code: 404,
+        message: '商品不存在'
+      })
+    }
+    
+    await product.update(productData)
+    
+    res.json({
+      code: 200,
+      message: '更新成功',
+      data: product
+    })
+  } catch (error) {
+    console.error('更新商品失败:', error)
+    res.json({
+      code: 500,
+      message: '更新失败'
     })
   }
 })

@@ -8,12 +8,14 @@
         </el-form-item>
         <el-form-item label="订单状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="全部" value="" />
-            <el-option label="待付款" value="pending" />
-            <el-option label="待发货" value="paid" />
-            <el-option label="已发货" value="shipped" />
-            <el-option label="已完成" value="completed" />
-            <el-option label="已取消" value="cancelled" />
+            <el-option label="全部" :value="null" />
+            <el-option label="待付款" :value="1" />
+            <el-option label="待发货" :value="2" />
+            <el-option label="已发货" :value="3" />
+            <el-option label="已完成" :value="4" />
+            <el-option label="已取消" :value="5" />
+            <el-option label="超时" :value="6" />
+            <el-option label="已退款" :value="7" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -28,9 +30,9 @@
       <el-table :data="orders" style="width: 100%" v-loading="loading">
         <el-table-column prop="order_no" label="订单号" width="180" />
         <el-table-column prop="user.nickname" label="用户" width="120" />
-        <el-table-column prop="total_amount" label="订单金额" width="120">
+        <el-table-column prop="pay_amount" label="实付金额" width="120">
           <template #default="{ row }">
-            ¥{{ row.total_amount }}
+            <span style="color: #f56c6c; font-weight: bold;">¥{{ row.pay_amount }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="订单状态" width="100">
@@ -40,7 +42,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="payment_method" label="支付方式" width="100" />
+        <el-table-column prop="pay_method" label="支付方式" width="100">
+          <template #default="{ row }">
+            {{ getPayMethodText(row.pay_method) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="created_at" label="下单时间" width="160" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
@@ -48,7 +54,7 @@
               <el-icon><View /></el-icon> 查看
             </el-button>
             <el-button 
-              v-if="row.status === 'paid'" 
+              v-if="row.status === 2" 
               type="success" 
               link 
               @click="handleShip(row)"
@@ -56,7 +62,7 @@
               发货
             </el-button>
             <el-button 
-              v-if="row.status === 'pending'" 
+              v-if="row.status === 1" 
               type="danger" 
               link 
               @click="handleCancel(row.id)"
@@ -92,7 +98,7 @@
       </el-form>
       <template #footer>
         <el-button @click="shipDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="confirmShip">确定</el-button>
+        <el-button type="primary" @click="confirmShip" :loading="submitting">确定</el-button>
       </template>
     </el-dialog>
   </div>
@@ -106,13 +112,14 @@ import request from '@/utils/request'
 
 const router = useRouter()
 const loading = ref(false)
+const submitting = ref(false)
 const orders = ref([])
 const shipDialogVisible = ref(false)
 const currentOrder = ref(null)
 
 const searchForm = reactive({
   order_no: '',
-  status: ''
+  status: null  // 改为 null，与后端数字类型匹配
 })
 
 const pagination = reactive({
@@ -153,7 +160,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   searchForm.order_no = ''
-  searchForm.status = ''
+  searchForm.status = null  // 改为 null
   pagination.page = 1
   fetchOrders()
 }
@@ -175,6 +182,7 @@ const confirmShip = async () => {
     return
   }
 
+  submitting.value = true
   try {
     await request.put(`/admin/orders/${currentOrder.value.id}/ship`, shipForm)
     ElMessage.success('发货成功')
@@ -182,7 +190,9 @@ const confirmShip = async () => {
     fetchOrders()
   } catch (error) {
     console.error('发货失败:', error)
-    ElMessage.error('发货失败')
+    ElMessage.error(error.message || '发货失败')
+  } finally {
+    submitting.value = false
   }
 }
 
@@ -204,24 +214,36 @@ const handleCancel = async (id) => {
 
 const getStatusType = (status) => {
   const map = {
-    pending: 'warning',
-    paid: 'success',
-    shipped: 'primary',
-    completed: 'info',
-    cancelled: 'danger'
+    1: 'warning',   // 待付款
+    2: 'info',      // 待发货
+    3: 'primary',   // 已发货
+    4: 'success',   // 已完成
+    5: 'info',      // 已取消
+    6: 'info',      // 超时
+    7: 'danger'     // 已退款
   }
   return map[status] || 'info'
 }
 
 const getStatusText = (status) => {
   const map = {
-    pending: '待付款',
-    paid: '待发货',
-    shipped: '已发货',
-    completed: '已完成',
-    cancelled: '已取消'
+    1: '待付款',
+    2: '待发货',
+    3: '已发货',
+    4: '已完成',
+    5: '已取消',
+    6: '超时',
+    7: '已退款'
   }
-  return map[status] || status
+  return map[status] || '未知'
+}
+
+const getPayMethodText = (method) => {
+  const map = {
+    1: '微信支付',
+    2: '余额支付'
+  }
+  return map[method] || '-'
 }
 
 onMounted(() => {
