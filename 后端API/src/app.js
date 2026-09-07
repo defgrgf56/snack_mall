@@ -13,13 +13,28 @@ const app = express()
 const PORT = process.env.PORT || 3000
 
 // 中间件
-app.use(helmet()) // 安全头
-app.use(cors()) // 跨域
+// 配置 helmet - 放宽对静态资源的限制
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // 允许跨域资源访问
+  contentSecurityPolicy: false // 禁用 CSP，避免阻止图片加载
+}))
+
+// 配置 CORS - 允许前端访问
+app.use(cors({
+  origin: ['http://localhost:8080', 'http://localhost:8081', 'http://127.0.0.1:8080', 'http://127.0.0.1:8081'],
+  credentials: true
+}))
+
 app.use(express.json()) // 解析JSON
 app.use(express.urlencoded({ extended: true })) // 解析URL编码
 
-// 静态文件服务
-app.use('/uploads', express.static('uploads'))
+// 静态文件服务 - 使用绝对路径，并设置正确的响应头
+const path = require('path')
+app.use('/uploads', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  next()
+}, express.static(path.join(__dirname, '../uploads')))
 
 // 请求日志
 app.use((req, res, next) => {

@@ -85,20 +85,36 @@ const uploadHeaders = computed(() => {
 const imageList = ref([])
 const previewVisible = ref(false)
 const previewUrl = ref('')
+const isUpdatingFromProps = ref(false) // 标记是否正在从 props 更新
 
 // 监听 modelValue 变化
 watch(() => props.modelValue, (newVal) => {
   if (Array.isArray(newVal)) {
-    imageList.value = newVal.map((url, index) => ({
-      uid: Date.now() + index,
-      url
-    }))
+    // 检查是否真的发生了变化
+    const newUrls = newVal.join(',')
+    const currentUrls = imageList.value.map(item => item.url).join(',')
+    
+    if (newUrls !== currentUrls) {
+      isUpdatingFromProps.value = true
+      imageList.value = newVal.map((url, index) => ({
+        uid: Date.now() + index,
+        url
+      }))
+      // 使用 nextTick 确保响应式更新完成后再重置标记
+      setTimeout(() => {
+        isUpdatingFromProps.value = false
+      }, 0)
+    }
   }
 }, { immediate: true })
 
 // 监听 imageList 变化
 watch(imageList, (newVal) => {
-  emit('update:modelValue', newVal.map(item => item.url))
+  // 如果正在从 props 更新，跳过 emit，避免循环
+  if (!isUpdatingFromProps.value) {
+    const urls = newVal.map(item => item.url)
+    emit('update:modelValue', urls)
+  }
 }, { deep: true })
 
 const beforeUpload = (file) => {

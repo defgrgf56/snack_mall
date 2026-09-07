@@ -98,17 +98,17 @@
             </div>
           </template>
           <div class="quick-actions">
-            <el-button type="primary" @click="$router.push('/products/create')">
+            <el-button type="primary" @click="$router.push('/products')">
               <el-icon><Plus /></el-icon> 添加商品
             </el-button>
             <el-button type="success" @click="$router.push('/orders')">
               <el-icon><List /></el-icon> 订单管理
             </el-button>
-            <el-button type="warning" @click="$router.push('/coupons')">
-              <el-icon><Ticket /></el-icon> 优惠券管理
+            <el-button type="warning" @click="$router.push('/users')">
+              <el-icon><User /></el-icon> 用户管理
             </el-button>
-            <el-button type="info" @click="$router.push('/banners')">
-              <el-icon><Picture /></el-icon> 轮播图管理
+            <el-button type="info" @click="$router.push('/statistics')">
+              <el-icon><DataAnalysis /></el-icon> 数据分析
             </el-button>
           </div>
         </el-card>
