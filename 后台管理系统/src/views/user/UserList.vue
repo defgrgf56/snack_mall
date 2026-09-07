@@ -99,7 +99,7 @@ const fetchUsers = async () => {
       }
     })
     users.value = res.list || []
-    pagination.total = res.total || 0
+    pagination.total = res.pagination?.total || 0
   } catch (error) {
     console.error('获取用户列表失败:', error)
     ElMessage.error('获取用户列表失败')

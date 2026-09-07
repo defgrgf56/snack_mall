@@ -195,17 +195,15 @@ const passwordRules = {
 const loadAdmins = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/admin/list', {
+    const data = await request.get('/admin/list', {
       params: {
         page: page.value,
         pageSize: pageSize.value,
         keyword: searchKeyword.value
       }
     })
-    if (data.code === 200) {
-      adminList.value = data.data.list
-      total.value = data.data.total
-    }
+    adminList.value = data.list
+    total.value = data.total
   } catch (error) {
     ElMessage.error('加载失败')
   } finally {

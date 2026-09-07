@@ -46,15 +46,6 @@ module.exports = (sequelize) => {
       defaultValue: 1,
       comment: '状态：0-已结束 1-进行中 2-未开始'
     },
-    link_type: {
-      type: DataTypes.TINYINT,
-      defaultValue: 1,
-      comment: '链接类型：1-商品列表 2-外部链接 3-活动页面'
-    },
-    link_value: {
-      type: DataTypes.TEXT,
-      comment: '链接值'
-    },
     sort: {
       type: DataTypes.INTEGER,
       defaultValue: 0,

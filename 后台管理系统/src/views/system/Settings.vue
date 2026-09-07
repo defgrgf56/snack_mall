@@ -219,49 +219,46 @@ const orderConfig = reactive({
 const loadConfig = async () => {
   loading.value = true
   try {
-    const { data } = await request.get('/config')
-    if (data.code === 200) {
-      const config = data.data
-      
-      // 基本设置
-      if (config.site_name) basicConfig.site_name = config.site_name
-      if (config.site_logo) basicConfig.site_logo = config.site_logo
-      if (config.service_phone) basicConfig.service_phone = config.service_phone
-      if (config.service_email) basicConfig.service_email = config.service_email
-      if (config.company_address) basicConfig.company_address = config.company_address
-      if (config.about_us) basicConfig.about_us = config.about_us
-      
-      // 支付设置
-      if (config.wechat_enabled !== undefined) paymentConfig.wechat_enabled = config.wechat_enabled
-      if (config.wechat_appid) paymentConfig.wechat_appid = config.wechat_appid
-      if (config.wechat_mchid) paymentConfig.wechat_mchid = config.wechat_mchid
-      if (config.wechat_key) paymentConfig.wechat_key = config.wechat_key
-      if (config.alipay_enabled !== undefined) paymentConfig.alipay_enabled = config.alipay_enabled
-      if (config.alipay_appid) paymentConfig.alipay_appid = config.alipay_appid
-      if (config.alipay_private_key) paymentConfig.alipay_private_key = config.alipay_private_key
-      
-      // 物流设置
-      if (config.default_freight !== undefined) logisticsConfig.default_freight = config.default_freight
-      if (config.free_freight_amount !== undefined) logisticsConfig.free_freight_amount = config.free_freight_amount
-      if (config.ship_address) logisticsConfig.ship_address = config.ship_address
-      if (config.sender_name) logisticsConfig.sender_name = config.sender_name
-      if (config.sender_phone) logisticsConfig.sender_phone = config.sender_phone
-      
-      // 短信设置
-      if (config.sms_enabled !== undefined) smsConfig.enabled = config.sms_enabled
-      if (config.sms_platform) smsConfig.platform = config.sms_platform
-      if (config.sms_access_key) smsConfig.access_key = config.sms_access_key
-      if (config.sms_secret_key) smsConfig.secret_key = config.sms_secret_key
-      if (config.sms_sign_name) smsConfig.sign_name = config.sms_sign_name
-      if (config.sms_code_template_id) smsConfig.code_template_id = config.sms_code_template_id
-      
-      // 订单设置
-      if (config.unpaid_cancel_minutes !== undefined) orderConfig.unpaid_cancel_minutes = config.unpaid_cancel_minutes
-      if (config.shipped_complete_days !== undefined) orderConfig.shipped_complete_days = config.shipped_complete_days
-      if (config.auto_review_days !== undefined) orderConfig.auto_review_days = config.auto_review_days
-      if (config.allow_refund !== undefined) orderConfig.allow_refund = config.allow_refund
-      if (config.refund_need_approve !== undefined) orderConfig.refund_need_approve = config.refund_need_approve
-    }
+    const config = await request.get('/config')
+    
+    // 基本设置
+    if (config.site_name) basicConfig.site_name = config.site_name
+    if (config.site_logo) basicConfig.site_logo = config.site_logo
+    if (config.service_phone) basicConfig.service_phone = config.service_phone
+    if (config.service_email) basicConfig.service_email = config.service_email
+    if (config.company_address) basicConfig.company_address = config.company_address
+    if (config.about_us) basicConfig.about_us = config.about_us
+    
+    // 支付设置
+    if (config.wechat_enabled !== undefined) paymentConfig.wechat_enabled = config.wechat_enabled
+    if (config.wechat_appid) paymentConfig.wechat_appid = config.wechat_appid
+    if (config.wechat_mchid) paymentConfig.wechat_mchid = config.wechat_mchid
+    if (config.wechat_key) paymentConfig.wechat_key = config.wechat_key
+    if (config.alipay_enabled !== undefined) paymentConfig.alipay_enabled = config.alipay_enabled
+    if (config.alipay_appid) paymentConfig.alipay_appid = config.alipay_appid
+    if (config.alipay_private_key) paymentConfig.alipay_private_key = config.alipay_private_key
+    
+    // 物流设置
+    if (config.default_freight !== undefined) logisticsConfig.default_freight = config.default_freight
+    if (config.free_freight_amount !== undefined) logisticsConfig.free_freight_amount = config.free_freight_amount
+    if (config.ship_address) logisticsConfig.ship_address = config.ship_address
+    if (config.sender_name) logisticsConfig.sender_name = config.sender_name
+    if (config.sender_phone) logisticsConfig.sender_phone = config.sender_phone
+    
+    // 短信设置
+    if (config.sms_enabled !== undefined) smsConfig.enabled = config.sms_enabled
+    if (config.sms_platform) smsConfig.platform = config.sms_platform
+    if (config.sms_access_key) smsConfig.access_key = config.sms_access_key
+    if (config.sms_secret_key) smsConfig.secret_key = config.sms_secret_key
+    if (config.sms_sign_name) smsConfig.sign_name = config.sms_sign_name
+    if (config.sms_code_template_id) smsConfig.code_template_id = config.sms_code_template_id
+    
+    // 订单设置
+    if (config.unpaid_cancel_minutes !== undefined) orderConfig.unpaid_cancel_minutes = config.unpaid_cancel_minutes
+    if (config.shipped_complete_days !== undefined) orderConfig.shipped_complete_days = config.shipped_complete_days
+    if (config.auto_review_days !== undefined) orderConfig.auto_review_days = config.auto_review_days
+    if (config.allow_refund !== undefined) orderConfig.allow_refund = config.allow_refund
+    if (config.refund_need_approve !== undefined) orderConfig.refund_need_approve = config.refund_need_approve
   } catch (error) {
     console.error('加载配置失败:', error)
   } finally {

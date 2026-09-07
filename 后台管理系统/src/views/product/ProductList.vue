@@ -8,7 +8,7 @@
         </el-form-item>
         <el-form-item label="商品分类">
           <el-select v-model="searchForm.category_id" placeholder="请选择分类" clearable>
-            <el-option label="全部" :value="null" />
+            <el-option label="全部" value="" />
             <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
           </el-select>
         </el-form-item>
@@ -29,11 +29,18 @@
         <el-table-column label="商品图片" width="100">
           <template #default="{ row }">
             <el-image 
-              :src="row.image_url" 
+              :src="row.cover || row.image_url" 
               fit="cover" 
               style="width: 60px; height: 60px; border-radius: 4px;"
-              :preview-src-list="[row.image_url]"
-            />
+              :preview-src-list="[row.cover || row.image_url]"
+              lazy
+            >
+              <template #error>
+                <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f5f7fa; color: #909399; font-size: 12px;">
+                  <el-icon><Picture /></el-icon>
+                </div>
+              </template>
+            </el-image>
           </template>
         </el-table-column>
         <el-table-column prop="name" label="商品名称" min-width="200" />
@@ -99,7 +106,7 @@ const categories = ref([])
 
 const searchForm = reactive({
   name: '',
-  category_id: null
+  category_id: ''
 })
 
 const pagination = reactive({
@@ -144,7 +151,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   searchForm.name = ''
-  searchForm.category_id = null
+  searchForm.category_id = ''
   pagination.page = 1
   fetchProducts()
 }

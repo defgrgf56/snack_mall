@@ -22,16 +22,14 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="商品图片" prop="image_url">
-          <el-input v-model="form.image_url" placeholder="请输入图片URL" />
-          <div style="margin-top: 10px;">
-            <el-image 
-              v-if="form.image_url" 
-              :src="form.image_url" 
-              style="width: 200px; height: 200px;"
-              fit="cover"
-            />
-          </div>
+        <el-form-item label="商品封面" prop="cover">
+          <ImageUpload v-model="form.cover" tip="上传商品封面图" />
+          <div class="form-tip">建议尺寸：800x800，支持 jpg、png 格式，大小不超过 5MB</div>
+        </el-form-item>
+
+        <el-form-item label="商品轮播图">
+          <MultiImageUpload v-model="form.images" :limit="9" />
+          <div class="form-tip">最多上传9张，支持拖拽排序</div>
         </el-form-item>
 
         <el-form-item label="商品价格" prop="price">
@@ -74,6 +72,8 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
+import ImageUpload from '@/components/ImageUpload.vue'
+import MultiImageUpload from '@/components/MultiImageUpload.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -86,7 +86,8 @@ const isEdit = Boolean(route.params.id)
 const form = reactive({
   name: '',
   category_id: null,
-  image_url: '',
+  cover: '',
+  images: [],
   price: 0,
   stock: 0,
   description: '',
@@ -96,7 +97,7 @@ const form = reactive({
 const rules = {
   name: [{ required: true, message: '请输入商品名称', trigger: 'blur' }],
   category_id: [{ required: true, message: '请选择商品分类', trigger: 'change' }],
-  image_url: [{ required: true, message: '请输入商品图片URL', trigger: 'blur' }],
+  cover: [{ required: true, message: '请上传商品封面图', trigger: 'change' }],
   price: [{ required: true, message: '请输入商品价格', trigger: 'blur' }],
   stock: [{ required: true, message: '请输入商品库存', trigger: 'blur' }]
 }
@@ -151,3 +152,12 @@ onMounted(() => {
   fetchProduct()
 })
 </script>
+
+<style scoped>
+.form-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+</style>

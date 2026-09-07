@@ -8,7 +8,7 @@
         </el-form-item>
         <el-form-item label="订单状态">
           <el-select v-model="searchForm.status" placeholder="请选择状态" clearable>
-            <el-option label="全部" :value="null" />
+            <el-option label="全部" value="" />
             <el-option label="待付款" value="pending" />
             <el-option label="待发货" value="paid" />
             <el-option label="已发货" value="shipped" />
@@ -112,7 +112,7 @@ const currentOrder = ref(null)
 
 const searchForm = reactive({
   order_no: '',
-  status: null
+  status: ''
 })
 
 const pagination = reactive({
@@ -153,7 +153,7 @@ const handleSearch = () => {
 
 const handleReset = () => {
   searchForm.order_no = ''
-  searchForm.status = null
+  searchForm.status = ''
   pagination.page = 1
   fetchOrders()
 }

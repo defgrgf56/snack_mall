@@ -78,6 +78,43 @@ const routes = [
         component: () => import('@/views/marketing/BannerList.vue'),
         meta: { title: '轮播图', icon: 'Picture' }
       },
+      {
+        path: 'marketing/activities',
+        name: 'Activities',
+        component: () => import('@/views/marketing/ActivityList.vue'),
+        meta: { title: '活动专区', icon: 'Present' }
+      },
+      {
+        path: 'marketing/activities/create',
+        name: 'ActivityCreate',
+        component: () => import('@/views/marketing/ActivityForm.vue'),
+        meta: { title: '新建活动', hidden: true }
+      },
+      {
+        path: 'marketing/activities/:id/edit',
+        name: 'ActivityEdit',
+        component: () => import('@/views/marketing/ActivityForm.vue'),
+        meta: { title: '编辑活动', hidden: true }
+      },
+      // 秒杀管理
+      {
+        path: 'marketing/seckills',
+        name: 'Seckills',
+        component: () => import('@/views/marketing/SeckillList.vue'),
+        meta: { title: '即时秒杀', icon: 'Timer' }
+      },
+      {
+        path: 'marketing/seckills/create',
+        name: 'SeckillCreate',
+        component: () => import('@/views/marketing/SeckillForm.vue'),
+        meta: { title: '新建秒杀', hidden: true }
+      },
+      {
+        path: 'marketing/seckills/:id/edit',
+        name: 'SeckillEdit',
+        component: () => import('@/views/marketing/SeckillForm.vue'),
+        meta: { title: '编辑秒杀', hidden: true }
+      },
       // 系统设置
       {
         path: 'settings',

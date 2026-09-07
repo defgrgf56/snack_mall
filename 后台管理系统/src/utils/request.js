@@ -45,6 +45,9 @@ request.interceptors.response.use(
       return Promise.reject(new Error(res.message || '请求失败'))
     }
 
+    // 返回 data 部分，让前端可以直接访问 list、total 等字段
+    // 后端返回格式: { code: 200, message: 'xxx', data: { list, total, ... } }
+    // 前端接收格式: { list, total, ... }
     return res.data
   },
   (error) => {

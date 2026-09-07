@@ -4,7 +4,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, adminAuth } = require('../middleware/auth');
 
 // 确保上传目录存在
 const uploadDir = path.join(__dirname, '../../uploads');
@@ -57,12 +57,36 @@ const upload = multer({
 });
 
 /**
+ * 认证中间件 - 支持用户和管理员
+ */
+async function authMiddleware(req, res, next) {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.json({
+      code: 401,
+      message: '未登录',
+      data: null
+    });
+  }
+  
+  // 先尝试管理员认证
+  try {
+    await adminAuth(req, res, next);
+  } catch (error) {
+    // 如果管理员认证失败，尝试用户认证
+    await authenticateToken(req, res, next);
+  }
+}
+
+/**
  * 单文件上传
  * POST /api/upload
  * Content-Type: multipart/form-data
  * Field: file
  */
-router.post('/', authenticateToken, upload.single('file'), (req, res) => {
+router.post('/', authMiddleware, upload.single('file'), (req, res) => {
   try {
     if (!req.file) {
       return res.json({
@@ -103,7 +127,7 @@ router.post('/', authenticateToken, upload.single('file'), (req, res) => {
  * Content-Type: multipart/form-data
  * Field: files (可以选择多个文件)
  */
-router.post('/multiple', authenticateToken, upload.array('files', 10), (req, res) => {
+router.post('/multiple', authMiddleware, upload.array('files', 10), (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.json({
@@ -142,7 +166,7 @@ router.post('/multiple', authenticateToken, upload.array('files', 10), (req, res
  * DELETE /api/upload
  * Body: { url }
  */
-router.delete('/', authenticateToken, (req, res) => {
+router.delete('/', authMiddleware, (req, res) => {
   try {
     const { url } = req.body;
     
