@@ -35,7 +35,9 @@ module.exports = (sequelize) => {
     }
   }, {
     tableName: 'categories',
-    timestamps: false, // 禁用自动时间戳
+    timestamps: true, // 启用自动时间戳
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
     paranoid: false, // 禁用软删除
     comment: '商品分类表',
     indexes: [

@@ -469,43 +469,67 @@ router.get('/hot-products', adminAuth, async (req, res) => {
 // 获取订单列表（管理员）
 router.get('/orders', adminAuth, async (req, res) => {
   try {
-    const { page = 1, pageSize = 10, status, keyword } = req.query
+    const { 
+      page = 1, 
+      pageSize = 10, 
+      status, 
+      order_no,
+      user_nickname,
+      start_date,
+      end_date
+    } = req.query
     const offset = (page - 1) * pageSize
     const { OrderItem } = require('../models')
 
     const where = {}
+    
+    // 订单状态筛选
     if (status) {
       where.status = parseInt(status)
     }
-    if (keyword) {
-      where[Op.or] = [
-        { order_no: { [Op.like]: `%${keyword}%` } },
-        { consignee: { [Op.like]: `%${keyword}%` } },
-        { phone: { [Op.like]: `%${keyword}%` } }
-      ]
+    
+    // 订单号搜索
+    if (order_no) {
+      where.order_no = { [Op.like]: `%${order_no}%` }
     }
+    
+    // 日期范围筛选
+    if (start_date && end_date) {
+      where.created_at = {
+        [Op.between]: [
+          new Date(start_date + ' 00:00:00'),
+          new Date(end_date + ' 23:59:59')
+        ]
+      }
+    }
+
+    // 用户关联条件
+    const include = [
+      {
+        model: OrderItem,
+        as: 'items',
+        include: [{
+          model: Product,
+          as: 'product',
+          attributes: ['id', 'name', 'cover']
+        }]
+      },
+      {
+        model: User,
+        as: 'user',
+        attributes: ['id', 'nickname', 'avatar'],
+        where: user_nickname ? { nickname: { [Op.like]: `%${user_nickname}%` } } : undefined,
+        required: !!user_nickname // 如果有用户昵称筛选，必须有关联的用户
+      }
+    ]
 
     const { count, rows } = await Order.findAndCountAll({
       where,
-      include: [
-        {
-          model: OrderItem,
-          as: 'items',
-          include: [{
-            model: Product,
-            as: 'product',
-            attributes: ['id', 'name', 'cover']
-          }]
-        },
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'nickname', 'avatar']
-        }
-      ],
+      include,
       order: [['created_at', 'DESC']],
       limit: parseInt(pageSize),
-      offset: parseInt(offset)
+      offset: parseInt(offset),
+      distinct: true // 避免 JOIN 导致的重复计数
     })
 
     res.json({
@@ -893,8 +917,23 @@ router.get('/products/:id', adminAuth, async (req, res) => {
 router.get('/categories', adminAuth, async (req, res) => {
   try {
     const { Category } = require('../models')
+    const { Sequelize } = require('sequelize')
+    
+    // 查询分类列表，并统计每个分类下的商品数量
     const categories = await Category.findAll({
-      order: [['sort', 'ASC']]
+      attributes: {
+        include: [
+          [
+            Sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM products
+              WHERE products.category_id = Category.id
+            )`),
+            'product_count'
+          ]
+        ]
+      },
+      order: [['sort', 'ASC'], ['id', 'DESC']]
     })
 
     res.json({
