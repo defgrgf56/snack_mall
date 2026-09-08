@@ -466,6 +466,103 @@ router.get('/hot-products', adminAuth, async (req, res) => {
   }
 })
 
+// 获取订单统计数据（管理员）
+router.get('/orders/stats', adminAuth, async (req, res) => {
+  try {
+    const { 
+      status, 
+      order_no,
+      user_nickname,
+      start_date,
+      end_date
+    } = req.query
+
+    const where = {}
+    
+    // 订单状态筛选
+    if (status) {
+      where.status = parseInt(status)
+    }
+    
+    // 订单号搜索
+    if (order_no) {
+      where.order_no = { [Op.like]: `%${order_no}%` }
+    }
+    
+    // 日期范围筛选
+    if (start_date && end_date) {
+      where.created_at = {
+        [Op.between]: [start_date + ' 00:00:00', end_date + ' 23:59:59']
+      }
+    }
+
+    // 用户昵称需要JOIN查询
+    let userInclude = undefined
+    if (user_nickname) {
+      userInclude = {
+        model: User,
+        as: 'user',
+        attributes: [],
+        where: { nickname: { [Op.like]: `%${user_nickname}%` } },
+        required: true
+      }
+    }
+
+    // 总订单数
+    const totalCount = await Order.count({
+      where,
+      include: userInclude ? [userInclude] : undefined,
+      distinct: true
+    })
+
+    // 待发货订单数 (status = 2)
+    const pendingCount = await Order.count({
+      where: { ...where, status: 2 },
+      include: userInclude ? [userInclude] : undefined,
+      distinct: true
+    })
+
+    // 已完成订单数 (status = 4)
+    const completedCount = await Order.count({
+      where: { ...where, status: 4 },
+      include: userInclude ? [userInclude] : undefined,
+      distinct: true
+    })
+
+    // 总销售额 (status = 2,3,4 的订单)
+    const salesResult = await Order.findAll({
+      where: { 
+        ...where, 
+        status: { [Op.in]: [2, 3, 4] }
+      },
+      include: userInclude ? [userInclude] : undefined,
+      attributes: [
+        [Order.sequelize.fn('SUM', Order.sequelize.col('pay_amount')), 'total']
+      ],
+      raw: true
+    })
+
+    const totalAmount = parseFloat(salesResult[0]?.total || 0).toFixed(2)
+
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        total: totalCount,
+        pending: pendingCount,
+        completed: completedCount,
+        totalAmount: totalAmount
+      }
+    })
+  } catch (error) {
+    console.error('获取订单统计失败:', error)
+    res.json({
+      code: 500,
+      message: '获取失败'
+    })
+  }
+})
+
 // 获取订单列表（管理员）
 router.get('/orders', adminAuth, async (req, res) => {
   try {

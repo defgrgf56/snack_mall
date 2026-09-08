@@ -293,6 +293,14 @@ const shipDialogVisible = ref(false)
 const currentOrder = ref(null)
 const shipFormRef = ref(null)
 
+// 统计数据
+const stats = ref({
+  total: 0,
+  pending: 0,
+  completed: 0,
+  totalAmount: '0.00'
+})
+
 const searchForm = reactive({
   order_no: '',
   user_nickname: '',
@@ -321,18 +329,31 @@ const shipRules = {
   ]
 }
 
-// 统计数据
-const stats = computed(() => {
-  return {
-    total: pagination.total,
-    pending: orders.value.filter(o => o.status === 2).length,
-    completed: orders.value.filter(o => o.status === 4).length,
-    totalAmount: orders.value
-      .filter(o => [2, 3, 4].includes(o.status))
-      .reduce((sum, o) => sum + parseFloat(o.pay_amount || 0), 0)
-      .toFixed(2)
+// 获取统计数据
+const fetchStats = async () => {
+  try {
+    const params = {
+      order_no: searchForm.order_no,
+      status: searchForm.status
+    }
+    
+    // 添加日期范围参数
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.start_date = searchForm.dateRange[0]
+      params.end_date = searchForm.dateRange[1]
+    }
+    
+    // 添加用户昵称搜索
+    if (searchForm.user_nickname) {
+      params.user_nickname = searchForm.user_nickname
+    }
+    
+    const res = await request.get('/admin/orders/stats', { params })
+    stats.value = res
+  } catch (error) {
+    console.error('获取统计数据失败:', error)
   }
-})
+}
 
 const fetchOrders = async () => {
   loading.value = true
@@ -358,6 +379,9 @@ const fetchOrders = async () => {
     const res = await request.get('/admin/orders', { params })
     orders.value = res.list || []
     pagination.total = res.total || 0
+    
+    // 同时获取统计数据
+    await fetchStats()
   } catch (error) {
     console.error('获取订单列表失败:', error)
     ElMessage.error('获取订单列表失败')
