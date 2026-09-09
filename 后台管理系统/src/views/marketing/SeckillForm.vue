@@ -25,47 +25,22 @@
         </el-form-item>
 
         <el-form-item label="选择商品" prop="product_id">
-          <el-select
+          <ProductSelector
             v-model="formData.product_id"
-            placeholder="请选择商品"
-            filterable
-            style="width: 100%"
+            :product="selectedProduct"
             @change="handleProductChange"
-          >
-            <el-option
-              v-for="product in productList"
-              :key="product.id"
-              :label="`${product.name} (库存: ${product.stock})`"
-              :value="product.id"
-            >
-              <div style="display: flex; align-items: center">
-                <el-image
-                  v-if="product.cover"
-                  :src="product.cover"
-                  style="width: 40px; height: 40px; margin-right: 10px; border-radius: 4px"
-                  fit="cover"
-                />
-                <div>
-                  <div>{{ product.name }}</div>
-                  <div style="font-size: 12px; color: #999">
-                    原价: ¥{{ product.price }} | 库存: {{ product.stock }}
-                  </div>
-                </div>
-              </div>
-            </el-option>
-          </el-select>
+          />
         </el-form-item>
 
-        <el-form-item label="原价" prop="original_price">
-          <el-input-number
-            v-model="formData.original_price"
-            :min="0"
-            :precision="2"
-            :step="0.01"
-            controls-position="right"
+        <el-form-item label="商品原价">
+          <el-input
+            :model-value="formData.original_price > 0 ? `¥${formData.original_price}` : '请先选择商品'"
+            disabled
             style="width: 200px"
           />
-          <span style="margin-left: 10px; color: #999">元</span>
+          <span style="margin-left: 10px; color: #999; font-size: 12px">
+            自动获取商品当前价格
+          </span>
         </el-form-item>
 
         <el-form-item label="秒杀价" prop="seckill_price">
@@ -164,7 +139,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getSeckillDetail, createSeckill, updateSeckill } from '@/api/seckill'
-import { getProductList } from '@/api/product'
+import ProductSelector from '@/components/ProductSelector.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -172,7 +147,6 @@ const route = useRoute()
 const isEdit = computed(() => !!route.params.id)
 const formRef = ref()
 const submitting = ref(false)
-const productList = ref([])
 const selectedProduct = ref(null)
 
 const formData = reactive({
@@ -194,19 +168,6 @@ const rules = {
   ],
   product_id: [
     { required: true, message: '请选择商品', trigger: 'change' }
-  ],
-  original_price: [
-    { required: true, message: '请输入原价', trigger: 'blur' },
-    { 
-      validator: (rule, value, callback) => {
-        if (value <= 0) {
-          callback(new Error('原价必须大于0'))
-        } else {
-          callback()
-        }
-      },
-      trigger: 'blur'
-    }
   ],
   seckill_price: [
     { required: true, message: '请输入秒杀价', trigger: 'blur' },
@@ -255,22 +216,16 @@ const discount = computed(() => {
   return 0
 })
 
-// 获取商品列表
-const fetchProductList = async () => {
-  try {
-    const res = await getProductList({ page: 1, pageSize: 1000 })
-    productList.value = res.list
-  } catch (error) {
-    ElMessage.error('获取商品列表失败')
-  }
-}
-
 // 商品变化
-const handleProductChange = (productId) => {
-  const product = productList.value.find(p => p.id === productId)
+const handleProductChange = (product) => {
   if (product) {
     selectedProduct.value = product
     formData.original_price = parseFloat(product.price)
+    
+    // 自动生成标题
+    if (!formData.title || formData.title === selectedProduct.value?.name) {
+      formData.title = product.name
+    }
   }
 }
 
@@ -329,8 +284,6 @@ const handleBack = () => {
 }
 
 onMounted(async () => {
-  await fetchProductList()
-  
   if (isEdit.value) {
     await fetchDetail()
   }

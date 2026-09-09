@@ -10,48 +10,40 @@ const { Op } = require('sequelize');
  */
 router.get('/', async (req, res) => {
   try {
-    const { status = 1, page = 1, pageSize = 10 } = req.query;
+    const { status, page = 1, pageSize = 10 } = req.query;
     
     const offset = (page - 1) * pageSize;
     const limit = parseInt(pageSize);
     
     const now = new Date();
     
-    // 构建查询条件
-    const where = {};
-    
-    if (status) {
-      where.status = parseInt(status);
-    }
-    
-    // 如果查询进行中的秒杀，添加时间条件
-    if (status == 1) {
-      where.start_time = { [Op.lte]: now };
-      where.end_time = { [Op.gte]: now };
-    }
-    
+    // 不再使用数据库的 status 字段筛选，获取所有秒杀后动态计算
     const { count, rows } = await Seckill.findAndCountAll({
-      where,
       include: [{
         model: Product,
         as: 'product',
         attributes: ['id', 'name', 'cover', 'price', 'stock', 'sales']
       }],
       order: [['sort', 'DESC'], ['created_at', 'DESC']],
-      offset,
-      limit
+      offset: 0,
+      limit: 10000
     });
     
-    // 计算剩余时间和进度
-    const seckills = rows.map(item => {
+    // 动态计算秒杀状态
+    let seckills = rows.map(item => {
       const data = item.toJSON();
+      const startTime = new Date(data.start_time);
+      const endTime = new Date(data.end_time);
       
-      // 计算剩余时间（秒）
-      if (data.status === 1) {
-        data.remaining_time = Math.max(0, Math.floor((new Date(data.end_time) - now) / 1000));
-      } else if (data.status === 2) {
-        data.remaining_time = Math.max(0, Math.floor((new Date(data.start_time) - now) / 1000));
+      // 根据时间计算实际状态
+      if (now < startTime) {
+        data.status = 2; // 未开始
+        data.remaining_time = Math.max(0, Math.floor((startTime - now) / 1000));
+      } else if (now >= startTime && now <= endTime) {
+        data.status = 1; // 进行中
+        data.remaining_time = Math.max(0, Math.floor((endTime - now) / 1000));
       } else {
+        data.status = 0; // 已结束
         data.remaining_time = 0;
       }
       
@@ -66,16 +58,25 @@ router.get('/', async (req, res) => {
       return data;
     });
     
+    // 如果指定了 status，则根据动态计算的状态进行筛选
+    if (status !== undefined && status !== '') {
+      seckills = seckills.filter(item => item.status === parseInt(status));
+    }
+    
+    // 应用分页
+    const total = seckills.length;
+    const paginatedSeckills = seckills.slice(offset, offset + limit);
+    
     res.json({
       code: 200,
       message: '获取成功',
       data: {
-        list: seckills,
+        list: paginatedSeckills,
         pagination: {
-          total: count,
+          total: total,
           page: parseInt(page),
           pageSize: limit,
-          totalPages: Math.ceil(count / limit)
+          totalPages: Math.ceil(total / limit)
         }
       }
     });
