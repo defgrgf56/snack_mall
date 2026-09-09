@@ -6,7 +6,7 @@ import request from '@/utils/request'
  */
 export function getProductList(params) {
   return request({
-    url: '/products',
+    url: '/admin/products',
     method: 'get',
     params
   })
@@ -17,7 +17,7 @@ export function getProductList(params) {
  */
 export function getProductDetail(id) {
   return request({
-    url: `/products/${id}`,
+    url: `/admin/products/${id}`,
     method: 'get'
   })
 }
@@ -27,7 +27,7 @@ export function getProductDetail(id) {
  */
 export function createProduct(data) {
   return request({
-    url: '/products',
+    url: '/admin/products',
     method: 'post',
     data
   })
@@ -38,7 +38,7 @@ export function createProduct(data) {
  */
 export function updateProduct(id, data) {
   return request({
-    url: `/products/${id}`,
+    url: `/admin/products/${id}`,
     method: 'put',
     data
   })
@@ -49,7 +49,7 @@ export function updateProduct(id, data) {
  */
 export function deleteProduct(id) {
   return request({
-    url: `/products/${id}`,
+    url: `/admin/products/${id}`,
     method: 'delete'
   })
 }
@@ -59,7 +59,7 @@ export function deleteProduct(id) {
  */
 export function updateProductStatus(id, status) {
   return request({
-    url: `/products/${id}/status`,
+    url: `/admin/products/${id}/status`,
     method: 'put',
     data: { status }
   })

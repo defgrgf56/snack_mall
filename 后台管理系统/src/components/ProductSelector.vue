@@ -169,10 +169,13 @@ const fetchProducts = async () => {
     }
     
     const res = await getProductList(params)
-    productList.value = res.list
-    total.value = res.pagination.total
+    // 兼容两种返回格式：{ list, pagination: { total } } 或 { list, total }
+    productList.value = res?.list || []
+    total.value = res?.pagination?.total || res?.total || 0
   } catch (error) {
     console.error('获取商品列表失败:', error)
+    productList.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -182,9 +185,10 @@ const fetchProducts = async () => {
 const fetchCategories = async () => {
   try {
     const res = await getCategoryList()
-    categories.value = res.list || res
+    categories.value = res?.list || res || []
   } catch (error) {
     console.error('获取分类失败:', error)
+    categories.value = []
   }
 }
 
