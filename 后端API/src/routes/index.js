@@ -17,12 +17,12 @@ const uploadRoutes = require('./upload');
 const refundRoutes = require('./refund');
 const notificationRoutes = require('./notification');
 const favoriteRoutes = require('./favorite');
-const seckillRoutes = require('./seckill');
 const activityRoutes = require('./activity');
 const reviewRoutes = require('./review');
 const searchRoutes = require('./search');
 const feedbackRoutes = require('./feedback');
 const configRoutes = require('./config');
+const analyticsRoutes = require('./analytics');
 
 // 注册路由
 router.use('/auth', authRoutes);
@@ -39,12 +39,12 @@ router.use('/upload', uploadRoutes);
 router.use('/refunds', refundRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/favorites', favoriteRoutes);
-router.use('/seckills', seckillRoutes);
 router.use('/activities', activityRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/search', searchRoutes);
 router.use('/feedbacks', feedbackRoutes);
 router.use('/config', configRoutes);
+router.use('/admin/analytics', analyticsRoutes);
 
 // 根路由
 router.get('/', (req, res) => {

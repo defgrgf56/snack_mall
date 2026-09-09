@@ -10,7 +10,7 @@ const { Op } = require('sequelize');
  */
 router.get('/', async (req, res) => {
   try {
-    const { type, status = 1, page = 1, pageSize = 10 } = req.query;
+    const { type, status, page = 1, pageSize = 10 } = req.query;
     
     const offset = (page - 1) * pageSize;
     const limit = parseInt(pageSize);
@@ -24,15 +24,19 @@ router.get('/', async (req, res) => {
       where.type = type;
     }
     
-    if (status) {
-      where.status = parseInt(status);
-    }
-    
-    // 如果查询进行中的活动，添加时间条件
+    // 根据 status 参数动态过滤（基于时间而非静态字段）
     if (status == 1) {
+      // 进行中：开始时间 <= 现在 <= 结束时间
       where.start_time = { [Op.lte]: now };
       where.end_time = { [Op.gte]: now };
+    } else if (status == 2) {
+      // 未开始：开始时间 > 现在
+      where.start_time = { [Op.gt]: now };
+    } else if (status == 0) {
+      // 已结束：结束时间 < 现在
+      where.end_time = { [Op.lt]: now };
     }
+    // 如果 status 未传或为其他值，则不过滤，返回所有活动
     
     const { count, rows } = await Activity.findAndCountAll({
       where,
@@ -41,15 +45,21 @@ router.get('/', async (req, res) => {
       limit
     });
     
-    // 计算剩余时间
+    // 动态计算状态和剩余时间
     const activities = rows.map(item => {
       const data = item.toJSON();
+      const startTime = new Date(data.start_time);
+      const endTime = new Date(data.end_time);
       
-      if (data.status === 1) {
-        data.remaining_time = Math.max(0, Math.floor((new Date(data.end_time) - now) / 1000));
-      } else if (data.status === 2) {
-        data.remaining_time = Math.max(0, Math.floor((new Date(data.start_time) - now) / 1000));
+      // 动态计算 status
+      if (now < startTime) {
+        data.status = 2; // 未开始
+        data.remaining_time = Math.max(0, Math.floor((startTime - now) / 1000));
+      } else if (now >= startTime && now <= endTime) {
+        data.status = 1; // 进行中
+        data.remaining_time = Math.max(0, Math.floor((endTime - now) / 1000));
       } else {
+        data.status = 0; // 已结束
         data.remaining_time = 0;
       }
       
@@ -106,13 +116,18 @@ router.get('/:id', async (req, res) => {
     
     const data = activity.toJSON();
     const now = new Date();
+    const startTime = new Date(data.start_time);
+    const endTime = new Date(data.end_time);
     
-    // 计算剩余时间
-    if (data.status === 1) {
-      data.remaining_time = Math.max(0, Math.floor((new Date(data.end_time) - now) / 1000));
-    } else if (data.status === 2) {
-      data.remaining_time = Math.max(0, Math.floor((new Date(data.start_time) - now) / 1000));
+    // 动态计算状态和剩余时间
+    if (now < startTime) {
+      data.status = 2; // 未开始
+      data.remaining_time = Math.max(0, Math.floor((startTime - now) / 1000));
+    } else if (now >= startTime && now <= endTime) {
+      data.status = 1; // 进行中
+      data.remaining_time = Math.max(0, Math.floor((endTime - now) / 1000));
     } else {
+      data.status = 0; // 已结束
       data.remaining_time = 0;
     }
     

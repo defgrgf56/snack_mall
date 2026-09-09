@@ -10,7 +10,6 @@ const review = require('./review')
 const refund = require('./refund')
 const favorite = require('./favorite')
 const coupon = require('./coupon')
-const seckill = require('./seckill')
 const activity = require('./activity')
 const notification = require('./notification')
 const feedback = require('./feedback')
@@ -26,7 +25,6 @@ module.exports = {
   refund,
   favorite,
   coupon,
-  seckill,
   activity,
   notification,
   feedback

@@ -43,7 +43,6 @@ const Config = require('./Config')(sequelize)
 const { Refund, RefundLog } = require('./Refund')(sequelize)
 const Notification = require('./Notification')(sequelize)
 const Favorite = require('./Favorite')(sequelize)
-const Seckill = require('./Seckill')(sequelize)
 const Activity = require('./Activity')(sequelize)
 const ActivityProduct = require('./ActivityProduct')(sequelize)
 const Review = require('./Review')(sequelize)
@@ -108,10 +107,6 @@ Refund.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
 // 退款 - 退款日志
 Refund.hasMany(RefundLog, { foreignKey: 'refund_id', as: 'logs' })
 RefundLog.belongsTo(Refund, { foreignKey: 'refund_id' })
-
-// 秒杀 - 商品
-Seckill.belongsTo(Product, { foreignKey: 'product_id', as: 'product' })
-Product.hasMany(Seckill, { foreignKey: 'product_id', as: 'seckills' })
 
 // 活动 - 商品 (多对多)
 Activity.belongsToMany(Product, { 
@@ -192,7 +187,6 @@ module.exports = {
   RefundLog,
   Notification,
   Favorite,
-  Seckill,
   Activity,
   ActivityProduct,
   Review,

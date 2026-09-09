@@ -3,7 +3,7 @@
     <el-card>
       <template #header>
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>{{ isEdit ? '编辑活动' : '新建活动' }}</span>
+          <span>{{ isEdit ? '编辑活动' : isCopy ? '复制活动' : '新建活动' }}</span>
           <el-button @click="handleBack">返回</el-button>
         </div>
       </template>
@@ -36,6 +36,7 @@
           <el-upload
             class="cover-uploader"
             :action="uploadUrl"
+            :headers="uploadHeaders"
             :show-file-list="false"
             :on-success="handleCoverSuccess"
             :before-upload="beforeCoverUpload"
@@ -64,6 +65,7 @@
                 placeholder="开始时间"
                 style="width: 100%;"
                 value-format="YYYY-MM-DD HH:mm:ss"
+                @change="updateStatusPreview"
               />
             </el-form-item>
           </el-col>
@@ -76,17 +78,17 @@
                 placeholder="结束时间"
                 style="width: 100%;"
                 value-format="YYYY-MM-DD HH:mm:ss"
+                @change="updateStatusPreview"
               />
             </el-form-item>
           </el-col>
         </el-form-item>
 
-        <el-form-item label="活动状态" prop="status">
-          <el-radio-group v-model="formData.status">
-            <el-radio :label="2">未开始</el-radio>
-            <el-radio :label="1">进行中</el-radio>
-            <el-radio :label="0">已结束</el-radio>
-          </el-radio-group>
+        <el-form-item label="活动状态">
+          <el-tag :type="statusPreview.type" size="large">
+            {{ statusPreview.text }}
+          </el-tag>
+          <div class="form-tip">状态由活动时间自动计算</div>
         </el-form-item>
 
         <el-form-item label="排序" prop="sort">
@@ -109,6 +111,14 @@
           />
         </el-form-item>
 
+        <el-form-item v-if="isEdit" label="活动商品">
+          <el-button type="primary" plain @click="handleManageProducts">
+            <el-icon><Goods /></el-icon>
+            管理活动商品
+          </el-button>
+          <div class="form-tip">快速跳转到商品管理页面</div>
+        </el-form-item>
+
         <el-form-item>
           <el-button type="primary" :loading="submitting" @click="handleSubmit">
             {{ isEdit ? '保存修改' : '创建活动' }}
@@ -121,16 +131,17 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, Goods } from '@element-plus/icons-vue'
 import { getActivityDetail, createActivity, updateActivity } from '@/api/activity'
 
 const router = useRouter()
 const route = useRoute()
 
 const isEdit = ref(false)
+const isCopy = ref(false)
 const activityId = ref(null)
 const formRef = ref(null)
 const submitting = ref(false)
@@ -143,13 +154,49 @@ const formData = reactive({
   type: 'festival',
   start_time: '',
   end_time: '',
-  status: 2,
   sort: 0,
   description: ''
 })
 
+// 状态预览
+const statusPreview = reactive({
+  text: '未开始',
+  type: 'warning'
+})
+
+// 计算活动状态
+function calculateStatus(startTime, endTime) {
+  if (!startTime || !endTime) {
+    return { text: '未开始', type: 'warning' }
+  }
+  
+  const now = new Date().getTime()
+  const start = new Date(startTime).getTime()
+  const end = new Date(endTime).getTime()
+  
+  if (now < start) {
+    return { text: '未开始', type: 'warning' }
+  }
+  if (now > end) {
+    return { text: '已结束', type: 'info' }
+  }
+  return { text: '进行中', type: 'success' }
+}
+
+// 更新状态预览
+function updateStatusPreview() {
+  const status = calculateStatus(formData.start_time, formData.end_time)
+  statusPreview.text = status.text
+  statusPreview.type = status.type
+}
+
 // 上传地址
 const uploadUrl = ref(import.meta.env.VITE_API_BASE_URL + '/upload')
+
+// 上传请求头（带 token）
+const uploadHeaders = ref({
+  'Authorization': `Bearer ${localStorage.getItem('admin_token')}`
+})
 
 // 表单验证规则
 const rules = {
@@ -170,9 +217,6 @@ const rules = {
   ],
   end_time: [
     { required: true, message: '请选择结束时间', trigger: 'change' }
-  ],
-  status: [
-    { required: true, message: '请选择活动状态', trigger: 'change' }
   ]
 }
 
@@ -181,6 +225,8 @@ async function loadActivityDetail() {
   try {
     const res = await getActivityDetail(activityId.value)
     Object.assign(formData, res)
+    // 加载后更新状态预览
+    updateStatusPreview()
   } catch (error) {
     console.error('获取活动详情失败:', error)
     ElMessage.error(error.message || '获取活动详情失败')
@@ -190,9 +236,15 @@ async function loadActivityDetail() {
 
 // 封面上传成功
 function handleCoverSuccess(response) {
-  if (response.success) {
-    formData.cover = response.data.url
+  console.log('上传响应:', response)
+  if (response.code === 200 && response.data?.url) {
+    // 拼接完整的图片 URL（后端地址 + 相对路径）
+    const baseUrl = import.meta.env.VITE_API_BASE_URL.replace('/api', '')
+    formData.cover = baseUrl + response.data.url
     ElMessage.success('上传成功')
+  } else if (response.code === 401) {
+    ElMessage.error('登录已过期，请重新登录')
+    router.push('/login')
   } else {
     ElMessage.error(response.message || '上传失败')
   }
@@ -253,13 +305,62 @@ function handleBack() {
   router.push('/marketing/activities')
 }
 
+// 管理商品
+function handleManageProducts() {
+  // 保存当前编辑状态到 sessionStorage
+  sessionStorage.setItem('activityFormData', JSON.stringify(formData))
+  // 跳转回列表页，触发商品管理对话框
+  router.push({
+    path: '/marketing/activities',
+    query: { 
+      openProductDialog: activityId.value 
+    }
+  })
+}
+
 // 初始化
-onMounted(() => {
+onMounted(async () => {
   const id = route.params.id
-  if (id && id !== 'create') {
+  const copyFrom = route.query.copyFrom
+  
+  if (copyFrom) {
+    // 复制模式
+    isCopy.value = true
+    try {
+      const res = await getActivityDetail(copyFrom)
+      // 设置未来时间（明天开始，30天后结束）
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(0, 0, 0, 0)
+      
+      const endDate = new Date(tomorrow)
+      endDate.setDate(endDate.getDate() + 30)
+      
+      // 填充表单数据
+      Object.assign(formData, {
+        title: res.title + '（副本）',
+        subtitle: res.subtitle,
+        cover: res.cover,
+        type: res.type,
+        description: res.description,
+        sort: res.sort,
+        start_time: tomorrow.toISOString().slice(0, 19).replace('T', ' '),
+        end_time: endDate.toISOString().slice(0, 19).replace('T', ' ')
+      })
+      updateStatusPreview()
+      ElMessage.success('已加载活动配置，请调整时间后保存')
+    } catch (error) {
+      console.error('加载活动详情失败:', error)
+      ElMessage.error('加载活动配置失败')
+    }
+  } else if (id && id !== 'create') {
+    // 编辑模式
     isEdit.value = true
     activityId.value = id
     loadActivityDetail()
+  } else {
+    // 新建模式，设置默认状态预览
+    updateStatusPreview()
   }
 })
 </script>

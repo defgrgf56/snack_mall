@@ -1299,7 +1299,7 @@ router.delete('/products/:id', adminAuth, async (req, res) => {
 router.get('/activities', adminAuth, async (req, res) => {
   try {
     const { title, type, status, page = 1, pageSize = 10 } = req.query
-    const { Activity } = require('../models')
+    const { Activity, ActivityProduct, sequelize } = require('../models')
     
     const offset = (page - 1) * pageSize
     const limit = parseInt(pageSize)
@@ -1326,16 +1326,67 @@ router.get('/activities', adminAuth, async (req, res) => {
       limit
     })
     
+    // 为每个活动查询关联商品数量
+    const activitiesWithCount = await Promise.all(
+      rows.map(async (activity) => {
+        const productCount = await ActivityProduct.count({
+          where: { activity_id: activity.id }
+        })
+        return {
+          ...activity.toJSON(),
+          productCount
+        }
+      })
+    )
+    
+    // 计算全局统计数据（不受筛选和分页影响）
+    const now = new Date()
+    const allActivities = await Activity.findAll({
+      attributes: ['id', 'start_time', 'end_time'],
+      raw: true
+    })
+    
+    // 动态计算每个活动的状态
+    let ongoingCount = 0
+    let upcomingCount = 0
+    let endedCount = 0
+    
+    allActivities.forEach(activity => {
+      const startTime = new Date(activity.start_time)
+      const endTime = new Date(activity.end_time)
+      
+      if (now < startTime) {
+        upcomingCount++  // 未开始
+      } else if (now > endTime) {
+        endedCount++  // 已结束
+      } else {
+        ongoingCount++  // 进行中
+      }
+    })
+    
+    // 统计所有活动的商品总数
+    const totalProductsResult = await sequelize.query(
+      'SELECT SUM(product_count) as total FROM (SELECT activity_id, COUNT(*) as product_count FROM activity_products GROUP BY activity_id) as counts',
+      { type: sequelize.QueryTypes.SELECT }
+    )
+    const totalProducts = totalProductsResult[0]?.total || 0
+    
     res.json({
       code: 200,
       message: '获取成功',
       data: {
-        list: rows,
+        list: activitiesWithCount,
         pagination: {
           total: count,
           page: parseInt(page),
           pageSize: limit,
           totalPages: Math.ceil(count / limit)
+        },
+        stats: {
+          ongoing: ongoingCount,
+          upcoming: upcomingCount,
+          ended: endedCount,
+          totalProducts: parseInt(totalProducts)
         }
       }
     })
@@ -1741,322 +1792,6 @@ router.delete('/activities/:id/products/:productId', adminAuth, async (req, res)
     res.json({
       code: 500,
       message: '移除失败'
-    })
-  }
-})
-
-/**
- * 秒杀活动管理 API
- */
-
-/**
- * 获取秒杀列表（管理员）
- * GET /api/admin/seckills
- */
-router.get('/seckills', adminAuth, async (req, res) => {
-  try {
-    const { page = 1, pageSize = 10, status, keyword } = req.query
-    const { Seckill, Product } = require('../models')
-    
-    const offset = (page - 1) * pageSize
-    const limit = parseInt(pageSize)
-    
-    const where = {}
-    if (keyword) {
-      where.title = { [Op.like]: `%${keyword}%` }
-    }
-    
-    // 后台管理使用数据库状态，方便管理员手动控制
-    if (status !== undefined && status !== '') {
-      where.status = parseInt(status)
-    }
-    
-    const { count, rows } = await Seckill.findAndCountAll({
-      where,
-      include: [{
-        model: Product,
-        as: 'product',
-        attributes: ['id', 'name', 'cover', 'price', 'stock', 'sales']
-      }],
-      order: [['sort', 'DESC'], ['created_at', 'DESC']],
-      offset,
-      limit
-    })
-    
-    res.json({
-      code: 200,
-      message: '获取成功',
-      data: {
-        list: rows,
-        pagination: {
-          total: count,
-          page: parseInt(page),
-          pageSize: limit,
-          totalPages: Math.ceil(count / limit)
-        }
-      }
-    })
-  } catch (error) {
-    console.error('获取秒杀列表失败:', error)
-    res.json({
-      code: 500,
-      message: '获取失败'
-    })
-  }
-})
-
-/**
- * 获取秒杀详情（管理员）
- * GET /api/admin/seckills/:id
- */
-router.get('/seckills/:id', adminAuth, async (req, res) => {
-  try {
-    const { id } = req.params
-    const { Seckill, Product } = require('../models')
-    
-    const seckill = await Seckill.findByPk(id, {
-      include: [{
-        model: Product,
-        as: 'product',
-        attributes: ['id', 'name', 'cover', 'price', 'stock', 'sales']
-      }]
-    })
-    
-    if (!seckill) {
-      return res.json({
-        code: 404,
-        message: '秒杀活动不存在'
-      })
-    }
-    
-    // 动态计算秒杀状态
-    const seckillData = seckill.toJSON()
-    const now = new Date()
-    const startTime = new Date(seckillData.start_time)
-    const endTime = new Date(seckillData.end_time)
-    
-    if (now < startTime) {
-      seckillData.status = 2 // 未开始
-    } else if (now >= startTime && now <= endTime) {
-      seckillData.status = 1 // 进行中
-    } else {
-      seckillData.status = 0 // 已结束
-    }
-    
-    res.json({
-      code: 200,
-      message: '获取成功',
-      data: seckillData
-    })
-  } catch (error) {
-    console.error('获取秒杀详情失败:', error)
-    res.json({
-      code: 500,
-      message: '获取失败'
-    })
-  }
-})
-
-/**
- * 创建秒杀活动（管理员）
- * POST /api/admin/seckills
- */
-router.post('/seckills', adminAuth, async (req, res) => {
-  try {
-    const { Seckill } = require('../models')
-    const {
-      title,
-      product_id,
-      start_time,
-      end_time,
-      original_price,
-      seckill_price,
-      stock,
-      limit_per_user,
-      sort = 0,
-      status = 2
-    } = req.body
-    
-    // 验证必填字段
-    if (!title || !product_id || !start_time || !end_time || 
-        !original_price || !seckill_price || !stock) {
-      return res.json({
-        code: 400,
-        message: '请填写完整信息'
-      })
-    }
-    
-    // 验证价格
-    if (parseFloat(seckill_price) >= parseFloat(original_price)) {
-      return res.json({
-        code: 400,
-        message: '秒杀价必须低于原价'
-      })
-    }
-    
-    // 创建秒杀活动
-    const seckill = await Seckill.create({
-      title,
-      product_id,
-      start_time,
-      end_time,
-      original_price,
-      seckill_price,
-      stock,
-      sold: 0,
-      limit_per_user: limit_per_user || 1,
-      sort,
-      status
-    })
-    
-    res.json({
-      code: 200,
-      message: '创建成功',
-      data: seckill
-    })
-  } catch (error) {
-    console.error('创建秒杀活动失败:', error)
-    res.json({
-      code: 500,
-      message: '创建失败'
-    })
-  }
-})
-
-/**
- * 更新秒杀活动（管理员）
- * PUT /api/admin/seckills/:id
- */
-router.put('/seckills/:id', adminAuth, async (req, res) => {
-  try {
-    const { id } = req.params
-    const { Seckill } = require('../models')
-    const {
-      title,
-      product_id,
-      start_time,
-      end_time,
-      original_price,
-      seckill_price,
-      stock,
-      limit_per_user,
-      sort,
-      status
-    } = req.body
-    
-    const seckill = await Seckill.findByPk(id)
-    if (!seckill) {
-      return res.json({
-        code: 404,
-        message: '秒杀活动不存在'
-      })
-    }
-    
-    // 验证价格
-    if (seckill_price && original_price && parseFloat(seckill_price) >= parseFloat(original_price)) {
-      return res.json({
-        code: 400,
-        message: '秒杀价必须低于原价'
-      })
-    }
-    
-    // 更新秒杀活动
-    await seckill.update({
-      title: title || seckill.title,
-      product_id: product_id || seckill.product_id,
-      start_time: start_time || seckill.start_time,
-      end_time: end_time || seckill.end_time,
-      original_price: original_price !== undefined ? original_price : seckill.original_price,
-      seckill_price: seckill_price !== undefined ? seckill_price : seckill.seckill_price,
-      stock: stock !== undefined ? stock : seckill.stock,
-      limit_per_user: limit_per_user !== undefined ? limit_per_user : seckill.limit_per_user,
-      sort: sort !== undefined ? sort : seckill.sort,
-      status: status !== undefined ? status : seckill.status
-    })
-    
-    res.json({
-      code: 200,
-      message: '更新成功',
-      data: seckill
-    })
-  } catch (error) {
-    console.error('更新秒杀活动失败:', error)
-    res.json({
-      code: 500,
-      message: '更新失败'
-    })
-  }
-})
-
-/**
- * 删除秒杀活动（管理员）
- * DELETE /api/admin/seckills/:id
- */
-router.delete('/seckills/:id', adminAuth, async (req, res) => {
-  try {
-    const { id } = req.params
-    const { Seckill } = require('../models')
-    
-    const seckill = await Seckill.findByPk(id)
-    if (!seckill) {
-      return res.json({
-        code: 404,
-        message: '秒杀活动不存在'
-      })
-    }
-    
-    await seckill.destroy()
-    
-    res.json({
-      code: 200,
-      message: '删除成功'
-    })
-  } catch (error) {
-    console.error('删除秒杀活动失败:', error)
-    res.json({
-      code: 500,
-      message: '删除失败'
-    })
-  }
-})
-
-/**
- * 更新秒杀状态（管理员）
- * PUT /api/admin/seckills/:id/status
- */
-router.put('/seckills/:id/status', adminAuth, async (req, res) => {
-  try {
-    const { id } = req.params
-    const { status } = req.body
-    const { Seckill } = require('../models')
-    
-    if (![0, 1, 2].includes(parseInt(status))) {
-      return res.json({
-        code: 400,
-        message: '无效的状态值'
-      })
-    }
-    
-    const seckill = await Seckill.findByPk(id)
-    if (!seckill) {
-      return res.json({
-        code: 404,
-        message: '秒杀活动不存在'
-      })
-    }
-    
-    await seckill.update({ status: parseInt(status) })
-    
-    res.json({
-      code: 200,
-      message: '状态更新成功',
-      data: seckill
-    })
-  } catch (error) {
-    console.error('更新秒杀状态失败:', error)
-    res.json({
-      code: 500,
-      message: '状态更新失败'
     })
   }
 })

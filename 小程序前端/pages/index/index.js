@@ -16,15 +16,7 @@ Page(createPageMixin({
     coupons: [],
     couponsLoop: [], // 循环展示的优惠券列表
     couponDisplayCount: 1, // 同时显示的优惠券数量
-    seckills: [],
     activities: [],
-    
-    // 秒杀倒计时
-    seckillCountdown: {
-      hours: '00',
-      minutes: '00',
-      seconds: '00'
-    },
     
     // 导航栏配置
     navBarHeight: 0,
@@ -52,12 +44,7 @@ Page(createPageMixin({
     }
   },
 
-  onUnload() {
-    // 清理倒计时
-    if (this._seckillTimer) {
-      clearInterval(this._seckillTimer)
-    }
-  },
+
 
   /**
    * 初始化导航栏
@@ -92,7 +79,6 @@ Page(createPageMixin({
         hotProducts,
         newProducts,
         coupons,
-        seckills,
         activities
       ] = await Promise.allSettled([
         app.api.product.getBanners(),
@@ -100,7 +86,6 @@ Page(createPageMixin({
         this.loadHotProducts(),
         this.loadNewProducts(),
         this.loadCoupons(),
-        this.loadSeckills(),
         this.loadActivities()
       ])
 
@@ -135,17 +120,11 @@ Page(createPageMixin({
         hotProducts: safeArray(hotProducts),
         newProducts: safeArray(newProducts),
         coupons: safeArray(coupons, 5),
-        seckills: safeArray(seckills, 10),
         activities: safeArray(activities, 4)
       })
 
       // 处理优惠券循环数据
       this.prepareCouponsLoop()
-
-      // 启动秒杀倒计时
-      if (this.data.seckills.length > 0) {
-        this.startSeckillCountdown()
-      }
     } catch (error) {
       console.error('首页加载异常:', error)
       this.setPageError(error)
@@ -250,19 +229,6 @@ Page(createPageMixin({
   },
 
   /**
-   * 加载秒杀活动
-   */
-  async loadSeckills() {
-    try {
-      const result = await app.api.seckill.getSeckills({ status: 1, page: 1, pageSize: 10 })
-      // 后端返回 { list: [], pagination: {} } 格式
-      return Array.isArray(result.list) ? result.list : []
-    } catch (error) {
-      return []
-    }
-  },
-
-  /**
    * 加载活动专区
    */
   async loadActivities() {
@@ -273,46 +239,6 @@ Page(createPageMixin({
     } catch (error) {
       return []
     }
-  },
-
-  /**
-   * 启动秒杀倒计时
-   */
-  startSeckillCountdown() {
-    const seckills = this.data.seckills
-    if (seckills.length === 0) return
-
-    let countdown = seckills[0].remaining_time || 0
-
-    const updateCountdown = () => {
-      if (countdown <= 0) {
-        clearInterval(this._seckillTimer)
-        this.loadSeckills().then(data => {
-          this.setData({ seckills: data.slice(0, 10) })
-          if (data.length > 0) {
-            this.startSeckillCountdown()
-          }
-        })
-        return
-      }
-
-      const hours = Math.floor(countdown / 3600)
-      const minutes = Math.floor((countdown % 3600) / 60)
-      const seconds = countdown % 60
-
-      this.setData({
-        seckillCountdown: {
-          hours: hours.toString().padStart(2, '0'),
-          minutes: minutes.toString().padStart(2, '0'),
-          seconds: seconds.toString().padStart(2, '0')
-        }
-      })
-
-      countdown--
-    }
-
-    updateCountdown()
-    this._seckillTimer = this.$setInterval(updateCountdown, 1000)
   },
 
   /**
@@ -418,13 +344,6 @@ Page(createPageMixin({
     }
 
     wx.navigateTo({ url: '/pages/coupon-list/coupon-list' })
-  },
-
-  /**
-   * 跳转到秒杀列表
-   */
-  goSeckillList() {
-    wx.navigateTo({ url: '/pages/seckill-list/seckill-list' })
   },
 
   /**

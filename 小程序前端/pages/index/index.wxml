@@ -72,50 +72,6 @@
     </swiper>
   </view>
 
-  <!-- 限时秒杀 -->
-  <view class="seckill-section" wx:if="{{seckills.length > 0}}">
-    <view class="section-header seckill-header">
-      <view class="seckill-title-box">
-        <text class="section-title seckill-title">⚡ 限时秒杀</text>
-        <view class="seckill-countdown" wx:if="{{seckillCountdown > 0}}">
-          <text class="countdown-label">距结束</text>
-          <view class="countdown-time">
-            <text class="time-unit">{{seckillHours}}</text>
-            <text class="time-sep">:</text>
-            <text class="time-unit">{{seckillMinutes}}</text>
-            <text class="time-sep">:</text>
-            <text class="time-unit">{{seckillSeconds}}</text>
-          </view>
-        </view>
-      </view>
-      <text class="section-more" bindtap="goSeckillList">更多 ></text>
-    </view>
-    <scroll-view class="seckill-scroll" scroll-x>
-      <view class="seckill-list">
-        <view class="seckill-item" wx:for="{{seckills}}" wx:key="id" bindtap="goProductDetail" data-id="{{item.product.id}}">
-          <image class="seckill-image" src="{{item.product.cover}}" mode="aspectFill"></image>
-          <view class="seckill-badge">限时</view>
-          <view class="seckill-info">
-            <text class="seckill-product-name">{{item.product.name}}</text>
-            <view class="seckill-price-box">
-              <view class="seckill-price">
-                <text class="price-symbol">¥</text>
-                <text class="price-value">{{item.seckill_price}}</text>
-              </view>
-              <text class="seckill-original-price">¥{{item.original_price}}</text>
-            </view>
-            <view class="seckill-progress">
-              <view class="progress-bar">
-                <view class="progress-fill" style="width: {{item.progress}}%"></view>
-              </view>
-              <text class="progress-text">已抢{{item.progress}}%</text>
-            </view>
-          </view>
-        </view>
-      </view>
-    </scroll-view>
-  </view>
-
   <!-- 活动专区 -->
   <view class="activity-section" wx:if="{{activities.length > 0}}">
     <view class="section-header">

@@ -174,6 +174,7 @@ async function validateImageContent(filePath) {
 
 /**
  * 认证中间件 - 支持用户和管理员
+ * 先尝试解析 token，根据 payload 判断是用户还是管理员
  */
 async function authMiddleware(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -187,12 +188,85 @@ async function authMiddleware(req, res, next) {
     });
   }
   
-  // 先尝试管理员认证
   try {
-    await adminAuth(req, res, next);
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    
+    // 判断是管理员 token 还是用户 token
+    // 管理员 token 的 payload 有 id 字段
+    // 用户 token 的 payload 有 userId 字段
+    if (decoded.id) {
+      // 管理员认证
+      const { Admin } = require('../models');
+      const admin = await Admin.findByPk(decoded.id);
+      
+      if (!admin) {
+        return res.json({
+          code: 401,
+          message: '管理员不存在'
+        });
+      }
+      
+      if (admin.status !== 1) {
+        return res.json({
+          code: 403,
+          message: '账号已被禁用'
+        });
+      }
+      
+      req.admin = admin;
+      req.adminId = admin.id;
+      next();
+    } else if (decoded.userId) {
+      // 用户认证
+      const { User } = require('../models');
+      const user = await User.findByPk(decoded.userId);
+      
+      if (!user) {
+        return res.json({
+          code: 401,
+          message: '用户不存在',
+          data: null
+        });
+      }
+      
+      if (user.status !== 1) {
+        return res.json({
+          code: 403,
+          message: '账号已被禁用',
+          data: null
+        });
+      }
+      
+      req.user = user;
+      req.userId = user.id;
+      next();
+    } else {
+      return res.json({
+        code: 401,
+        message: 'Token格式无效'
+      });
+    }
   } catch (error) {
-    // 如果管理员认证失败，尝试用户认证
-    await authenticateToken(req, res, next);
+    if (error.name === 'JsonWebTokenError') {
+      return res.json({
+        code: 401,
+        message: 'Token无效'
+      });
+    }
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.json({
+        code: 401,
+        message: 'Token已过期，请重新登录'
+      });
+    }
+    
+    console.error('Token验证失败:', error);
+    return res.json({
+      code: 500,
+      message: '服务器错误'
+    });
   }
 }
 

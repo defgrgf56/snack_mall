@@ -20,6 +20,12 @@ const routes = [
         component: () => import('@/views/Dashboard.vue'),
         meta: { title: '数据看板', icon: 'DataLine' }
       },
+      {
+        path: 'statistics',
+        name: 'DataAnalysis',
+        component: () => import('@/views/DataAnalysis.vue'),
+        meta: { title: '数据分析', icon: 'DataAnalysis' }
+      },
       // 商品管理
       {
         path: 'products',
@@ -95,25 +101,6 @@ const routes = [
         name: 'ActivityEdit',
         component: () => import('@/views/marketing/ActivityForm.vue'),
         meta: { title: '编辑活动', hidden: true }
-      },
-      // 秒杀管理
-      {
-        path: 'marketing/seckills',
-        name: 'Seckills',
-        component: () => import('@/views/marketing/SeckillList.vue'),
-        meta: { title: '即时秒杀', icon: 'Timer' }
-      },
-      {
-        path: 'marketing/seckills/create',
-        name: 'SeckillCreate',
-        component: () => import('@/views/marketing/SeckillForm.vue'),
-        meta: { title: '新建秒杀', hidden: true }
-      },
-      {
-        path: 'marketing/seckills/:id/edit',
-        name: 'SeckillEdit',
-        component: () => import('@/views/marketing/SeckillForm.vue'),
-        meta: { title: '编辑秒杀', hidden: true }
       },
       // 系统设置
       {

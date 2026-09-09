@@ -42,7 +42,6 @@
           <el-menu-item index="/coupons">优惠券</el-menu-item>
           <el-menu-item index="/banners">轮播图</el-menu-item>
           <el-menu-item index="/marketing/activities">活动专区</el-menu-item>
-          <el-menu-item index="/marketing/seckills">即时秒杀</el-menu-item>
         </el-sub-menu>
 
         <el-sub-menu index="system">

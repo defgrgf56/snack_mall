@@ -57,6 +57,9 @@
           <el-button @click="refreshData">
             <el-icon><Refresh /></el-icon> 刷新
           </el-button>
+          <el-button @click="handleExport" :loading="exporting">
+            <el-icon><Download /></el-icon> 导出
+          </el-button>
         </div>
         <div class="toolbar-right">
           <el-text type="info" size="small">共 {{ pagination.total }} 条记录</el-text>
@@ -209,9 +212,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
+import { exportToExcel } from '@/utils/export'
 
 const router = useRouter()
 const loading = ref(false)
+const exporting = ref(false)
 const products = ref([])
 const categories = ref([])
 
@@ -362,6 +367,69 @@ const handleDelete = async (id) => {
       console.error('删除商品失败:', error)
       ElMessage.error('删除失败')
     }
+  }
+}
+
+// 导出商品数据
+const handleExport = async () => {
+  if (exporting.value) return
+  
+  exporting.value = true
+  try {
+    // 构建查询参数（获取全部符合条件的数据）
+    const params = {
+      page: 1,
+      pageSize: 9999,
+      name: searchForm.name,
+      category_id: searchForm.category_id,
+      status: searchForm.status
+    }
+    
+    // 清理空值参数
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
+    
+    ElMessage.info('正在导出商品数据，请稍候...')
+    
+    // 获取数据
+    const res = await request.get('/admin/products', { params })
+    
+    if (!res.list || res.list.length === 0) {
+      ElMessage.warning('没有可导出的商品数据')
+      return
+    }
+    
+    // 格式化导出数据
+    const exportData = res.list.map(product => ({
+      '商品ID': product.id,
+      '商品名称': product.name,
+      '分类': product.category?.name || '-',
+      '价格(元)': product.price,
+      '原价(元)': product.original_price || '-',
+      '库存': product.stock,
+      '销量': product.sales || 0,
+      '商品状态': product.status === 1 ? '上架' : '下架',
+      '是否推荐': product.is_recommend === 1 ? '是' : '否',
+      '是否新品': product.is_new === 1 ? '是' : '否',
+      '是否热销': product.is_hot === 1 ? '是' : '否',
+      '排序': product.sort || 0,
+      '创建时间': product.created_at,
+      '更新时间': product.updated_at,
+      '商品简介': product.description || '-'
+    }))
+    
+    // 导出 Excel
+    exportToExcel(exportData, '商品列表', '商品数据')
+    
+    ElMessage.success(`成功导出 ${exportData.length} 条商品数据`)
+  } catch (error) {
+    console.error('导出商品失败:', error)
+    ElMessage.error(error.message || '导出失败')
+  } finally {
+    exporting.value = false
   }
 }
 

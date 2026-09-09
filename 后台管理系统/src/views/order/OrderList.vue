@@ -99,6 +99,9 @@
             <el-icon><Search /></el-icon> 搜索
           </el-button>
           <el-button @click="handleReset">重置</el-button>
+          <el-button @click="handleExport" :loading="exporting">
+            <el-icon><Download /></el-icon> 导出Excel
+          </el-button>
         </el-form-item>
       </el-form>
 
@@ -281,13 +284,16 @@ import {
   User,
   Promotion,
   Close,
-  Check
+  Check,
+  Download
 } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import { exportToExcel } from '@/utils/export'
 
 const router = useRouter()
 const loading = ref(false)
 const submitting = ref(false)
+const exporting = ref(false)
 const orders = ref([])
 const shipDialogVisible = ref(false)
 const currentOrder = ref(null)
@@ -540,6 +546,86 @@ const getTimeAgo = (dateStr) => {
   if (hours < 24) return `${hours}小时前`
   if (days < 7) return `${days}天前`
   return ''
+}
+
+// 导出订单数据
+const handleExport = async () => {
+  if (exporting.value) return
+  
+  exporting.value = true
+  try {
+    // 构建查询参数（获取全部符合条件的数据）
+    const params = {
+      page: 1,
+      pageSize: 9999, // 获取全部数据
+      order_no: searchForm.order_no,
+      status: searchForm.status
+    }
+    
+    // 添加日期范围参数
+    if (searchForm.dateRange && searchForm.dateRange.length === 2) {
+      params.start_date = searchForm.dateRange[0]
+      params.end_date = searchForm.dateRange[1]
+    }
+    
+    // 添加用户昵称搜索
+    if (searchForm.user_nickname) {
+      params.user_nickname = searchForm.user_nickname
+    }
+    
+    ElMessage.info('正在导出订单数据，请稍候...')
+    
+    // 获取数据
+    const res = await request.get('/admin/orders', { params })
+    
+    if (!res.list || res.list.length === 0) {
+      ElMessage.warning('没有可导出的订单数据')
+      return
+    }
+    
+    // 格式化导出数据
+    const exportData = res.list.map(order => {
+      // 拼接商品信息
+      const productInfo = order.items?.map(item => 
+        `${item.product_name}(¥${item.price} x ${item.quantity})`
+      ).join('; ') || '-'
+      
+      // 拼接收货地址
+      const address = order.consignee ? 
+        `${order.consignee} ${order.phone} ${order.province}${order.city}${order.district}${order.address}` : 
+        '-'
+      
+      return {
+        '订单号': order.order_no,
+        '用户昵称': order.user?.nickname || '-',
+        '商品信息': productInfo,
+        '商品总额': order.total_amount,
+        '运费': order.freight_amount || 0,
+        '优惠金额': order.discount_amount || 0,
+        '实付金额': order.pay_amount,
+        '订单状态': getStatusText(order.status),
+        '支付方式': getPayMethodText(order.pay_method),
+        '支付时间': order.pay_time || '-',
+        '收货信息': address,
+        '快递公司': order.ship_company || '-',
+        '快递单号': order.ship_no || '-',
+        '发货时间': order.ship_time || '-',
+        '完成时间': order.finish_time || '-',
+        '下单时间': order.created_at,
+        '备注': order.remark || '-'
+      }
+    })
+    
+    // 导出 Excel
+    exportToExcel(exportData, '订单列表', '订单数据')
+    
+    ElMessage.success(`成功导出 ${exportData.length} 条订单数据`)
+  } catch (error) {
+    console.error('导出订单失败:', error)
+    ElMessage.error(error.message || '导出失败')
+  } finally {
+    exporting.value = false
+  }
 }
 
 onMounted(() => {
