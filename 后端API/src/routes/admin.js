@@ -58,12 +58,12 @@ router.post('/login', async (req, res) => {
       { expiresIn: '7d' }
     )
 
-    res.json({
-      code: 200,
-      message: '登录成功',
-      data: {
+  res.json({
+    code: 200,
+    message: '登录成功',
+    data: {
         token,
-        userInfo: {
+      userInfo: {
           id: admin.id,
           username: admin.username,
           nickname: admin.nickname,
@@ -1762,11 +1762,13 @@ router.get('/seckills', adminAuth, async (req, res) => {
     const limit = parseInt(pageSize)
     
     const where = {}
-    if (status) {
-      where.status = parseInt(status)
-    }
     if (keyword) {
       where.title = { [Op.like]: `%${keyword}%` }
+    }
+    
+    // 后台管理使用数据库状态，方便管理员手动控制
+    if (status !== undefined && status !== '') {
+      where.status = parseInt(status)
     }
     
     const { count, rows } = await Seckill.findAndCountAll({
@@ -1827,10 +1829,24 @@ router.get('/seckills/:id', adminAuth, async (req, res) => {
       })
     }
     
+    // 动态计算秒杀状态
+    const seckillData = seckill.toJSON()
+    const now = new Date()
+    const startTime = new Date(seckillData.start_time)
+    const endTime = new Date(seckillData.end_time)
+    
+    if (now < startTime) {
+      seckillData.status = 2 // 未开始
+    } else if (now >= startTime && now <= endTime) {
+      seckillData.status = 1 // 进行中
+    } else {
+      seckillData.status = 0 // 已结束
+    }
+    
     res.json({
       code: 200,
       message: '获取成功',
-      data: seckill
+      data: seckillData
     })
   } catch (error) {
     console.error('获取秒杀详情失败:', error)
