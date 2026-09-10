@@ -13,6 +13,8 @@
         bindinput="onKeywordInput"
         bindconfirm="onSearch"
         focus="{{autoFocus}}"
+        cursor-spacing="10"
+        adjust-position="{{false}}"
       />
       <text class="clear-input" wx:if="{{keyword}}" bindtap="onClearInput">×</text>
     </view>
@@ -20,7 +22,19 @@
   </view>
 
   <!-- 搜索联想列表 -->
-  <view class="suggestions-list" wx:if="{{showSuggestions && suggestions.length > 0}}">
+  <view class="suggestions-list" wx:if="{{showSuggestions}}">
+    <!-- 始终显示"搜索xxx"选项 -->
+    <view 
+      class="suggestion-item search-keyword-item"
+      data-keyword="{{currentKeyword}}"
+      bindtap="onSuggestionTap"
+      wx:if="{{currentKeyword}}"
+    >
+      <text class="suggestion-icon primary">🔍</text>
+      <text class="suggestion-text primary">搜索"{{currentKeyword}}"</text>
+    </view>
+    
+    <!-- 商品建议列表 -->
     <view 
       class="suggestion-item"
       wx:for="{{suggestions}}"
@@ -30,6 +44,11 @@
     >
       <text class="suggestion-icon">🔍</text>
       <text class="suggestion-text">{{item}}</text>
+    </view>
+    
+    <!-- 无建议提示 -->
+    <view class="no-suggestions" wx:if="{{suggestions.length === 0 && currentKeyword}}">
+      <text class="no-suggestions-text">暂无相关商品建议</text>
     </view>
   </view>
 
@@ -69,7 +88,7 @@
           wx:for="{{hotKeywords}}"
           wx:key="index"
           data-keyword="{{item}}"
-          bindtap="onHistoryTap"
+          bindtap="onHotKeywordTap"
         >
           <text class="tag-icon">🔥</text>
           <text class="tag-text">{{item}}</text>

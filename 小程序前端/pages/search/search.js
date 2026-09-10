@@ -8,6 +8,7 @@ const app = getApp()
 Page(createPageMixin({
   data: {
     keyword: '',
+    currentKeyword: '',  // 当前输入的关键词（用于显示"搜索xxx"）
     history: [],
     hotKeywords: [],
     suggestions: [],
@@ -34,6 +35,12 @@ Page(createPageMixin({
     this.setNavBarInfo()
     this.loadHistory()
     this.loadHotKeywords()
+    
+    // 如果有传入关键词，自动填充并搜索
+    if (options.keyword && options.keyword !== 'undefined') {
+      this.setData({ keyword: options.keyword })
+      this.onSearch()
+    }
   },
 
   /**
@@ -126,7 +133,16 @@ Page(createPageMixin({
    */
   async onKeywordInput(e) {
     const keyword = e.detail.value
-    this.setData({ keyword })
+    
+    // 强制更新 - 先清空再设置，确保视图更新
+    this.setData({ 
+      keyword: '',
+    })
+    
+    // 使用 nextTick 确保渲染
+    wx.nextTick(() => {
+      this.setData({ keyword })
+    })
 
     // 如果输入为空，隐藏联想
     if (!keyword.trim()) {
@@ -148,12 +164,22 @@ Page(createPageMixin({
           keyword: keyword.trim() 
         })
         const suggestions = (result || []).map(item => item.keyword || item)
+        
+        // 即使没有建议，也显示"搜索 xxx"选项
+        const finalSuggestions = suggestions.length > 0 ? suggestions : []
+        
         this.setData({
-          suggestions,
-          showSuggestions: suggestions.length > 0
+          suggestions: finalSuggestions,
+          showSuggestions: true,  // 始终显示建议框
+          currentKeyword: keyword.trim()  // 保存当前输入的关键词
         })
       } catch (error) {
-        // 静默失败
+        // 失败时也显示"搜索 xxx"
+        this.setData({
+          suggestions: [],
+          showSuggestions: true,
+          currentKeyword: keyword.trim()
+        })
       }
     }, 300)
   },

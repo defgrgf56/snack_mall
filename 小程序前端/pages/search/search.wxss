@@ -92,16 +92,47 @@
   background-color: #f9f9f9;
 }
 
+/* 搜索关键词项 - 突出显示 */
+.search-keyword-item {
+  background: linear-gradient(90deg, #FFF9F5 0%, #FFFFFF 100%);
+  border-bottom: 2rpx solid #FFE8DC;
+}
+
+.search-keyword-item:active {
+  background: linear-gradient(90deg, #FFF0E6 0%, #FFF9F5 100%);
+}
+
 .suggestion-icon {
   font-size: 28rpx;
   margin-right: 16rpx;
   opacity: 0.5;
 }
 
+.suggestion-icon.primary {
+  opacity: 1;
+  color: #FF6B00;
+}
+
 .suggestion-text {
   flex: 1;
   font-size: 28rpx;
   color: #333;
+}
+
+.suggestion-text.primary {
+  color: #FF6B00;
+  font-weight: 500;
+}
+
+/* 无建议提示 */
+.no-suggestions {
+  padding: 32rpx 24rpx;
+  text-align: center;
+}
+
+.no-suggestions-text {
+  font-size: 24rpx;
+  color: #999;
 }
 
 /* 搜索内容区域 */

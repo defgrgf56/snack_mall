@@ -191,5 +191,7 @@ module.exports = {
   ActivityProduct,
   Review,
   ReviewImage,
-  Feedback
+  Feedback,
+  SearchHistory,
+  SearchHot
 }

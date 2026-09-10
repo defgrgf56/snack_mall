@@ -1,7 +1,7 @@
 // pages/feedback-list/feedback-list.js
 const app = getApp()
 const API = require('../../services/api/index')
-const { createPageMixin } = require('../../mixins/page-mixin')
+const createPageMixin = require('../../mixins/page-mixin')
 
 const pageMixin = createPageMixin()
 
