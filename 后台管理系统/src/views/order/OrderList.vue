@@ -234,10 +234,63 @@
     </el-card>
 
     <!-- 发货对话框 -->
-    <el-dialog v-model="shipDialogVisible" title="订单发货" width="500px">
+    <el-dialog 
+      v-model="shipDialogVisible" 
+      title="订单发货" 
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <!-- 订单基本信息 -->
+      <div v-if="currentOrder" class="ship-order-info">
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item label="订单号">
+            <el-tag size="small">{{ currentOrder.order_no }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="收货人">
+            {{ currentOrder.consignee }} {{ currentOrder.phone }}
+          </el-descriptions-item>
+          <el-descriptions-item label="收货地址">
+            {{ currentOrder.province }}{{ currentOrder.city }}{{ currentOrder.district }}{{ currentOrder.address }}
+          </el-descriptions-item>
+        </el-descriptions>
+
+        <!-- 商品列表 -->
+        <div class="ship-products" v-if="currentOrder.items && currentOrder.items.length > 0">
+          <div class="ship-products-title">商品列表</div>
+          <div class="ship-product-item" v-for="item in currentOrder.items" :key="item.id">
+            <el-image 
+              :src="item.product_cover" 
+              fit="cover" 
+              class="ship-product-image"
+            >
+              <template #error>
+                <div class="image-slot">
+                  <el-icon><Picture /></el-icon>
+                </div>
+              </template>
+            </el-image>
+            <div class="ship-product-info">
+              <div class="ship-product-name">{{ item.product_name }}</div>
+              <div class="ship-product-meta">
+                <span class="price">¥{{ item.price }}</span>
+                <span class="quantity">×{{ item.quantity }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <el-divider />
+
       <el-form :model="shipForm" label-width="100px" ref="shipFormRef" :rules="shipRules">
         <el-form-item label="快递公司" prop="express_company">
-          <el-select v-model="shipForm.express_company" placeholder="请选择快递公司" style="width: 100%;">
+          <el-select 
+            v-model="shipForm.express_company" 
+            placeholder="请选择快递公司" 
+            style="width: 100%;"
+            filterable
+            @change="saveLastExpressCompany"
+          >
             <el-option label="顺丰速运" value="顺丰速运" />
             <el-option label="圆通快递" value="圆通快递" />
             <el-option label="中通快递" value="中通快递" />
@@ -250,14 +303,22 @@
           </el-select>
         </el-form-item>
         <el-form-item label="快递单号" prop="express_no">
-          <el-input v-model="shipForm.express_no" placeholder="请输入快递单号" />
+          <el-input 
+            v-model="shipForm.express_no" 
+            placeholder="请输入快递单号" 
+            clearable
+            maxlength="30"
+            show-word-limit
+          />
         </el-form-item>
         <el-form-item label="备注">
           <el-input 
             v-model="shipForm.remark" 
             type="textarea" 
             :rows="3" 
-            placeholder="选填，备注信息" 
+            placeholder="选填，备注信息"
+            maxlength="200"
+            show-word-limit
           />
         </el-form-item>
       </el-form>
@@ -326,12 +387,25 @@ const shipForm = reactive({
   remark: ''
 })
 
+// 快递单号验证规则
+const validateExpressNo = (rule, value, callback) => {
+  if (!value) {
+    callback(new Error('请输入快递单号'))
+  } else if (value.length < 8) {
+    callback(new Error('快递单号长度不能少于8位'))
+  } else if (!/^[A-Za-z0-9]+$/.test(value)) {
+    callback(new Error('快递单号只能包含字母和数字'))
+  } else {
+    callback()
+  }
+}
+
 const shipRules = {
   express_company: [
     { required: true, message: '请选择快递公司', trigger: 'change' }
   ],
   express_no: [
-    { required: true, message: '请输入快递单号', trigger: 'blur' }
+    { required: true, validator: validateExpressNo, trigger: 'blur' }
   ]
 }
 
@@ -423,10 +497,21 @@ const handleView = (id) => {
 
 const handleShip = (order) => {
   currentOrder.value = order
-  shipForm.express_company = ''
+  
+  // 尝试从 localStorage 读取上次选择的快递公司
+  const lastExpressCompany = localStorage.getItem('lastExpressCompany')
+  
+  shipForm.express_company = lastExpressCompany || ''
   shipForm.express_no = ''
   shipForm.remark = ''
   shipDialogVisible.value = true
+}
+
+// 保存上次选择的快递公司
+const saveLastExpressCompany = (value) => {
+  if (value) {
+    localStorage.setItem('lastExpressCompany', value)
+  }
 }
 
 const confirmShip = async () => {
@@ -438,8 +523,8 @@ const confirmShip = async () => {
     submitting.value = true
     try {
       await request.put(`/admin/orders/${currentOrder.value.id}/ship`, {
-        ship_company: shipForm.express_company,
-        ship_no: shipForm.express_no,
+        express_company: shipForm.express_company,
+        express_no: shipForm.express_no,
         remark: shipForm.remark
       })
       ElMessage.success('发货成功')
@@ -882,4 +967,76 @@ onMounted(() => {
     font-size: 24px;
   }
 }
+
+/* 发货对话框样式 */
+.ship-order-info {
+  margin-bottom: 20px;
+}
+
+.ship-products {
+  margin-top: 16px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.ship-products-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 12px;
+}
+
+.ship-product-item {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  background: white;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.ship-product-item:last-child {
+  margin-bottom: 0;
+}
+
+.ship-product-image {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.ship-product-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ship-product-name {
+  font-size: 13px;
+  color: #303133;
+  line-height: 1.4;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ship-product-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.ship-product-meta .price {
+  color: #f56c6c;
+  font-weight: 600;
+}
+
+.ship-product-meta .quantity {
+  color: #909399;
+}
+
 </style>

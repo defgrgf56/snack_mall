@@ -55,6 +55,72 @@
       </view>
     </view>
 
+    <!-- 用户评价 -->
+    <view class="review-section" wx:if="{{reviewStats && reviewStats.total > 0}}">
+      <!-- 评价统计头部 -->
+      <view class="review-header">
+        <view class="review-title">用户评价 ({{reviewStats.total}})</view>
+        <view class="review-summary">
+          <text class="review-rate">{{reviewStats.average_rating}}</text>
+          <view class="review-stars">
+            <text class="star {{reviewStats.average_rating >= 1 ? 'filled' : ''}}">★</text>
+            <text class="star {{reviewStats.average_rating >= 2 ? 'filled' : ''}}">★</text>
+            <text class="star {{reviewStats.average_rating >= 3 ? 'filled' : ''}}">★</text>
+            <text class="star {{reviewStats.average_rating >= 4 ? 'filled' : ''}}">★</text>
+            <text class="star {{reviewStats.average_rating >= 5 ? 'filled' : ''}}">★</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 评价列表 -->
+      <view class="review-list">
+        <view class="review-item" wx:for="{{reviews}}" wx:key="id">
+          <!-- 用户信息 -->
+          <view class="review-user">
+            <image class="user-avatar" src="{{item.User.avatar || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+            <view class="user-info">
+              <view class="user-name">{{item.User.nickname || '匿名用户'}}</view>
+              <view class="review-stars-small">
+                <text class="star-small {{item.rating >= 1 ? 'filled' : ''}}">★</text>
+                <text class="star-small {{item.rating >= 2 ? 'filled' : ''}}">★</text>
+                <text class="star-small {{item.rating >= 3 ? 'filled' : ''}}">★</text>
+                <text class="star-small {{item.rating >= 4 ? 'filled' : ''}}">★</text>
+                <text class="star-small {{item.rating >= 5 ? 'filled' : ''}}">★</text>
+              </view>
+            </view>
+            <view class="review-date">{{item.created_at}}</view>
+          </view>
+
+          <!-- 评价内容 -->
+          <view class="review-content" wx:if="{{item.content}}">{{item.content}}</view>
+
+          <!-- 评价图片 -->
+          <view class="review-images" wx:if="{{item.images && item.images.length > 0}}">
+            <image 
+              class="review-image" 
+              wx:for="{{item.images}}" 
+              wx:for-item="img" 
+              wx:key="index"
+              src="{{img}}" 
+              mode="aspectFill"
+            ></image>
+          </view>
+
+          <!-- 商家回复 -->
+          <view class="review-reply" wx:if="{{item.reply}}">
+            <view class="reply-label">商家回复：</view>
+            <view class="reply-content">{{item.reply}}</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 查看更多 -->
+      <view class="review-more" bindtap="viewAllReviews">
+        <text>查看全部评价</text>
+        <text class="arrow">›</text>
+      </view>
+    </view>
+
     <!-- 商品详情 -->
     <view class="product-detail-card">
       <view class="detail-title">商品详情</view>

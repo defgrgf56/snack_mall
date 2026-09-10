@@ -147,12 +147,20 @@ Page(createPageMixin({
   /**
    * 去支付
    */
-  onPayOrder(e) {
+  async onPayOrder(e) {
     const { id } = e.currentTarget.dataset
-    wx.showToast({
-      title: '支付功能开发中',
-      icon: 'none'
-    })
+    
+    try {
+      await app.api.order.payOrderMock(id)
+      errorHandler.showSuccess('支付成功')
+      
+      // 延迟刷新订单列表
+      this.$setTimeout(() => {
+        this.loadOrderList(true)
+      }, 1500)
+    } catch (error) {
+      // 错误已由 errorHandler 统一处理
+    }
   },
 
   /**
@@ -195,6 +203,17 @@ Page(createPageMixin({
     } catch (error) {
       // 错误已统一处理
     }
+  },
+
+  /**
+   * 去评价
+   */
+  onComment(e) {
+    const { id } = e.currentTarget.dataset
+    
+    wx.navigateTo({
+      url: `/pages/order-comment/order-comment?orderId=${id}`
+    })
   },
 
   /**

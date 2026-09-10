@@ -1164,6 +1164,68 @@ router.delete('/categories/:id', adminAuth, async (req, res) => {
   }
 })
 
+// 批量更新商品标记（管理员）- 必须在 POST /products 之前
+router.post('/products/batch-update', adminAuth, async (req, res) => {
+  try {
+    const { ids, updates } = req.body
+
+    // 验证参数
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.json({
+        code: 400,
+        message: '请选择要更新的商品'
+      })
+    }
+
+    if (!updates || typeof updates !== 'object') {
+      return res.json({
+        code: 400,
+        message: '更新数据格式错误'
+      })
+    }
+
+    // 只允许更新 is_hot 和 is_new 字段
+    const allowedFields = {}
+    if (updates.hasOwnProperty('is_hot')) {
+      allowedFields.is_hot = updates.is_hot ? 1 : 0
+    }
+    if (updates.hasOwnProperty('is_new')) {
+      allowedFields.is_new = updates.is_new ? 1 : 0
+    }
+
+    if (Object.keys(allowedFields).length === 0) {
+      return res.json({
+        code: 400,
+        message: '没有可更新的字段'
+      })
+    }
+
+    // 批量更新
+    const [affectedCount] = await Product.update(allowedFields, {
+      where: {
+        id: {
+          [Op.in]: ids
+        }
+      }
+    })
+
+    res.json({
+      code: 200,
+      message: `成功更新 ${affectedCount} 个商品`,
+      data: {
+        affectedCount,
+        updates: allowedFields
+      }
+    })
+  } catch (error) {
+    console.error('批量更新商品标记失败:', error)
+    res.json({
+      code: 500,
+      message: '批量更新失败'
+    })
+  }
+})
+
 // 创建/更新商品（管理员）
 router.post('/products', adminAuth, async (req, res) => {
   try {

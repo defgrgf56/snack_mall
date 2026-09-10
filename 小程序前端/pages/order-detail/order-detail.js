@@ -97,9 +97,18 @@ Page(createPageMixin({
   /**
    * 去支付
    */
-  onPayOrder() {
-    // TODO: 接入支付功能
-    errorHandler.showToast('支付功能开发中')
+  async onPayOrder() {
+    try {
+      await app.api.order.payOrderMock(this.data.orderId)
+      errorHandler.showSuccess('支付成功')
+      
+      // 延迟刷新订单详情，让用户看到成功提示
+      this.$setTimeout(() => {
+        this.loadOrderDetail(this.data.orderId)
+      }, 1500)
+    } catch (error) {
+      // 错误已由 errorHandler 统一处理
+    }
   },
 
   /**

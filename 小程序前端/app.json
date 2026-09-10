@@ -12,6 +12,7 @@
     "pages/order-confirm/order-confirm",
     "pages/order-list/order-list",
     "pages/order-detail/order-detail",
+    "pages/order-comment/order-comment",
     "pages/coupon-select/coupon-select",
     "pages/refund-apply/refund-apply",
     "pages/refund-detail/refund-detail",

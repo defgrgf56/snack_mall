@@ -96,6 +96,166 @@
   color: #1989fa;
 }
 
+/* 用户评价区域 */
+.review-section {
+  background: white;
+  margin-bottom: 20rpx;
+}
+
+.review-header {
+  padding: 30rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.review-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333;
+}
+
+.review-summary {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.review-rate {
+  font-size: 40rpx;
+  font-weight: bold;
+  color: #ff6b00;
+}
+
+.review-stars {
+  display: flex;
+  gap: 4rpx;
+}
+
+.star {
+  font-size: 28rpx;
+  color: #ddd;
+}
+
+.star.filled {
+  color: #ff6b00;
+}
+
+.review-list {
+  padding: 0 30rpx;
+}
+
+.review-item {
+  padding: 30rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.review-item:last-child {
+  border-bottom: none;
+}
+
+.review-user {
+  display: flex;
+  align-items: center;
+  gap: 15rpx;
+  margin-bottom: 15rpx;
+}
+
+.user-avatar {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 28rpx;
+  color: #333;
+  margin-bottom: 6rpx;
+}
+
+.review-stars-small {
+  display: flex;
+  gap: 2rpx;
+}
+
+.star-small {
+  font-size: 24rpx;
+  color: #ddd;
+}
+
+.star-small.filled {
+  color: #ff6b00;
+}
+
+.review-date {
+  font-size: 24rpx;
+  color: #999;
+  white-space: nowrap;
+}
+
+.review-content {
+  font-size: 28rpx;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 15rpx;
+}
+
+.review-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-bottom: 15rpx;
+}
+
+.review-image {
+  width: 160rpx;
+  height: 160rpx;
+  border-radius: 8rpx;
+}
+
+.review-reply {
+  background: #f8f8f8;
+  padding: 20rpx;
+  border-radius: 8rpx;
+  margin-top: 15rpx;
+}
+
+.reply-label {
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 8rpx;
+}
+
+.reply-content {
+  font-size: 26rpx;
+  color: #666;
+  line-height: 1.5;
+}
+
+.review-more {
+  padding: 30rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: #666;
+  border-top: 1rpx solid #f0f0f0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.review-more .arrow {
+  font-size: 36rpx;
+  font-weight: bold;
+}
+
 /* 商品规格 */
 .product-spec-card {
   background: white;

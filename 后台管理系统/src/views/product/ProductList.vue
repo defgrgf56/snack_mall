@@ -60,6 +60,25 @@
           <el-button @click="handleExport" :loading="exporting">
             <el-icon><Download /></el-icon> 导出
           </el-button>
+          
+          <!-- 批量操作按钮 -->
+          <el-divider direction="vertical" />
+          <el-dropdown @command="handleBatchCommand" :disabled="selectedIds.length === 0">
+            <el-button :disabled="selectedIds.length === 0">
+              批量操作 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="setHot">设为热门商品</el-dropdown-item>
+                <el-dropdown-item command="unsetHot">取消热门商品</el-dropdown-item>
+                <el-dropdown-item command="setNew">设为新品</el-dropdown-item>
+                <el-dropdown-item command="unsetNew">取消新品</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-text v-if="selectedIds.length > 0" type="primary" size="small" style="margin-left: 8px;">
+            已选择 {{ selectedIds.length }} 项
+          </el-text>
         </div>
         <div class="toolbar-right">
           <el-text type="info" size="small">共 {{ pagination.total }} 条记录</el-text>
@@ -119,11 +138,15 @@
 
       <!-- 商品列表 -->
       <el-table 
+        ref="tableRef"
         :data="products" 
+        row-key="id"
         style="width: 100%" 
         v-loading="loading"
         border
+        @selection-change="handleSelectionChange"
       >
+        <el-table-column type="selection" width="55" align="center" />
         <el-table-column prop="id" label="ID" width="80" align="center" />
         <el-table-column label="商品信息" min-width="300">
           <template #default="{ row }">
@@ -163,6 +186,15 @@
           </template>
         </el-table-column>
         <el-table-column prop="sales" label="销量" width="100" align="center" />
+        <el-table-column label="标记" width="120" align="center">
+          <template #default="{ row }">
+            <div style="display: flex; gap: 4px; justify-content: center; flex-wrap: wrap;">
+              <el-tag v-if="row.is_hot === 1" type="danger" size="small" effect="dark">热门</el-tag>
+              <el-tag v-if="row.is_new === 1" type="success" size="small" effect="dark">新品</el-tag>
+              <span v-if="row.is_hot !== 1 && row.is_new !== 1" style="color: #909399;">-</span>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100" align="center">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'info'" size="small">
@@ -208,7 +240,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
@@ -219,6 +251,8 @@ const loading = ref(false)
 const exporting = ref(false)
 const products = ref([])
 const categories = ref([])
+const selectedIds = ref([]) // 选中的商品ID列表
+const tableRef = ref(null) // 表格引用
 
 const stats = reactive({
   totalCount: 0,
@@ -264,6 +298,18 @@ const fetchProducts = async () => {
     pagination.total = res.total || 0
     
     console.log('赋值后 products:', products.value.map(p => ({ id: p.id, name: p.name })))
+    
+    // 恢复选中状态（跨分页保持选中）
+    await nextTick()
+    if (tableRef.value && selectedIds.value.length > 0) {
+      console.log('恢复选中状态, selectedIds:', selectedIds.value)
+      products.value.forEach(row => {
+        if (selectedIds.value.includes(row.id)) {
+          console.log('恢复选中商品:', row.id, row.name)
+          tableRef.value.toggleRowSelection(row, true)
+        }
+      })
+    }
   } catch (error) {
     console.error('获取商品列表失败:', error)
     ElMessage.error('获取商品列表失败')
@@ -366,6 +412,78 @@ const handleDelete = async (id) => {
     if (error !== 'cancel') {
       console.error('删除商品失败:', error)
       ElMessage.error('删除失败')
+    }
+  }
+}
+
+// 处理表格选择变化
+const handleSelectionChange = (selection) => {
+  console.log('=== handleSelectionChange 触发 ===')
+  console.log('selection:', selection.map(s => s.id))
+  console.log('selectedIds (变化前):', selectedIds.value)
+  
+  // 获取当前页的商品ID列表
+  const currentPageIds = products.value.map(p => p.id)
+  console.log('currentPageIds:', currentPageIds)
+  
+  // 移除当前页的所有ID（不管是否选中）
+  const idsFromOtherPages = selectedIds.value.filter(id => !currentPageIds.includes(id))
+  console.log('idsFromOtherPages:', idsFromOtherPages)
+  
+  // 添加当前页选中的ID
+  const currentPageSelectedIds = selection.map(item => item.id)
+  console.log('currentPageSelectedIds:', currentPageSelectedIds)
+  
+  // 合并：其他页的选中 + 当前页的选中
+  selectedIds.value = [...idsFromOtherPages, ...currentPageSelectedIds]
+  console.log('selectedIds (变化后):', selectedIds.value)
+}
+
+// 处理批量操作命令
+const handleBatchCommand = async (command) => {
+  if (selectedIds.value.length === 0) {
+    ElMessage.warning('请先选择商品')
+    return
+  }
+
+  const commandMap = {
+    setHot: { field: 'is_hot', value: 1, label: '设为热门' },
+    unsetHot: { field: 'is_hot', value: 0, label: '取消热门' },
+    setNew: { field: 'is_new', value: 1, label: '设为新品' },
+    unsetNew: { field: 'is_new', value: 0, label: '取消新品' }
+  }
+
+  const operation = commandMap[command]
+  if (!operation) return
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要将选中的 ${selectedIds.value.length} 个商品${operation.label}吗？`,
+      '批量操作确认',
+      {
+        type: 'warning',
+        confirmButtonText: '确定',
+        cancelButtonText: '取消'
+      }
+    )
+
+    const updates = {}
+    updates[operation.field] = operation.value
+
+    await request.post('/admin/products/batch-update', {
+      ids: selectedIds.value,
+      updates
+    })
+
+    ElMessage.success(`成功${operation.label} ${selectedIds.value.length} 个商品`)
+    
+    // 清空选择并刷新列表
+    selectedIds.value = []
+    fetchProducts()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量操作失败:', error)
+      ElMessage.error(error.message || '批量操作失败')
     }
   }
 }

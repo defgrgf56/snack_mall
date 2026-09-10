@@ -1,0 +1,91 @@
+<!--pages/order-comment/order-comment.wxml-->
+<view class="comment-container">
+  <!-- 商品信息 -->
+  <view class="product-section">
+    <view class="product-item" wx:for="{{orderItems}}" wx:key="id">
+      <image class="product-image" src="{{item.product.cover}}" mode="aspectFill" />
+      <view class="product-info">
+        <text class="product-name">{{item.product.name}}</text>
+        <text class="product-price">¥{{item.price}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 评价表单 -->
+  <view class="comment-form">
+    <view class="form-section" wx:for="{{orderItems}}" wx:key="id" wx:for-item="item">
+      <view class="section-title">评价 {{item.product.name}}</view>
+      
+      <!-- 星级评分 -->
+      <view class="rating-section">
+        <text class="label">商品评分</text>
+        <view class="stars">
+          <view 
+            class="star {{index + 1 <= item.rating ? 'active' : ''}}"
+            wx:for="{{[1,2,3,4,5]}}"
+            wx:key="*this"
+            data-item-id="{{item.id}}"
+            data-rating="{{item}}"
+            bindtap="onRatingTap"
+          >★</view>
+        </view>
+      </view>
+
+      <!-- 评价内容 -->
+      <view class="content-section">
+        <textarea 
+          class="comment-textarea"
+          placeholder="说说这个商品的使用感受吧~"
+          value="{{item.content}}"
+          data-item-id="{{item.id}}"
+          bindinput="onContentInput"
+          maxlength="500"
+        />
+        <text class="word-count">{{item.content ? item.content.length : 0}}/500</text>
+      </view>
+
+      <!-- 上传图片 -->
+      <view class="image-section">
+        <text class="label">晒图（选填）</text>
+        <view class="image-list">
+          <view class="image-item" wx:for="{{item.images}}" wx:key="index" wx:for-item="img">
+            <image class="uploaded-image" src="{{img}}" mode="aspectFill" />
+            <view 
+              class="delete-btn"
+              data-item-id="{{item.id}}"
+              data-index="{{index}}"
+              bindtap="onDeleteImage"
+            >×</view>
+          </view>
+          <view 
+            class="upload-btn" 
+            wx:if="{{item.images.length < 6}}"
+            data-item-id="{{item.id}}"
+            bindtap="onUploadImage"
+          >
+            <text class="upload-icon">+</text>
+            <text class="upload-text">上传图片</text>
+          </view>
+        </view>
+        <text class="tip">最多上传6张图片</text>
+      </view>
+
+      <!-- 匿名评价 -->
+      <view class="anonymous-section">
+        <text class="label">匿名评价</text>
+        <switch 
+          checked="{{item.is_anonymous}}"
+          data-item-id="{{item.id}}"
+          bindchange="onAnonymousChange"
+        />
+      </view>
+    </view>
+  </view>
+
+  <!-- 提交按钮 -->
+  <view class="submit-section">
+    <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">
+      {{submitting ? '提交中...' : '提交评价'}}
+    </button>
+  </view>
+</view>

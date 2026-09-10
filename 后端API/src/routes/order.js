@@ -405,6 +405,79 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 /**
+ * 模拟支付订单（开发/测试环境使用）
+ * POST /api/orders/:id/pay-mock
+ */
+router.post('/:id/pay-mock', authenticateToken, async (req, res) => {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    const { id } = req.params;
+    
+    const order = await Order.findOne({
+      where: { id, user_id: req.userId }
+    });
+    
+    if (!order) {
+      await transaction.rollback();
+      return res.json({
+        code: 404,
+        message: '订单不存在',
+        data: null
+      });
+    }
+    
+    // 只有待付款订单可以支付
+    if (order.status !== 1) {
+      await transaction.rollback();
+      return res.json({
+        code: 400,
+        message: '订单状态不允许支付',
+        data: null
+      });
+    }
+    
+    // 更新订单状态为待发货
+    await order.update({
+      status: 2, // 待发货
+      pay_time: new Date(),
+      payment_method: 'mock' // 标记为模拟支付
+    }, { transaction });
+    
+    // 如果使用了优惠券，标记为已使用
+    if (order.coupon_id) {
+      const { UserCoupon } = require('../models');
+      await UserCoupon.update(
+        { status: 1, used_time: new Date() },
+        { 
+          where: { 
+            id: order.coupon_id,
+            user_id: req.userId
+          },
+          transaction
+        }
+      );
+    }
+    
+    await transaction.commit();
+    
+    res.json({
+      code: 200,
+      message: '支付成功',
+      data: order
+    });
+  } catch (error) {
+    await transaction.rollback();
+    console.error('模拟支付失败:', error);
+    res.json({
+      code: 500,
+      message: '支付失败',
+      data: null
+    });
+  }
+});
+
+/**
  * 取消订单
  * PUT /api/orders/:id/cancel
  */

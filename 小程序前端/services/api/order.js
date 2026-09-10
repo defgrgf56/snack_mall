@@ -53,5 +53,15 @@ module.exports = {
    */
   getOrderStats() {
     return request.get('/orders/stats')
+  },
+
+  /**
+   * 模拟支付订单（开发/测试环境）
+   */
+  payOrderMock(orderId) {
+    return request.post(`/orders/${orderId}/pay-mock`, {}, {
+      loading: true,
+      loadingText: '支付中...'
+    })
   }
 }

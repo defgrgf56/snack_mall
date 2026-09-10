@@ -10,7 +10,12 @@ Page(createPageMixin({
     product: null,
     quantity: 1,
     isFavorited: false,
-    favoriteId: null
+    favoriteId: null,
+    reviewStats: null, // 评价统计
+    reviews: [], // 评价列表
+    reviewsPage: 1,
+    reviewsLimit: 3, // 每次加载3条
+    hasMoreReviews: false
   },
 
   onLoad(options) {
@@ -23,6 +28,8 @@ Page(createPageMixin({
     this.setData({ productId: options.id })
     this.loadProductDetail()
     this.checkFavoriteStatus()
+    this.loadReviewStats()
+    this.loadReviews()
   },
 
   /**
@@ -209,5 +216,58 @@ Page(createPageMixin({
       path: `/pages/product-detail/product-detail?id=${product.id}`,
       imageUrl: product.cover
     }
+  },
+
+  /**
+   * 加载评价统计
+   */
+  async loadReviewStats() {
+    try {
+      const stats = await app.api.review.getReviewStats(this.data.productId)
+      this.setData({ reviewStats: stats })
+    } catch (error) {
+      // 静默失败
+    }
+  },
+
+  /**
+   * 加载评价列表
+   */
+  async loadReviews(isLoadMore = false) {
+    try {
+      const { productId, reviewsPage, reviewsLimit, reviews } = this.data
+      
+      const result = await app.api.review.getProductReviews(
+        productId,
+        isLoadMore ? reviewsPage : 1,
+        reviewsLimit
+      )
+
+      const newReviews = result.reviews || []
+      
+      this.setData({
+        reviews: isLoadMore ? [...reviews, ...newReviews] : newReviews,
+        reviewsPage: isLoadMore ? reviewsPage + 1 : 2,
+        hasMoreReviews: newReviews.length >= reviewsLimit
+      })
+    } catch (error) {
+      // 静默失败
+    }
+  },
+
+  /**
+   * 加载更多评价
+   */
+  async handleLoadMoreReviews() {
+    await this.loadReviews(true)
+  },
+
+  /**
+   * 查看全部评价
+   */
+  viewAllReviews() {
+    wx.navigateTo({
+      url: `/pages/review-list/review-list?productId=${this.data.productId}`
+    })
   }
 }))
