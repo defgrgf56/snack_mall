@@ -57,15 +57,20 @@ Page(createPageMixin({
    */
   async loadHistory() {
     try {
-      // TODO: 从后端获取搜索历史
-      // const result = await app.api.xxx.getSearchHistory()
-      // this.setData({ history: result })
-      
-      // 暂时使用本地存储
+      // 优先从后端获取（需登录）
+      if (app.store.isLoggedIn()) {
+        const result = await app.api.search.getSearchHistory()
+        const history = (result || []).map(item => item.keyword)
+        this.setData({ history })
+      } else {
+        // 未登录使用本地存储
+        const history = wx.getStorageSync(STORAGE_KEY.SEARCH_HISTORY) || []
+        this.setData({ history })
+      }
+    } catch (error) {
+      // 失败时回退到本地存储
       const history = wx.getStorageSync(STORAGE_KEY.SEARCH_HISTORY) || []
       this.setData({ history })
-    } catch (error) {
-      // 静默失败
     }
   },
 
@@ -74,16 +79,14 @@ Page(createPageMixin({
    */
   async loadHotKeywords() {
     try {
-      // TODO: 从后端获取热门搜索
-      // const result = await app.api.xxx.getHotKeywords()
-      // this.setData({ hotKeywords: result })
-      
-      // 暂时使用默认值
+      const result = await app.api.search.getHotKeywords()
+      const keywords = result.map(item => item.keyword)
+      this.setData({ hotKeywords: keywords })
+    } catch (error) {
+      // 失败时使用默认值
       this.setData({
         hotKeywords: ['坚果', '巧克力', '饼干', '零食大礼包']
       })
-    } catch (error) {
-      // 静默失败
     }
   },
 
@@ -92,10 +95,22 @@ Page(createPageMixin({
    */
   async saveHistory(keyword) {
     try {
-      // TODO: 保存到后端
-      // await app.api.xxx.saveSearchHistory(keyword)
-      
-      // 暂时使用本地存储
+      // 保存到后端（需登录）
+      if (app.store.isLoggedIn()) {
+        await app.api.search.saveSearchHistory(keyword)
+        await this.loadHistory() // 重新加载历史
+      } else {
+        // 未登录保存到本地
+        let history = this.data.history
+        history = history.filter(item => item !== keyword)
+        history.unshift(keyword)
+        history = history.slice(0, 10)
+        
+        wx.setStorageSync(STORAGE_KEY.SEARCH_HISTORY, history)
+        this.setData({ history })
+      }
+    } catch (error) {
+      // 失败时保存到本地
       let history = this.data.history
       history = history.filter(item => item !== keyword)
       history.unshift(keyword)
@@ -103,8 +118,6 @@ Page(createPageMixin({
       
       wx.setStorageSync(STORAGE_KEY.SEARCH_HISTORY, history)
       this.setData({ history })
-    } catch (error) {
-      // 静默失败
     }
   },
 
@@ -131,12 +144,14 @@ Page(createPageMixin({
 
     this._suggestTimer = this.$setTimeout(async () => {
       try {
-        // TODO: 调用搜索建议 API
-        // const suggestions = await app.api.xxx.getSearchSuggestions(keyword.trim())
-        // this.setData({
-        //   suggestions,
-        //   showSuggestions: suggestions.length > 0
-        // })
+        const result = await app.api.search.getSearchSuggestions({ 
+          keyword: keyword.trim() 
+        })
+        const suggestions = (result || []).map(item => item.keyword || item)
+        this.setData({
+          suggestions,
+          showSuggestions: suggestions.length > 0
+        })
       } catch (error) {
         // 静默失败
       }
@@ -203,32 +218,21 @@ Page(createPageMixin({
     const params = {
       keyword,
       page: 1,
-      limit: 20
+      pageSize: 20
     }
 
     // 根据排序类型添加参数
-    switch (this.data.sortType) {
-      case 'sales':
-        params.order_by = 'sales'
-        params.order = 'desc'
-        break
-      case 'price_asc':
-        params.order_by = 'price'
-        params.order = 'asc'
-        break
-      case 'price_desc':
-        params.order_by = 'price'
-        params.order = 'desc'
-        break
+    if (this.data.sortType !== 'default') {
+      params.sortBy = this.data.sortType
     }
 
     try {
       const result = await this.loadData(
-        () => app.api.product.getProducts(params),
+        () => app.api.search.searchProducts(params),
         { showLoading: true }
       )
 
-      const products = result.items || []
+      const products = result.list || result.items || []
       this.setData({ products })
       this.setPageEmpty(products.length === 0)
     } catch (error) {
@@ -274,8 +278,10 @@ Page(createPageMixin({
     if (!confirmed) return
 
     try {
-      // TODO: 清空后端历史
-      // await app.api.xxx.clearSearchHistory()
+      // 清空后端历史（需登录）
+      if (app.store.isLoggedIn()) {
+        await app.api.search.clearSearchHistory()
+      }
       
       // 清空本地历史
       wx.removeStorageSync(STORAGE_KEY.SEARCH_HISTORY)

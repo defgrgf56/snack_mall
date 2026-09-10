@@ -13,6 +13,7 @@ const coupon = require('./coupon')
 const activity = require('./activity')
 const notification = require('./notification')
 const feedback = require('./feedback')
+const search = require('./search')
 
 module.exports = {
   auth,
@@ -27,5 +28,6 @@ module.exports = {
   coupon,
   activity,
   notification,
-  feedback
+  feedback,
+  search
 }
