@@ -2690,8 +2690,8 @@ router.delete('/reviews/:id', adminAuth, async (req, res) => {
 // 收藏列表
 router.get('/favorites', adminAuth, async (req, res) => {
   try {
-    const { Favorite, User, Product } = require('../models')
-    const { page = 1, pageSize = 20, keyword } = req.query
+    const { Favorite, User, Product, Category } = require('../models')
+    const { page = 1, pageSize = 20, keyword, dateStart, dateEnd, sortBy = 'created_at', sortOrder = 'DESC', categoryId } = req.query
     const offset = (page - 1) * pageSize
     const where = {}
 
@@ -2702,15 +2702,36 @@ router.get('/favorites', adminAuth, async (req, res) => {
       ]
     }
 
+    if (dateStart || dateEnd) {
+      where.created_at = {}
+      if (dateStart) where.created_at[Op.gte] = new Date(dateStart)
+      if (dateEnd) {
+        const end = new Date(dateEnd)
+        end.setHours(23, 59, 59, 999)
+        where.created_at[Op.lte] = end
+      }
+    }
+
+    if (categoryId) {
+      where['$product.category_id$'] = parseInt(categoryId)
+    }
+
+    const allowedSortBy = ['created_at', 'id']
+    const finalSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'created_at'
+    const finalSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC'
+
+    const includeOpts = [
+      { model: User, as: 'user', attributes: ['id', 'nickname', 'avatar'] },
+      { model: Product, as: 'product', attributes: ['id', 'name', 'cover', 'price', 'category_id'] }
+    ]
+
     const { count, rows } = await Favorite.findAndCountAll({
       where,
-      include: [
-        { model: User, as: 'user', attributes: ['id', 'nickname', 'avatar'] },
-        { model: Product, as: 'product', attributes: ['id', 'name', 'cover', 'price'] }
-      ],
-      order: [['created_at', 'DESC']],
+      include: includeOpts,
+      order: [[finalSortBy, finalSortOrder]],
       limit: parseInt(pageSize),
-      offset
+      offset,
+      distinct: true
     })
 
     res.json({
@@ -2730,8 +2751,19 @@ router.get('/favorites', adminAuth, async (req, res) => {
 // 收藏统计
 router.get('/favorites/stats', adminAuth, async (req, res) => {
   try {
-    const { Favorite, Product } = require('../models')
+    const { Favorite, Product, User } = require('../models')
+    const { Op } = require('sequelize')
+    const now = new Date()
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    const weekStart = new Date(now)
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+    weekStart.setHours(0, 0, 0, 0)
+
     const total = await Favorite.count()
+    const todayCount = await Favorite.count({ where: { created_at: { [Op.gte]: todayStart } } })
+    const weekCount = await Favorite.count({ where: { created_at: { [Op.gte]: weekStart } } })
+    const uniqueUsers = await Favorite.count({ col: 'user_id', distinct: true })
+
     // 收藏数最多的前10个商品
     const topProducts = await Favorite.findAll({
       attributes: ['product_id', [require('sequelize').fn('COUNT', require('sequelize').col('product_id')), 'count']],
@@ -2740,9 +2772,19 @@ router.get('/favorites/stats', adminAuth, async (req, res) => {
       limit: 10,
       include: [{ model: Product, as: 'product', attributes: ['id', 'name', 'cover'] }]
     })
+
+    // 收藏最多的前10个用户
+    const topUsers = await Favorite.findAll({
+      attributes: ['user_id', [require('sequelize').fn('COUNT', require('sequelize').col('user_id')), 'count']],
+      group: ['user_id'],
+      order: [[require('sequelize').literal('count'), 'DESC']],
+      limit: 10,
+      include: [{ model: User, as: 'user', attributes: ['id', 'nickname', 'avatar'] }]
+    })
+
     res.json({
       code: 200,
-      data: { total, topProducts }
+      data: { total, todayCount, weekCount, uniqueUsers, topProducts, topUsers }
     })
   } catch (error) {
     console.error('获取收藏统计失败:', error)
@@ -2760,6 +2802,22 @@ router.delete('/favorites/:id', adminAuth, async (req, res) => {
     res.json({ code: 200, message: '删除成功' })
   } catch (error) {
     console.error('删除收藏失败:', error)
+    res.json({ code: 500, message: '删除失败' })
+  }
+})
+
+// 批量删除收藏
+router.post('/favorites/batch-delete', adminAuth, async (req, res) => {
+  try {
+    const { Favorite } = require('../models')
+    const { ids } = req.body
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.json({ code: 400, message: '请选择要删除的收藏记录' })
+    }
+    await Favorite.destroy({ where: { id: ids } })
+    res.json({ code: 200, message: `成功删除 ${ids.length} 条记录` })
+  } catch (error) {
+    console.error('批量删除收藏失败:', error)
     res.json({ code: 500, message: '删除失败' })
   }
 })
