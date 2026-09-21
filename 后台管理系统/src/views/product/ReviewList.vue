@@ -74,30 +74,21 @@
               <el-option label="待审核" :value="0" />
               <el-option label="已拒绝" :value="2" />
             </el-select>
-            <div class="sort-btns">
-              <el-button
-                :type="sorting.sortBy === 'created_at' ? 'primary' : ''"
-                @click="handleSort('created_at')"
-                size="small"
-              >
-                时间
-                <el-icon v-if="sorting.sortBy === 'created_at'" :size="12" style="margin-left:2px;">
-                  <ArrowUp v-if="sorting.sortOrder === 'ASC'" />
-                  <ArrowDown v-else />
-                </el-icon>
+            <el-dropdown @command="handleSort" trigger="click">
+              <el-button size="small">
+                <el-icon style="margin-right:4px;"><Sort /></el-icon>
+                {{ currentSortLabel }}
+                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
               </el-button>
-              <el-button
-                :type="sorting.sortBy === 'rating' ? 'primary' : ''"
-                @click="handleSort('rating')"
-                size="small"
-              >
-                评分
-                <el-icon v-if="sorting.sortBy === 'rating'" :size="12" style="margin-left:2px;">
-                  <ArrowUp v-if="sorting.sortOrder === 'ASC'" />
-                  <ArrowDown v-else />
-                </el-icon>
-              </el-button>
-            </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="created_at:DESC" :class="{ 'is-active': sorting.sortBy === 'created_at' && sorting.sortOrder === 'DESC' }">最新发布</el-dropdown-item>
+                  <el-dropdown-item command="created_at:ASC" :class="{ 'is-active': sorting.sortBy === 'created_at' && sorting.sortOrder === 'ASC' }">最早发布</el-dropdown-item>
+                  <el-dropdown-item command="rating:DESC" divided :class="{ 'is-active': sorting.sortBy === 'rating' && sorting.sortOrder === 'DESC' }">评分最高</el-dropdown-item>
+                  <el-dropdown-item command="rating:ASC" :class="{ 'is-active': sorting.sortBy === 'rating' && sorting.sortOrder === 'ASC' }">评分最低</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             <el-button @click="fetchList"><el-icon><Refresh /></el-icon></el-button>
           </div>
         </div>
@@ -208,9 +199,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, ChatDotSquare, Clock, CircleCheck, Picture, User, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
+import { Search, Refresh, ChatDotSquare, Clock, CircleCheck, Picture, User, ArrowDown, Sort } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const loading = ref(false)
@@ -261,13 +252,18 @@ const fetchList = async () => {
   }
 }
 
-const handleSort = (field) => {
-  if (sorting.sortBy === field) {
-    sorting.sortOrder = sorting.sortOrder === 'DESC' ? 'ASC' : 'DESC'
-  } else {
-    sorting.sortBy = field
-    sorting.sortOrder = 'DESC'
-  }
+const sortLabelMap = {
+  'created_at:DESC': '最新发布',
+  'created_at:ASC': '最早发布',
+  'rating:DESC': '评分最高',
+  'rating:ASC': '评分最低'
+}
+const currentSortLabel = computed(() => sortLabelMap[`${sorting.sortBy}:${sorting.sortOrder}`] || '排序')
+
+const handleSort = (command) => {
+  const [sortBy, sortOrder] = command.split(':')
+  sorting.sortBy = sortBy
+  sorting.sortOrder = sortOrder
   pagination.page = 1
   fetchList()
 }
@@ -350,5 +346,5 @@ onMounted(() => {
 .text-muted { color: #c0c4cc; font-size: 13px; }
 .time-text { font-size: 13px; color: #909399; }
 .pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
-.sort-btns { display: flex; gap: 4px; margin-right: 10px; }
+:deep(.is-active) { color: var(--el-color-primary); font-weight: bold; }
 </style>
