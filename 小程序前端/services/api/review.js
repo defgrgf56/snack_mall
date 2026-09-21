@@ -5,53 +5,35 @@ const request = require('../request')
  * 提交评价
  */
 const submitReview = (data) => {
-  return request({
-    url: '/reviews',
-    method: 'POST',
-    data
-  })
+  return request.post('/reviews', data)
 }
 
 /**
  * 获取商品评价列表
  */
 const getProductReviews = (productId, params = {}) => {
-  return request({
-    url: `/reviews/product/${productId}`,
-    method: 'GET',
-    data: params
-  })
+  return request.get(`/reviews/product/${productId}`, params)
 }
 
 /**
  * 获取商品评价统计
  */
 const getProductReviewStats = (productId) => {
-  return request({
-    url: `/reviews/product/${productId}/stats`,
-    method: 'GET'
-  })
+  return request.get(`/reviews/product/${productId}/stats`)
 }
 
 /**
  * 获取待评价订单商品列表
  */
 const getPendingReviews = () => {
-  return request({
-    url: '/reviews/pending',
-    method: 'GET'
-  })
+  return request.get('/reviews/pending')
 }
 
 /**
  * 获取我的评价列表
  */
 const getMyReviews = (params = {}) => {
-  return request({
-    url: '/reviews/my',
-    method: 'GET',
-    data: params
-  })
+  return request.get('/reviews/my', params)
 }
 
 module.exports = {

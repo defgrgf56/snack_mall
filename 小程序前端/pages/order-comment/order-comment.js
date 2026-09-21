@@ -122,15 +122,18 @@ Page({
       wx.showLoading({ title: '上传中...', mask: true })
 
       const request = require('../../services/request')
+      const { API_BASE_URL } = require('../../config/env')
 
       // 依次上传图片
       for (const filePath of res.tempFilePaths) {
         try {
           const uploadRes = await request.upload(filePath)
-          item.images.push(uploadRes.url)
+          // 拼接完整 URL
+          const fullUrl = API_BASE_URL.replace('/api', '') + uploadRes.url
+          item.images.push(fullUrl)
         } catch (error) {
           console.error('上传图片失败:', error)
-          errorHandler.showToast('部分图片上传失败', 'none')
+          wx.showToast({ title: '部分图片上传失败', icon: 'none' })
         }
       }
 

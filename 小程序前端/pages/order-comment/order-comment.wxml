@@ -21,11 +21,12 @@
         <text class="label">商品评分</text>
         <view class="stars">
           <view 
-            class="star {{index + 1 <= item.rating ? 'active' : ''}}"
+            class="star {{star <= item.rating ? 'active' : ''}}"
             wx:for="{{[1,2,3,4,5]}}"
+            wx:for-item="star"
             wx:key="*this"
             data-item-id="{{item.id}}"
-            data-rating="{{item}}"
+            data-rating="{{star}}"
             bindtap="onRatingTap"
           >★</view>
         </view>
