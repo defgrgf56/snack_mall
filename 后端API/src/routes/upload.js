@@ -8,6 +8,9 @@ const crypto = require('crypto');
 const sharp = require('sharp');
 const { authenticateToken, adminAuth } = require('../middleware/auth');
 
+// 统一 JWT 密钥
+const JWT_SECRET = process.env.JWT_SECRET || 'snack-mall-secret-key-2026';
+
 // 确保上传目录存在
 const uploadDir = path.join(__dirname, '../../uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -190,7 +193,7 @@ async function authMiddleware(req, res, next) {
   
   try {
     const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, JWT_SECRET);
     
     // 判断是管理员 token 还是用户 token
     // 管理员 token 的 payload 有 id 字段

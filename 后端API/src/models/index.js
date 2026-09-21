@@ -75,7 +75,7 @@ Order.belongsTo(User, { foreignKey: 'user_id', as: 'user' })
 
 // 订单 - 订单商品
 Order.hasMany(OrderItem, { foreignKey: 'order_id', as: 'items' })
-OrderItem.belongsTo(Order, { foreignKey: 'order_id' })
+OrderItem.belongsTo(Order, { foreignKey: 'order_id', as: 'order' })
 OrderItem.belongsTo(Product, { foreignKey: 'product_id', as: 'product' })
 
 // 订单 - 订单日志

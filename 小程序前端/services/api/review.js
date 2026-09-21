@@ -36,10 +36,18 @@ const getMyReviews = (params = {}) => {
   return request.get('/reviews/my', params)
 }
 
+/**
+ * 点赞评价
+ */
+const likeReview = (reviewId) => {
+  return request.post(`/reviews/${reviewId}/like`)
+}
+
 module.exports = {
   submitReview,
   getProductReviews,
   getProductReviewStats,
   getPendingReviews,
-  getMyReviews
+  getMyReviews,
+  likeReview
 }

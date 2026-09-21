@@ -17,10 +17,50 @@ App({
     // 初始化状态管理
     this.store = new Store()
     
+    // 监听网络状态变化
+    this._initNetworkMonitor()
+    
     // 延迟检查登录状态，确保 app 完全初始化
     setTimeout(() => {
       this.checkLoginStatus()
     }, 100)
+  },
+
+  /**
+   * 初始化网络状态监听
+   */
+  _initNetworkMonitor() {
+    // 获取初始网络状态
+    wx.getNetworkType({
+      success: (res) => {
+        this._networkType = res.networkType
+        if (res.networkType === 'none') {
+          wx.showToast({ title: '网络已断开', icon: 'none', duration: 3000 })
+        }
+      }
+    })
+
+    // 监听网络变化
+    wx.onNetworkStatusChange((res) => {
+      const wasOffline = this._networkType === 'none'
+      const isNowOffline = res.networkType === 'none'
+      this._networkType = res.networkType
+
+      if (wasOffline && !isNowOffline) {
+        // 网络恢复
+        wx.showToast({ title: '网络已恢复', icon: 'success', duration: 2000 })
+        // 通知当前页面刷新
+        const pages = getCurrentPages()
+        if (pages.length > 0) {
+          const currentPage = pages[pages.length - 1]
+          if (typeof currentPage.onNetworkRestore === 'function') {
+            currentPage.onNetworkRestore()
+          }
+        }
+      } else if (!wasOffline && isNowOffline) {
+        wx.showToast({ title: '网络已断开', icon: 'none', duration: 3000 })
+      }
+    })
   },
 
   onShow(options) {

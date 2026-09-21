@@ -1,6 +1,8 @@
 // pages/review-submit/review-submit.js - 重构后的评价提交页面
 const createPageMixin = require('../../mixins/page-mixin')
 const errorHandler = require('../../utils/error-handler')
+const { API_BASE_URL } = require('../../config/env')
+const request = require('../../services/request')
 
 const app = getApp()
 
@@ -11,8 +13,11 @@ Page(createPageMixin({
     rating: 5,
     ratingText: '非常满意',
     content: '',
-    images: [],
-    isAnonymous: false
+    images: [],       // 存储已上传的服务器URL
+    isAnonymous: false,
+    uploading: false,  // 是否正在上传图片
+    submitting: false, // 是否正在提交评价
+    uploadProgress: 0  // 上传进度计数
   },
 
   onLoad(options) {
@@ -22,9 +27,7 @@ Page(createPageMixin({
     }
   },
 
-  /**
-   * 加载订单商品信息
-   */
+  /** 加载订单商品信息 */
   async loadOrderItem() {
     try {
       const orderItems = await this.loadData(
@@ -45,9 +48,7 @@ Page(createPageMixin({
     }
   },
 
-  /**
-   * 点击星级评分
-   */
+  /** 点击星级评分 */
   onRatingTap(e) {
     const rating = parseInt(e.currentTarget.dataset.rating)
     const ratingTexts = {
@@ -64,20 +65,20 @@ Page(createPageMixin({
     })
   },
 
-  /**
-   * 输入评价内容
-   */
+  /** 输入评价内容 */
   onContentInput(e) {
-    this.setData({
-      content: e.detail.value
-    })
+    this.setData({ content: e.detail.value })
   },
 
-  /**
-   * 选择图片
-   */
+  /** 选择图片 */
   onChooseImage() {
+    if (this.data.uploading) return
+
     const remainCount = 9 - this.data.images.length
+    if (remainCount <= 0) {
+      errorHandler.showToast('最多上传9张图片', 'none')
+      return
+    }
 
     wx.chooseImage({
       count: remainCount,
@@ -89,63 +90,54 @@ Page(createPageMixin({
     })
   },
 
-  /**
-   * 上传图片
-   */
+  /** 上传图片到服务器 */
   async uploadImages(filePaths) {
-    try {
-      wx.showLoading({ title: '上传中...', mask: true })
+    this.setData({ uploading: true, uploadProgress: 0 })
 
-      const uploadedUrls = []
+    const total = filePaths.length
+    let successCount = 0
 
-      for (const filePath of filePaths) {
-        try {
-          // TODO: 实现图片上传 API
-          // const result = await app.api.upload.uploadImage(filePath)
-          // uploadedUrls.push(result.url)
-          
-          // 暂时使用本地路径模拟
-          uploadedUrls.push(filePath)
-        } catch (error) {
-          errorHandler.handle(error)
-        }
+    for (const filePath of filePaths) {
+      try {
+        const result = await request.upload(filePath, { loadingText: '上传中...' })
+        // 拼接完整URL（服务器返回相对路径如 /uploads/202609/xxx.jpg）
+        const fullUrl = API_BASE_URL.replace('/api', '') + result.url
+        this.data.images.push(fullUrl)
+        successCount++
+      } catch (error) {
+        console.error('上传图片失败:', error)
       }
+      this.setData({ uploadProgress: successCount })
+    }
 
-      wx.hideLoading()
+    this.setData({
+      images: [...this.data.images],
+      uploading: false,
+      uploadProgress: 0
+    })
 
-      if (uploadedUrls.length > 0) {
-        this.setData({
-          images: [...this.data.images, ...uploadedUrls]
-        })
-        errorHandler.showSuccess('上传成功')
-      }
-    } catch (error) {
-      wx.hideLoading()
-      errorHandler.handle(error)
+    if (successCount > 0 && successCount < total) {
+      errorHandler.showToast(`成功上传${successCount}张，${total - successCount}张失败`, 'none')
+    } else if (successCount === total) {
+      errorHandler.showToast('图片上传成功', 'success')
+    } else {
+      errorHandler.showToast('图片上传失败', 'none')
     }
   },
 
-  /**
-   * 删除图片
-   */
+  /** 删除图片 */
   onDeleteImage(e) {
     const { index } = e.currentTarget.dataset
     const images = this.data.images.filter((_, i) => i !== index)
     this.setData({ images })
   },
 
-  /**
-   * 切换匿名
-   */
+  /** 切换匿名 */
   onAnonymousChange(e) {
-    this.setData({
-      isAnonymous: e.detail.value
-    })
+    this.setData({ isAnonymous: e.detail.value })
   },
 
-  /**
-   * 表单验证
-   */
+  /** 表单验证 */
   validateForm() {
     if (!this.data.orderItemId) {
       throw new Error('订单商品信息错误')
@@ -153,13 +145,13 @@ Page(createPageMixin({
     return true
   },
 
-  /**
-   * 提交评价
-   */
+  /** 提交评价 */
   async onSubmit() {
+    if (this.data.submitting || this.data.uploading) return
+
     try {
-      // 验证表单
       this.validateForm()
+      this.setData({ submitting: true })
 
       const { orderItemId, rating, content, images, isAnonymous } = this.data
 
@@ -172,7 +164,7 @@ Page(createPageMixin({
       }
 
       await this.loadData(
-        () => app.api.review.createReview(reviewData),
+        () => app.api.review.submitReview(reviewData),
         { showLoading: true, loadingText: '提交中...' }
       )
 
@@ -182,6 +174,7 @@ Page(createPageMixin({
         wx.navigateBack()
       }, 1500)
     } catch (error) {
+      this.setData({ submitting: false })
       errorHandler.handle(error)
     }
   }

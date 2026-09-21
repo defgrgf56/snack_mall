@@ -1,7 +1,7 @@
 <!--pages/review-submit/review-submit.wxml-->
 <view class="review-page">
   <!-- 商品信息 -->
-  <view class="product-info">
+  <view class="product-info" wx:if="{{orderItem}}">
     <image class="product-image" src="{{orderItem.product.cover}}" mode="aspectFill" />
     <view class="product-detail">
       <text class="product-name">{{orderItem.product.name}}</text>
@@ -44,18 +44,23 @@
       <block wx:for="{{images}}" wx:key="index">
         <view class="image-item">
           <image class="preview-image" src="{{item}}" mode="aspectFill" />
-          <view class="delete-btn" data-index="{{index}}" bindtap="onDeleteImage">
+          <view class="delete-btn" data-index="{{index}}" bindtap="onDeleteImage" wx:if="{{!uploading}}">
             <text class="delete-icon">×</text>
+          </view>
+          <!-- 上传中遮罩 -->
+          <view class="uploading-mask" wx:if="{{uploading && index >= images.length - (uploadProgress > 0 ? 1 : 0)}}">
+            <view class="loading-spinner"></view>
           </view>
         </view>
       </block>
       
-      <view class="add-image" wx:if="{{images.length < 9}}" bindtap="onChooseImage">
+      <view class="add-image" wx:if="{{images.length < 9 && !uploading}}" bindtap="onChooseImage">
         <text class="add-icon">+</text>
         <text class="add-text">添加图片</text>
       </view>
     </view>
-    <text class="image-tip">最多上传9张图片，支持晒单</text>
+    <text class="image-tip" wx:if="{{!uploading}}">最多上传9张图片，支持晒单</text>
+    <text class="image-tip uploading-tip" wx:if="{{uploading}}">上传中... {{uploadProgress}}/{{images.length}}</text>
   </view>
 
   <!-- 匿名评价 -->
@@ -69,7 +74,9 @@
   </view>
 
   <!-- 提交按钮 -->
-  <view class="submit-btn" bindtap="onSubmit">
-    <text>提交评价</text>
+  <view class="submit-btn {{submitting || uploading ? 'disabled' : ''}}" bindtap="onSubmit">
+    <text wx:if="{{submitting}}">提交中...</text>
+    <text wx:elif="{{uploading}}">请等待图片上传</text>
+    <text wx:else>提交评价</text>
   </view>
 </view>

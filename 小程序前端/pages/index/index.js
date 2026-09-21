@@ -367,5 +367,10 @@ Page(createPageMixin({
     } finally {
       wx.hideLoading()
     }
+  },
+
+  /** 网络恢复时自动刷新（由 app.js 调用） */
+  onNetworkRestore() {
+    this.loadPageData()
   }
 }))

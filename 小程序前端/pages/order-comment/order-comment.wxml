@@ -84,8 +84,8 @@
   </view>
 
   <!-- 提交按钮 -->
-  <view class="submit-section">
-    <button class="submit-btn" bindtap="onSubmit" disabled="{{submitting}}">
+  <view class="submit-section" style="padding-bottom: calc(20rpx + {{safeAreaBottom}}px);">
+    <button class="submit-btn {{submitting ? 'disabled' : ''}}" bindtap="onSubmit" disabled="{{submitting}}">
       {{submitting ? '提交中...' : '提交评价'}}
     </button>
   </view>

@@ -1,27 +1,40 @@
-// pages/order-comment/order-comment.js
-const app = getApp()
+// pages/order-comment/order-comment.js - 重构后：接入 page-mixin，统一状态管理
+const createPageMixin = require('../../mixins/page-mixin')
 const errorHandler = require('../../utils/error-handler')
 
-Page({
+const app = getApp()
+
+Page(createPageMixin({
   data: {
     orderId: null,
     orderItems: [],
-    submitting: false
+    submitting: false,
+    safeAreaBottom: 0
   },
 
   onLoad(options) {
     const { orderId } = options
-    
+
     if (!orderId) {
-      errorHandler.showToast('订单ID不能为空', 'none')
-      setTimeout(() => {
-        wx.navigateBack()
-      }, 1500)
+      errorHandler.handle(new Error('订单ID不能为空'))
+      setTimeout(() => wx.navigateBack(), 1500)
       return
     }
 
     this.setData({ orderId })
+    this._setSafeArea()
     this.loadOrderItems()
+  },
+
+  /**
+   * 安全区适配
+   */
+  _setSafeArea() {
+    const sysInfo = app.store.getState('systemInfo')
+    const bottom = sysInfo?.safeArea
+      ? sysInfo.screenHeight - sysInfo.safeArea.bottom
+      : 0
+    this.setData({ safeAreaBottom: bottom })
   },
 
   /**
@@ -29,40 +42,35 @@ Page({
    */
   async loadOrderItems() {
     try {
-      wx.showLoading({ title: '加载中...', mask: true })
-      
-      // 获取订单详情
-      const order = await app.api.order.getOrderDetail(this.data.orderId)
-      
+      const order = await this.loadData(
+        () => app.api.order.getOrderDetail(this.data.orderId),
+        { showLoading: true }
+      )
+
       // 过滤出未评价的商品
-      const orderItems = order.items.filter(item => !item.is_reviewed).map(item => ({
-        id: item.id,
-        product_id: item.product_id,
-        product: item.product,
-        price: item.price,
-        quantity: item.quantity,
-        rating: 5, // 默认5星
-        content: '',
-        images: [],
-        is_anonymous: false
-      }))
+      const orderItems = order.items
+        .filter(item => !item.is_reviewed)
+        .map(item => ({
+          id: item.id,
+          product_id: item.product_id,
+          product: item.product,
+          price: item.price,
+          quantity: item.quantity,
+          rating: 5,
+          content: '',
+          images: [],
+          is_anonymous: false
+        }))
 
       if (orderItems.length === 0) {
-        errorHandler.showToast('没有待评价的商品', 'none')
-        setTimeout(() => {
-          wx.navigateBack()
-        }, 1500)
+        errorHandler.handle(new Error('没有待评价的商品'))
+        setTimeout(() => wx.navigateBack(), 1500)
         return
       }
 
       this.setData({ orderItems })
     } catch (error) {
-      // 错误已由 errorHandler 处理
-      setTimeout(() => {
-        wx.navigateBack()
-      }, 1500)
-    } finally {
-      wx.hideLoading()
+      setTimeout(() => wx.navigateBack(), 1500)
     }
   },
 
@@ -71,13 +79,8 @@ Page({
    */
   onRatingTap(e) {
     const { itemId, rating } = e.currentTarget.dataset
-    const { orderItems } = this.data
-    
-    const index = orderItems.findIndex(item => item.id === itemId)
-    if (index === -1) return
-
-    orderItems[index].rating = parseInt(rating)
-    this.setData({ orderItems })
+    const key = `orderItems[${this._findIndex(itemId)}].rating`
+    this.setData({ [key]: parseInt(rating) })
   },
 
   /**
@@ -85,14 +88,8 @@ Page({
    */
   onContentInput(e) {
     const { itemId } = e.currentTarget.dataset
-    const { value } = e.detail
-    const { orderItems } = this.data
-    
-    const index = orderItems.findIndex(item => item.id === itemId)
-    if (index === -1) return
-
-    orderItems[index].content = value
-    this.setData({ orderItems })
+    const key = `orderItems[${this._findIndex(itemId)}].content`
+    this.setData({ [key]: e.detail.value })
   },
 
   /**
@@ -100,12 +97,8 @@ Page({
    */
   async onUploadImage(e) {
     const { itemId } = e.currentTarget.dataset
-    const { orderItems } = this.data
-    
-    const index = orderItems.findIndex(item => item.id === itemId)
-    if (index === -1) return
-
-    const item = orderItems[index]
+    const idx = this._findIndex(itemId)
+    const item = this.data.orderItems[idx]
     const remainCount = 6 - item.images.length
 
     try {
@@ -119,29 +112,28 @@ Page({
         })
       })
 
-      wx.showLoading({ title: '上传中...', mask: true })
+      errorHandler.showLoading('上传中...')
 
       const request = require('../../services/request')
       const { API_BASE_URL } = require('../../config/env')
 
-      // 依次上传图片
+      const images = [...item.images]
       for (const filePath of res.tempFilePaths) {
         try {
           const uploadRes = await request.upload(filePath)
-          // 拼接完整 URL
           const fullUrl = API_BASE_URL.replace('/api', '') + uploadRes.url
-          item.images.push(fullUrl)
-        } catch (error) {
-          console.error('上传图片失败:', error)
-          wx.showToast({ title: '部分图片上传失败', icon: 'none' })
+          images.push(fullUrl)
+        } catch (err) {
+          console.error('上传图片失败:', err)
         }
       }
 
-      this.setData({ orderItems })
+      const key = `orderItems[${idx}].images`
+      this.setData({ [key]: images })
     } catch (error) {
-      console.error('选择图片失败:', error)
+      // 用户取消选择图片，静默处理
     } finally {
-      wx.hideLoading()
+      errorHandler.hideLoading()
     }
   },
 
@@ -150,13 +142,11 @@ Page({
    */
   onDeleteImage(e) {
     const { itemId, index: imgIndex } = e.currentTarget.dataset
-    const { orderItems } = this.data
-    
-    const index = orderItems.findIndex(item => item.id === itemId)
-    if (index === -1) return
-
-    orderItems[index].images.splice(imgIndex, 1)
-    this.setData({ orderItems })
+    const idx = this._findIndex(itemId)
+    const images = [...this.data.orderItems[idx].images]
+    images.splice(imgIndex, 1)
+    const key = `orderItems[${idx}].images`
+    this.setData({ [key]: images })
   },
 
   /**
@@ -164,14 +154,8 @@ Page({
    */
   onAnonymousChange(e) {
     const { itemId } = e.currentTarget.dataset
-    const { value } = e.detail
-    const { orderItems } = this.data
-    
-    const index = orderItems.findIndex(item => item.id === itemId)
-    if (index === -1) return
-
-    orderItems[index].is_anonymous = value
-    this.setData({ orderItems })
+    const key = `orderItems[${this._findIndex(itemId)}].is_anonymous`
+    this.setData({ [key]: e.detail.value })
   },
 
   /**
@@ -180,22 +164,20 @@ Page({
   async onSubmit() {
     if (this.data.submitting) return
 
-    const { orderItems, orderId } = this.data
+    const { orderItems } = this.data
 
     // 验证评价内容
     for (const item of orderItems) {
       if (!item.content.trim()) {
-        errorHandler.showToast(`请填写${item.product.name}的评价内容`, 'none')
+        errorHandler.handle(new Error(`请填写${item.product.name}的评价内容`))
         return
       }
     }
 
     this.setData({ submitting: true })
+    errorHandler.showLoading('提交中...')
 
     try {
-      wx.showLoading({ title: '提交中...', mask: true })
-
-      // 依次提交每个商品的评价
       for (const item of orderItems) {
         await app.api.review.submitReview({
           order_item_id: item.id,
@@ -206,16 +188,21 @@ Page({
         })
       }
 
-      wx.hideLoading()
+      errorHandler.hideLoading()
       errorHandler.showSuccess('评价成功')
 
-      // 延迟返回
-      setTimeout(() => {
+      this.$setTimeout(() => {
         wx.navigateBack()
       }, 1500)
     } catch (error) {
-      wx.hideLoading()
       this.setData({ submitting: false })
     }
+  },
+
+  /**
+   * 查找订单商品在数组中的索引
+   */
+  _findIndex(itemId) {
+    return this.data.orderItems.findIndex(item => item.id === itemId)
   }
-})
+}))

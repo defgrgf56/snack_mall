@@ -223,7 +223,7 @@ Page(createPageMixin({
    */
   async loadReviewStats() {
     try {
-      const stats = await app.api.review.getReviewStats(this.data.productId)
+      const stats = await app.api.review.getProductReviewStats(this.data.productId)
       this.setData({ reviewStats: stats })
     } catch (error) {
       // 静默失败
@@ -237,13 +237,14 @@ Page(createPageMixin({
     try {
       const { productId, reviewsPage, reviewsLimit, reviews } = this.data
       
-      const result = await app.api.review.getProductReviews(
-        productId,
-        isLoadMore ? reviewsPage : 1,
-        reviewsLimit
-      )
+      const params = {
+        page: isLoadMore ? reviewsPage : 1,
+        limit: reviewsLimit
+      }
 
-      const newReviews = result.reviews || []
+      const result = await app.api.review.getProductReviews(productId, params)
+
+      const newReviews = result.list || []
       
       this.setData({
         reviews: isLoadMore ? [...reviews, ...newReviews] : newReviews,
@@ -269,5 +270,14 @@ Page(createPageMixin({
     wx.navigateTo({
       url: `/pages/review-list/review-list?productId=${this.data.productId}`
     })
+  },
+
+  /**
+   * 评价头像加载失败，切换为默认头像
+   */
+  onReviewAvatarError(e) {
+    const { index } = e.currentTarget.dataset
+    const key = `reviews[${index}].user.avatar`
+    this.setData({ [key]: '/images/default-avatar.png' })
   }
 }))

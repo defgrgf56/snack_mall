@@ -105,6 +105,14 @@
       </view>
       <text class="arrow-icon">›</text>
     </view>
+
+    <view class="menu-item" bindtap="onNavigate" data-url="/pages/my-reviews/my-reviews">
+      <view class="menu-left">
+        <text class="menu-icon">⭐</text>
+        <text class="menu-text">我的评价</text>
+      </view>
+      <text class="arrow-icon">›</text>
+    </view>
   </view>
 
   <!-- 其他功能 -->

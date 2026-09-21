@@ -1,7 +1,7 @@
 // src/utils/jwt.js - JWT工具
 const jwt = require('jsonwebtoken')
 
-const SECRET = process.env.JWT_SECRET || 'your-secret-key'
+const SECRET = process.env.JWT_SECRET || 'snack-mall-secret-key-2026'
 const EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
 
 /**

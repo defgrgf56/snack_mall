@@ -24,7 +24,8 @@
     "pages/review-list/review-list",
     "pages/activity-detail/activity-detail",
     "pages/feedback/feedback",
-    "pages/feedback-list/feedback-list"
+    "pages/feedback-list/feedback-list",
+    "pages/my-reviews/my-reviews"
   ],
   "window": {
     "backgroundTextStyle": "light",

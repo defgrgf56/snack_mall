@@ -97,7 +97,7 @@
   <!-- 分类导航 -->
   <view class="category-nav" wx:if="{{categories.length > 0}}">
     <view class="category-item" wx:for="{{categories}}" wx:key="id" bindtap="goCategory" data-id="{{item.id}}">
-      <image class="category-icon" src="{{item.icon}}" mode="aspectFill"></image>
+      <image class="category-icon" src="{{item.icon}}" mode="aspectFill" lazy-load></image>
       <text class="category-name">{{item.name}}</text>
     </view>
   </view>
@@ -109,7 +109,7 @@
     </view>
     <view class="product-grid">
       <view class="product-item" wx:for="{{hotProducts}}" wx:key="id" bindtap="goProductDetail" data-id="{{item.id}}">
-        <image class="product-image" src="{{item.cover}}" mode="aspectFill"></image>
+        <image class="product-image" src="{{item.cover}}" mode="aspectFill" lazy-load></image>
         <view class="product-tags">
           <text class="tag tag-hot" wx:if="{{item.is_hot}}">HOT</text>
           <text class="tag tag-new" wx:if="{{item.is_new}}">NEW</text>
@@ -139,7 +139,7 @@
     </view>
     <view class="product-grid">
       <view class="product-item" wx:for="{{newProducts}}" wx:key="id" bindtap="goProductDetail" data-id="{{item.id}}">
-        <image class="product-image" src="{{item.cover}}" mode="aspectFill"></image>
+        <image class="product-image" src="{{item.cover}}" mode="aspectFill" lazy-load></image>
         <view class="product-tags">
           <text class="tag tag-new">NEW</text>
         </view>

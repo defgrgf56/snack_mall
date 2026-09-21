@@ -2,6 +2,9 @@
 const jwt = require('jsonwebtoken');
 const { User, Admin } = require('../models');
 
+// 统一 JWT 密钥，确保签名和验证一致
+const JWT_SECRET = process.env.JWT_SECRET || 'snack-mall-secret-key-2026';
+
 /**
  * JWT验证中间件
  * 用于保护需要登录的API接口
@@ -20,7 +23,7 @@ async function authenticateToken(req, res, next) {
     }
     
     // 验证token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     
     // 查找用户
     const user = await User.findByPk(decoded.userId);
@@ -89,7 +92,7 @@ async function adminAuth(req, res, next) {
     }
     
     // 验证token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+    const decoded = jwt.verify(token, JWT_SECRET);
     
     // 查找管理员
     const admin = await Admin.findByPk(decoded.id);
@@ -147,7 +150,7 @@ async function optionalAuth(req, res, next) {
     const token = authHeader && authHeader.split(' ')[1];
     
     if (token) {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, JWT_SECRET);
       const user = await User.findByPk(decoded.userId);
       
       if (user && user.status === 1) {

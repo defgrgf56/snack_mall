@@ -135,7 +135,7 @@ router.post('/', authenticateToken, async (req, res) => {
 router.get('/product/:product_id', async (req, res) => {
   try {
     const { product_id } = req.params;
-    const { page = 1, pageSize = 10, rating } = req.query;
+    const { page = 1, pageSize = 10, rating, ratingMin, ratingMax } = req.query;
     const offset = (page - 1) * pageSize;
     
     const where = {
@@ -144,8 +144,13 @@ router.get('/product/:product_id', async (req, res) => {
       is_show: 1 // 显示
     };
     
-    // 如果有评分筛选
-    if (rating) {
+    // 评分筛选：精确匹配 或 范围筛选
+    if (ratingMin || ratingMax) {
+      const { Op } = require('sequelize');
+      where.rating = {};
+      if (ratingMin) where.rating[Op.gte] = parseInt(ratingMin);
+      if (ratingMax) where.rating[Op.lte] = parseInt(ratingMax);
+    } else if (rating) {
       where.rating = parseInt(rating);
     }
     
@@ -261,6 +266,23 @@ router.get('/product/:product_id/stats', async (req, res) => {
       }]
     });
     
+    // 计算平均评分
+    const avgResult = await Review.findOne({
+      where: {
+        product_id,
+        status: 1,
+        is_show: 1
+      },
+      attributes: [
+        [sequelize.fn('AVG', sequelize.col('rating')), 'avg_rating'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      raw: true
+    });
+    const average_rating = avgResult && avgResult.count > 0 
+      ? parseFloat(parseFloat(avgResult.avg_rating).toFixed(1)) 
+      : 0;
+    
     // 计算好评率
     const goodRate = totalCount > 0 ? ((goodCount / totalCount) * 100).toFixed(1) : 0;
     
@@ -271,6 +293,7 @@ router.get('/product/:product_id/stats', async (req, res) => {
         total: totalCount,
         goodCount,
         goodRate: parseFloat(goodRate),
+        average_rating,
         imageCount,
         ratingStats
       }
@@ -336,11 +359,22 @@ router.get('/pending', authenticateToken, async (req, res) => {
  */
 router.get('/my', authenticateToken, async (req, res) => {
   try {
-    const { page = 1, pageSize = 10 } = req.query;
+    const { page = 1, pageSize = 10, rating, ratingMin, ratingMax } = req.query;
     const offset = (page - 1) * pageSize;
     
+    const where = { user_id: req.userId };
+    // 评分筛选：精确匹配 或 范围筛选
+    if (ratingMin || ratingMax) {
+      const { Op } = require('sequelize');
+      where.rating = {};
+      if (ratingMin) where.rating[Op.gte] = parseInt(ratingMin);
+      if (ratingMax) where.rating[Op.lte] = parseInt(ratingMax);
+    } else if (rating) {
+      where.rating = parseInt(rating);
+    }
+    
     const { count, rows: reviews } = await Review.findAndCountAll({
-      where: { user_id: req.userId },
+      where,
       include: [
         {
           model: Product,

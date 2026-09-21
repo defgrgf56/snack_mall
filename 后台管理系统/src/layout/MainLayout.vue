@@ -22,6 +22,8 @@
           </template>
           <el-menu-item index="/products">商品列表</el-menu-item>
           <el-menu-item index="/categories">商品分类</el-menu-item>
+          <el-menu-item index="/reviews">商品评价</el-menu-item>
+          <el-menu-item index="/favorites">商品收藏</el-menu-item>
         </el-sub-menu>
 
         <el-menu-item index="/orders">

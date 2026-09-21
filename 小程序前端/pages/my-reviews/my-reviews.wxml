@@ -1,0 +1,111 @@
+<!--pages/my-reviews/my-reviews.wxml-->
+<view class="my-reviews-page">
+
+  <!-- 评分筛选 -->
+  <view class="filter-bar">
+    <view
+      class="filter-tab {{filterRating === '' ? 'active' : ''}}"
+      data-rating=""
+      bindtap="onFilterTap"
+    >全部</view>
+    <view
+      class="filter-tab {{filterRating === 'good' ? 'active' : ''}}"
+      data-rating="good"
+      bindtap="onFilterTap"
+    >好评</view>
+    <view
+      class="filter-tab {{filterRating === 'mid' ? 'active' : ''}}"
+      data-rating="mid"
+      bindtap="onFilterTap"
+    >中评</view>
+    <view
+      class="filter-tab {{filterRating === 'bad' ? 'active' : ''}}"
+      data-rating="bad"
+      bindtap="onFilterTap"
+    >差评</view>
+  </view>
+
+  <!-- 评价列表 -->
+  <view class="review-list" wx:if="{{reviews.length > 0}}">
+    <view
+      class="review-card"
+      wx:for="{{reviews}}"
+      wx:key="id"
+      bindtap="onReviewTap"
+      data-product-id="{{item.product_id}}"
+    >
+      <!-- 商品信息 -->
+      <view class="product-row">
+        <image class="product-cover" src="{{item.product.cover}}" mode="aspectFill" />
+        <view class="product-info">
+          <text class="product-name">{{item.product.name}}</text>
+          <view class="rating-row">
+            <block wx:for="{{[1,2,3,4,5]}}" wx:key="*this" wx:for-item="star">
+              <text class="star {{item.rating >= star ? 'active' : ''}}">★</text>
+            </block>
+            <text class="rating-text">{{item.rating}}分</text>
+          </view>
+        </view>
+        <text class="arrow">›</text>
+      </view>
+
+      <!-- 评价内容 -->
+      <view class="review-body" wx:if="{{item.content}}">
+        <text class="review-text">{{item.content}}</text>
+      </view>
+
+      <!-- 评价图片 -->
+      <view class="review-images" wx:if="{{item.images && item.images.length > 0}}">
+        <image
+          class="review-img"
+          wx:for="{{item.images}}"
+          wx:key="id"
+          wx:for-item="img"
+          src="{{img.image_url}}"
+          mode="aspectFill"
+          catchtap="onPreviewImage"
+          data-images="{{item.images}}"
+          data-index="{{index}}"
+        />
+      </view>
+
+      <!-- 商家回复 -->
+      <view class="reply-box" wx:if="{{item.reply_content}}">
+        <text class="reply-label">商家回复：</text>
+        <text class="reply-text">{{item.reply_content}}</text>
+      </view>
+
+      <!-- 底部信息 -->
+      <view class="review-footer">
+        <text class="review-time">{{item.created_at}}</text>
+        <view class="like-info" wx:if="{{item.likes > 0}}">
+          <text>👍 {{item.likes}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && reviews.length === 0}}">
+    <text class="empty-icon">📝</text>
+    <text class="empty-text">暂无评价</text>
+    <text class="empty-desc">去购物后回来评价吧~</text>
+    <view class="empty-btn" bindtap="goShopping">去逛逛</view>
+  </view>
+
+  <!-- 加载中 -->
+  <view class="loading-state" wx:if="{{loading}}">
+    <text>加载中...</text>
+  </view>
+
+  <!-- 加载更多 -->
+  <view class="loadmore-state" wx:if="{{!loading && hasMore && reviews.length > 0}}">
+    <text>上拉加载更多</text>
+  </view>
+
+  <!-- 没有更多 -->
+  <view class="nomore-state" wx:if="{{!loading && !hasMore && reviews.length > 0}}">
+    <text>没有更多了</text>
+  </view>
+
+</view>

@@ -28,25 +28,25 @@
       全部
     </view>
     <view 
-      class="filter-item {{filterRating === '5' ? 'active' : ''}}"
-      data-rating="5"
+      class="filter-item {{filterRating === 'good' ? 'active' : ''}}"
+      data-rating="good"
       bindtap="onFilterTap"
     >
-      好评({{stats.ratingStats[4].count || 0}})
+      好评({{stats.goodCount || 0}})
     </view>
     <view 
-      class="filter-item {{filterRating === '3' ? 'active' : ''}}"
-      data-rating="3"
+      class="filter-item {{filterRating === 'mid' ? 'active' : ''}}"
+      data-rating="mid"
       bindtap="onFilterTap"
     >
-      中评({{stats.ratingStats[2].count || 0}})
+      中评({{stats.midCount || 0}})
     </view>
     <view 
-      class="filter-item {{filterRating === '1' ? 'active' : ''}}"
-      data-rating="1"
+      class="filter-item {{filterRating === 'bad' ? 'active' : ''}}"
+      data-rating="bad"
       bindtap="onFilterTap"
     >
-      差评({{stats.ratingStats[0].count || 0}})
+      差评({{stats.badCount || 0}})
     </view>
     <view 
       class="filter-item {{showImageOnly ? 'active' : ''}}"
@@ -61,7 +61,7 @@
     <view class="review-item" wx:for="{{reviews}}" wx:key="id">
       <!-- 用户信息 -->
       <view class="review-header">
-        <image class="user-avatar" src="{{item.user.avatar || '/images/default-avatar.png'}}" mode="aspectFill" />
+        <image class="user-avatar" src="{{item.user.avatar || '/images/default-avatar.png'}}" mode="aspectFill" binderror="onAvatarError" data-index="{{index}}" />
         <view class="user-info">
           <text class="user-name">{{item.user.nickname}}</text>
           <view class="review-stars">
@@ -101,7 +101,11 @@
 
       <!-- 点赞 -->
       <view class="review-actions">
-        <view class="action-btn" data-id="{{item.id}}" bindtap="onLikeTap">
+        <view 
+          class="action-btn {{item.is_liked ? 'liked' : ''}}" 
+          data-id="{{item.id}}" 
+          bindtap="onLikeTap"
+        >
           <text class="like-icon">👍</text>
           <text class="like-count">{{item.likes > 0 ? item.likes : '赞'}}</text>
         </view>

@@ -7,6 +7,9 @@ const { Admin, Order, Product, User } = require('../models')
 const { adminAuth } = require('../middleware/auth')
 const { Op } = require('sequelize')
 
+// 统一 JWT 密钥
+const JWT_SECRET = process.env.JWT_SECRET || 'snack-mall-secret-key-2026'
+
 // 管理员登录
 router.post('/login', async (req, res) => {
   try {
@@ -54,7 +57,7 @@ router.post('/login', async (req, res) => {
     // 生成token
     const token = jwt.sign(
       { id: admin.id, username: admin.username, role: admin.role },
-      process.env.JWT_SECRET || 'your-secret-key',
+      JWT_SECRET,
       { expiresIn: '7d' }
     )
 
@@ -2556,6 +2559,201 @@ router.put('/banners/:id/status', adminAuth, async (req, res) => {
       code: 500,
       message: '状态更新失败'
     })
+  }
+})
+
+// ========== 评价管理 ==========
+
+// 评价列表（分页+筛选）
+router.get('/reviews', adminAuth, async (req, res) => {
+  try {
+    const { Review, ReviewImage, User, Product } = require('../models')
+    const { page = 1, pageSize = 20, rating, status, keyword } = req.query
+    const offset = (page - 1) * pageSize
+    const where = {}
+
+    if (rating) where.rating = parseInt(rating)
+    if (status !== undefined && status !== '') where.status = parseInt(status)
+    if (keyword) {
+      where.content = { [Op.like]: `%${keyword}%` }
+    }
+
+    const { count, rows } = await Review.findAndCountAll({
+      where,
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'nickname', 'avatar'] },
+        { model: Product, as: 'product', attributes: ['id', 'name', 'cover'] },
+        { model: ReviewImage, as: 'images', attributes: ['id', 'image_url'] }
+      ],
+      order: [['created_at', 'DESC']],
+      limit: parseInt(pageSize),
+      offset
+    })
+
+    // 处理匿名
+    const list = rows.map(r => {
+      const d = r.toJSON()
+      if (d.is_anonymous === 1) {
+        d.user = { id: 0, nickname: '匿名用户', avatar: '' }
+      }
+      return d
+    })
+
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        list,
+        pagination: { total: count, page: parseInt(page), pageSize: parseInt(pageSize), totalPages: Math.ceil(count / pageSize) }
+      }
+    })
+  } catch (error) {
+    console.error('获取评价列表失败:', error)
+    res.json({ code: 500, message: '获取失败' })
+  }
+})
+
+// 评价统计
+router.get('/reviews/stats', adminAuth, async (req, res) => {
+  try {
+    const { Review, ReviewImage } = require('../models')
+    const total = await Review.count()
+    const pending = await Review.count({ where: { status: 0 } })
+    const good = await Review.count({ where: { rating: { [Op.gte]: 4 } } })
+    const withImages = await Review.count({
+      include: [{ model: ReviewImage, as: 'images', required: true }]
+    })
+    res.json({
+      code: 200,
+      data: { total, pending, good, withImages }
+    })
+  } catch (error) {
+    console.error('获取评价统计失败:', error)
+    res.json({ code: 500, message: '获取失败' })
+  }
+})
+
+// 回复评价
+router.put('/reviews/:id/reply', adminAuth, async (req, res) => {
+  try {
+    const { Review } = require('../models')
+    const { reply_content } = req.body
+    const review = await Review.findByPk(req.params.id)
+    if (!review) return res.json({ code: 404, message: '评价不存在' })
+    await review.update({ reply_content, reply_time: new Date() })
+    res.json({ code: 200, message: '回复成功' })
+  } catch (error) {
+    console.error('回复评价失败:', error)
+    res.json({ code: 500, message: '回复失败' })
+  }
+})
+
+// 审核评价
+router.put('/reviews/:id/status', adminAuth, async (req, res) => {
+  try {
+    const { Review } = require('../models')
+    const { status } = req.body
+    const review = await Review.findByPk(req.params.id)
+    if (!review) return res.json({ code: 404, message: '评价不存在' })
+    await review.update({ status: parseInt(status) })
+    res.json({ code: 200, message: '审核成功' })
+  } catch (error) {
+    console.error('审核评价失败:', error)
+    res.json({ code: 500, message: '审核失败' })
+  }
+})
+
+// 删除评价
+router.delete('/reviews/:id', adminAuth, async (req, res) => {
+  try {
+    const { Review, ReviewImage } = require('../models')
+    const review = await Review.findByPk(req.params.id)
+    if (!review) return res.json({ code: 404, message: '评价不存在' })
+    await ReviewImage.destroy({ where: { review_id: review.id } })
+    await review.destroy()
+    res.json({ code: 200, message: '删除成功' })
+  } catch (error) {
+    console.error('删除评价失败:', error)
+    res.json({ code: 500, message: '删除失败' })
+  }
+})
+
+// ========== 收藏管理 ==========
+
+// 收藏列表
+router.get('/favorites', adminAuth, async (req, res) => {
+  try {
+    const { Favorite, User, Product } = require('../models')
+    const { page = 1, pageSize = 20, keyword } = req.query
+    const offset = (page - 1) * pageSize
+    const where = {}
+
+    if (keyword) {
+      where[Op.or] = [
+        { '$product.name$': { [Op.like]: `%${keyword}%` } },
+        { '$user.nickname$': { [Op.like]: `%${keyword}%` } }
+      ]
+    }
+
+    const { count, rows } = await Favorite.findAndCountAll({
+      where,
+      include: [
+        { model: User, as: 'user', attributes: ['id', 'nickname', 'avatar'] },
+        { model: Product, as: 'product', attributes: ['id', 'name', 'cover', 'price'] }
+      ],
+      order: [['created_at', 'DESC']],
+      limit: parseInt(pageSize),
+      offset
+    })
+
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        list: rows,
+        pagination: { total: count, page: parseInt(page), pageSize: parseInt(pageSize), totalPages: Math.ceil(count / pageSize) }
+      }
+    })
+  } catch (error) {
+    console.error('获取收藏列表失败:', error)
+    res.json({ code: 500, message: '获取失败' })
+  }
+})
+
+// 收藏统计
+router.get('/favorites/stats', adminAuth, async (req, res) => {
+  try {
+    const { Favorite, Product } = require('../models')
+    const total = await Favorite.count()
+    // 收藏数最多的前10个商品
+    const topProducts = await Favorite.findAll({
+      attributes: ['product_id', [require('sequelize').fn('COUNT', require('sequelize').col('product_id')), 'count']],
+      group: ['product_id'],
+      order: [[require('sequelize').literal('count'), 'DESC']],
+      limit: 10,
+      include: [{ model: Product, as: 'product', attributes: ['id', 'name', 'cover'] }]
+    })
+    res.json({
+      code: 200,
+      data: { total, topProducts }
+    })
+  } catch (error) {
+    console.error('获取收藏统计失败:', error)
+    res.json({ code: 500, message: '获取失败' })
+  }
+})
+
+// 删除收藏
+router.delete('/favorites/:id', adminAuth, async (req, res) => {
+  try {
+    const { Favorite } = require('../models')
+    const favorite = await Favorite.findByPk(req.params.id)
+    if (!favorite) return res.json({ code: 404, message: '收藏不存在' })
+    await favorite.destroy()
+    res.json({ code: 200, message: '删除成功' })
+  } catch (error) {
+    console.error('删除收藏失败:', error)
+    res.json({ code: 500, message: '删除失败' })
   }
 })
 

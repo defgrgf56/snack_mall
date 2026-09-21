@@ -77,9 +77,9 @@
         <view class="review-item" wx:for="{{reviews}}" wx:key="id">
           <!-- 用户信息 -->
           <view class="review-user">
-            <image class="user-avatar" src="{{item.User.avatar || '/images/default-avatar.png'}}" mode="aspectFill"></image>
+            <image class="user-avatar" src="{{item.user.avatar || '/images/default-avatar.png'}}" mode="aspectFill" binderror="onReviewAvatarError" data-index="{{index}}"></image>
             <view class="user-info">
-              <view class="user-name">{{item.User.nickname || '匿名用户'}}</view>
+              <view class="user-name">{{item.user.nickname || '匿名用户'}}</view>
               <view class="review-stars-small">
                 <text class="star-small {{item.rating >= 1 ? 'filled' : ''}}">★</text>
                 <text class="star-small {{item.rating >= 2 ? 'filled' : ''}}">★</text>
@@ -100,8 +100,8 @@
               class="review-image" 
               wx:for="{{item.images}}" 
               wx:for-item="img" 
-              wx:key="index"
-              src="{{img}}" 
+              wx:key="id"
+              src="{{img.image_url}}" 
               mode="aspectFill"
             ></image>
           </view>

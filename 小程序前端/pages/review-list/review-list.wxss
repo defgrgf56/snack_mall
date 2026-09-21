@@ -198,10 +198,16 @@
   border-radius: 50rpx;
   font-size: 24rpx;
   color: #666;
+  transition: all 0.2s;
 }
 
 .action-btn:active {
   opacity: 0.7;
+}
+
+.action-btn.liked {
+  background: #fff3e6;
+  color: #ff6b00;
 }
 
 .like-icon {

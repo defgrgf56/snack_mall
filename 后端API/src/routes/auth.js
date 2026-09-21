@@ -5,6 +5,9 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const { User } = require('../models');
 
+// 统一 JWT 密钥
+const JWT_SECRET = process.env.JWT_SECRET || 'snack-mall-secret-key-2026';
+
 /**
  * 微信小程序登录
  * POST /api/auth/login
@@ -41,7 +44,7 @@ router.post('/login', async (req, res) => {
       // 生成 JWT token
       const token = jwt.sign(
         { userId: user.id, openid: user.openid },
-        process.env.JWT_SECRET || 'default_secret_key_for_development',
+        JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
       );
       
@@ -103,7 +106,7 @@ router.post('/login', async (req, res) => {
     // 生成 JWT token
     const token = jwt.sign(
       { userId: user.id, openid: user.openid },
-      process.env.JWT_SECRET,
+      JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
     
@@ -154,7 +157,7 @@ router.post('/dev-login', async (req, res) => {
 
     const token = jwt.sign(
       { userId: user.id, openid: user.openid },
-      process.env.JWT_SECRET || 'snack-mall-secret-key-2026',
+      JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
@@ -201,7 +204,7 @@ router.post('/update-profile', async (req, res) => {
       });
     }
     
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     const user = await User.findByPk(decoded.userId);
     
     if (!user) {

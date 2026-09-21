@@ -51,6 +51,18 @@ const routes = [
         component: () => import('@/views/product/CategoryList.vue'),
         meta: { title: '商品分类', icon: 'Menu' }
       },
+      {
+        path: 'reviews',
+        name: 'Reviews',
+        component: () => import('@/views/product/ReviewList.vue'),
+        meta: { title: '商品评价', icon: 'ChatDotSquare' }
+      },
+      {
+        path: 'favorites',
+        name: 'Favorites',
+        component: () => import('@/views/product/FavoriteList.vue'),
+        meta: { title: '商品收藏', icon: 'Star' }
+      },
       // 订单管理
       {
         path: 'orders',
