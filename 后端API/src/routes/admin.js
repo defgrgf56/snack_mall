@@ -2564,11 +2564,11 @@ router.put('/banners/:id/status', adminAuth, async (req, res) => {
 
 // ========== 评价管理 ==========
 
-// 评价列表（分页+筛选）
+// 评价列表（分页+筛选+排序）
 router.get('/reviews', adminAuth, async (req, res) => {
   try {
     const { Review, ReviewImage, User, Product } = require('../models')
-    const { page = 1, pageSize = 20, rating, status, keyword } = req.query
+    const { page = 1, pageSize = 20, rating, status, keyword, sortBy = 'created_at', sortOrder = 'DESC' } = req.query
     const offset = (page - 1) * pageSize
     const where = {}
 
@@ -2578,6 +2578,11 @@ router.get('/reviews', adminAuth, async (req, res) => {
       where.content = { [Op.like]: `%${keyword}%` }
     }
 
+    // 支持的排序字段：id、created_at、rating、status
+    const allowedSortBy = ['id', 'created_at', 'rating', 'status']
+    const finalSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'created_at'
+    const finalSortOrder = ['ASC', 'DESC'].includes(sortOrder.toUpperCase()) ? sortOrder.toUpperCase() : 'DESC'
+
     const { count, rows } = await Review.findAndCountAll({
       where,
       include: [
@@ -2585,7 +2590,7 @@ router.get('/reviews', adminAuth, async (req, res) => {
         { model: Product, as: 'product', attributes: ['id', 'name', 'cover'] },
         { model: ReviewImage, as: 'images', attributes: ['id', 'image_url'] }
       ],
-      order: [['created_at', 'DESC']],
+      order: [[finalSortBy, finalSortOrder]],
       limit: parseInt(pageSize),
       offset
     })

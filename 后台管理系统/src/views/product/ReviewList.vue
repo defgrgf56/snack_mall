@@ -74,6 +74,30 @@
               <el-option label="待审核" :value="0" />
               <el-option label="已拒绝" :value="2" />
             </el-select>
+            <div class="sort-btns">
+              <el-button
+                :type="sorting.sortBy === 'created_at' ? 'primary' : ''"
+                @click="handleSort('created_at')"
+                size="small"
+              >
+                时间
+                <el-icon v-if="sorting.sortBy === 'created_at'" :size="12" style="margin-left:2px;">
+                  <ArrowUp v-if="sorting.sortOrder === 'ASC'" />
+                  <ArrowDown v-else />
+                </el-icon>
+              </el-button>
+              <el-button
+                :type="sorting.sortBy === 'rating' ? 'primary' : ''"
+                @click="handleSort('rating')"
+                size="small"
+              >
+                评分
+                <el-icon v-if="sorting.sortBy === 'rating'" :size="12" style="margin-left:2px;">
+                  <ArrowUp v-if="sorting.sortOrder === 'ASC'" />
+                  <ArrowDown v-else />
+                </el-icon>
+              </el-button>
+            </div>
             <el-button @click="fetchList"><el-icon><Refresh /></el-icon></el-button>
           </div>
         </div>
@@ -186,7 +210,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, ChatDotSquare, Clock, CircleCheck, Picture, User } from '@element-plus/icons-vue'
+import { Search, Refresh, ChatDotSquare, Clock, CircleCheck, Picture, User, ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const loading = ref(false)
@@ -194,6 +218,7 @@ const list = ref([])
 const stats = reactive({ total: 0, pending: 0, good: 0, withImages: 0 })
 const pagination = reactive({ page: 1, pageSize: 20, total: 0 })
 const filters = reactive({ keyword: '', rating: '', status: '' })
+const sorting = reactive({ sortBy: 'created_at', sortOrder: 'DESC' })
 
 const replyDialog = reactive({ visible: false, loading: false, id: null, content: '' })
 
@@ -224,6 +249,8 @@ const fetchList = async () => {
     if (filters.keyword) params.keyword = filters.keyword
     if (filters.rating) params.rating = filters.rating
     if (filters.status !== '' && filters.status !== undefined) params.status = filters.status
+    params.sortBy = sorting.sortBy
+    params.sortOrder = sorting.sortOrder
     const res = await request.get('/admin/reviews', { params })
     list.value = res.list || []
     pagination.total = res.pagination?.total || 0
@@ -232,6 +259,17 @@ const fetchList = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleSort = (field) => {
+  if (sorting.sortBy === field) {
+    sorting.sortOrder = sorting.sortOrder === 'DESC' ? 'ASC' : 'DESC'
+  } else {
+    sorting.sortBy = field
+    sorting.sortOrder = 'DESC'
+  }
+  pagination.page = 1
+  fetchList()
 }
 
 const handleReply = (row) => {
@@ -312,4 +350,5 @@ onMounted(() => {
 .text-muted { color: #c0c4cc; font-size: 13px; }
 .time-text { font-size: 13px; color: #909399; }
 .pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
+.sort-btns { display: flex; gap: 4px; margin-right: 10px; }
 </style>
