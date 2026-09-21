@@ -2766,8 +2766,8 @@ router.get('/favorites/stats', adminAuth, async (req, res) => {
 
     // 收藏数最多的前10个商品
     const topProducts = await Favorite.findAll({
-      attributes: ['product_id', [require('sequelize').fn('COUNT', require('sequelize').col('product_id')), 'count']],
-      group: ['product_id'],
+      attributes: ['product_id', [require('sequelize').fn('COUNT', require('sequelize').col('Favorite.product_id')), 'count']],
+      group: ['product_id', 'product.id', 'product.name', 'product.cover'],
       order: [[require('sequelize').literal('count'), 'DESC']],
       limit: 10,
       include: [{ model: Product, as: 'product', attributes: ['id', 'name', 'cover'] }]
@@ -2775,8 +2775,8 @@ router.get('/favorites/stats', adminAuth, async (req, res) => {
 
     // 收藏最多的前10个用户
     const topUsers = await Favorite.findAll({
-      attributes: ['user_id', [require('sequelize').fn('COUNT', require('sequelize').col('user_id')), 'count']],
-      group: ['user_id'],
+      attributes: ['user_id', [require('sequelize').fn('COUNT', require('sequelize').col('Favorite.user_id')), 'count']],
+      group: ['user_id', 'user.id', 'user.nickname', 'user.avatar'],
       order: [[require('sequelize').literal('count'), 'DESC']],
       limit: 10,
       include: [{ model: User, as: 'user', attributes: ['id', 'nickname', 'avatar'] }]
