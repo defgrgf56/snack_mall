@@ -2592,7 +2592,8 @@ router.get('/reviews', adminAuth, async (req, res) => {
       ],
       order: [[finalSortBy, finalSortOrder]],
       limit: parseInt(pageSize),
-      offset
+      offset,
+      distinct: true
     })
 
     // 处理匿名
@@ -2626,7 +2627,8 @@ router.get('/reviews/stats', adminAuth, async (req, res) => {
     const pending = await Review.count({ where: { status: 0 } })
     const good = await Review.count({ where: { rating: { [Op.gte]: 4 } } })
     const withImages = await Review.count({
-      include: [{ model: ReviewImage, as: 'images', required: true }]
+      include: [{ model: ReviewImage, as: 'images', required: true }],
+      distinct: true
     })
     res.json({
       code: 200,
