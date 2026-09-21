@@ -2765,21 +2765,31 @@ router.get('/favorites/stats', adminAuth, async (req, res) => {
     const uniqueUsers = await Favorite.count({ col: 'user_id', distinct: true })
 
     // 收藏数最多的前10个商品
-    const topProducts = await Favorite.findAll({
+    const topProductsRaw = await Favorite.findAll({
       attributes: ['product_id', [require('sequelize').fn('COUNT', require('sequelize').col('Favorite.product_id')), 'count']],
       group: ['product_id', 'product.id', 'product.name', 'product.cover'],
       order: [[require('sequelize').literal('count'), 'DESC']],
       limit: 10,
       include: [{ model: Product, as: 'product', attributes: ['id', 'name', 'cover'] }]
     })
+    const topProducts = topProductsRaw.map(r => {
+      const d = r.toJSON()
+      d.count = parseInt(r.get('count')) || parseInt(d.count) || 0
+      return d
+    })
 
     // 收藏最多的前10个用户
-    const topUsers = await Favorite.findAll({
+    const topUsersRaw = await Favorite.findAll({
       attributes: ['user_id', [require('sequelize').fn('COUNT', require('sequelize').col('Favorite.user_id')), 'count']],
       group: ['user_id', 'user.id', 'user.nickname', 'user.avatar'],
       order: [[require('sequelize').literal('count'), 'DESC']],
       limit: 10,
       include: [{ model: User, as: 'user', attributes: ['id', 'nickname', 'avatar'] }]
+    })
+    const topUsers = topUsersRaw.map(r => {
+      const d = r.toJSON()
+      d.count = parseInt(r.get('count')) || parseInt(d.count) || 0
+      return d
     })
 
     res.json({

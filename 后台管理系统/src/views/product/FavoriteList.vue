@@ -58,7 +58,7 @@
               <div class="rank-badge" :class="`rank-${idx + 1}`">{{ idx + 1 }}</div>
               <el-image :src="item.product?.cover" style="width: 36px; height: 36px; border-radius: 4px;" fit="cover" lazy />
               <span class="rank-name">{{ item.product?.name || '-' }}</span>
-              <span class="rank-count">{{ item.dataValues?.count || 0 }} 次</span>
+              <span class="rank-count">{{ item.count || 0 }} 次</span>
             </div>
           </div>
           <el-empty v-else description="暂无数据" :image-size="60" />
@@ -74,7 +74,7 @@
                 <el-icon :size="14"><User /></el-icon>
               </el-avatar>
               <span class="rank-name">{{ item.user?.nickname || '匿名' }}</span>
-              <span class="rank-count">{{ item.dataValues?.count || 0 }} 个收藏</span>
+              <span class="rank-count">{{ item.count || 0 }} 个收藏</span>
             </div>
           </div>
           <el-empty v-else description="暂无数据" :image-size="60" />
