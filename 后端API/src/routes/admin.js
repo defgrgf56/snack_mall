@@ -386,11 +386,11 @@ router.get('/sales-trend', adminAuth, async (req, res) => {
     const salesData = await Order.findAll({
       attributes: [
         [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
-        [sequelize.fn('SUM', sequelize.col('total_amount')), 'amount']
+        [sequelize.fn('SUM', sequelize.col('pay_amount')), 'amount']
       ],
       where: {
         created_at: { [Op.gte]: sevenDaysAgo },
-        status: { [Op.in]: [2, 3, 4] }
+        status: { [Op.in]: [1, 2, 3] }
       },
       group: [sequelize.fn('DATE', sequelize.col('created_at'))],
       order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']],
