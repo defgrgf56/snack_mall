@@ -74,21 +74,12 @@
               <el-option label="待审核" :value="0" />
               <el-option label="已拒绝" :value="2" />
             </el-select>
-            <el-dropdown @command="handleSort" trigger="click">
-              <el-button size="small">
-                <el-icon style="margin-right:4px;"><Sort /></el-icon>
-                {{ currentSortLabel }}
-                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="created_at:DESC" :class="{ 'is-active': sorting.sortBy === 'created_at' && sorting.sortOrder === 'DESC' }">最新发布</el-dropdown-item>
-                  <el-dropdown-item command="created_at:ASC" :class="{ 'is-active': sorting.sortBy === 'created_at' && sorting.sortOrder === 'ASC' }">最早发布</el-dropdown-item>
-                  <el-dropdown-item command="rating:DESC" divided :class="{ 'is-active': sorting.sortBy === 'rating' && sorting.sortOrder === 'DESC' }">评分最高</el-dropdown-item>
-                  <el-dropdown-item command="rating:ASC" :class="{ 'is-active': sorting.sortBy === 'rating' && sorting.sortOrder === 'ASC' }">评分最低</el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+            <el-select v-model="currentSortOption" @change="handleSort" style="width: 130px; margin-right: 10px;" size="small">
+              <el-option label="最新发布" value="created_at:DESC" />
+              <el-option label="最早发布" value="created_at:ASC" />
+              <el-option label="评分最高" value="rating:DESC" />
+              <el-option label="评分最低" value="rating:ASC" />
+            </el-select>
             <el-button @click="fetchList"><el-icon><Refresh /></el-icon></el-button>
           </div>
         </div>
@@ -199,9 +190,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, ChatDotSquare, Clock, CircleCheck, Picture, User, ArrowDown, Sort } from '@element-plus/icons-vue'
+import { Search, Refresh, ChatDotSquare, Clock, CircleCheck, Picture, User } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
 const loading = ref(false)
@@ -210,6 +201,7 @@ const stats = reactive({ total: 0, pending: 0, good: 0, withImages: 0 })
 const pagination = reactive({ page: 1, pageSize: 20, total: 0 })
 const filters = reactive({ keyword: '', rating: '', status: '' })
 const sorting = reactive({ sortBy: 'created_at', sortOrder: 'DESC' })
+const currentSortOption = ref('created_at:DESC')
 
 const replyDialog = reactive({ visible: false, loading: false, id: null, content: '' })
 
@@ -258,10 +250,9 @@ const sortLabelMap = {
   'rating:DESC': '评分最高',
   'rating:ASC': '评分最低'
 }
-const currentSortLabel = computed(() => sortLabelMap[`${sorting.sortBy}:${sorting.sortOrder}`] || '排序')
 
-const handleSort = (command) => {
-  const [sortBy, sortOrder] = command.split(':')
+const handleSort = (val) => {
+  const [sortBy, sortOrder] = val.split(':')
   sorting.sortBy = sortBy
   sorting.sortOrder = sortOrder
   pagination.page = 1
@@ -346,5 +337,4 @@ onMounted(() => {
 .text-muted { color: #c0c4cc; font-size: 13px; }
 .time-text { font-size: 13px; color: #909399; }
 .pagination-wrap { display: flex; justify-content: flex-end; margin-top: 16px; }
-:deep(.is-active) { color: var(--el-color-primary); font-weight: bold; }
 </style>
