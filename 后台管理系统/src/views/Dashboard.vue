@@ -117,25 +117,59 @@
 
     <!-- 图表区域 -->
     <el-row :gutter="20" style="margin-top: 20px;">
+      <!-- 销售趋势 -->
       <el-col :span="12" :xs="24" :md="12">
-        <el-card>
+        <el-card class="chart-card">
           <template #header>
             <div class="card-header">
-              <span>销售趋势（最近7天）</span>
+              <div class="card-title-group">
+                <span class="card-title">销售趋势（最近7天）</span>
+                <span class="card-subtitle">单位：元 | 统计维度：销售额</span>
+              </div>
             </div>
           </template>
-          <div ref="salesChartRef" style="height: 300px;"></div>
+          <!-- 指标小卡片 -->
+          <div class="chart-indicators">
+            <div class="indicator-item">
+              <div class="indicator-value">¥{{ formatMoney(salesTrendStats.totalSales) }}</div>
+              <div class="indicator-label">总销售额</div>
+            </div>
+            <div class="indicator-item">
+              <div class="indicator-value">¥{{ formatMoney(salesTrendStats.dailyAvg) }}</div>
+              <div class="indicator-label">日均销售额</div>
+            </div>
+          </div>
+          <!-- 图表或空状态 -->
+          <div v-if="hasSalesData" ref="salesChartRef" class="chart-container"></div>
+          <div v-else class="chart-empty">
+            <el-empty description="近 7 天暂无销售数据" :image-size="80" />
+          </div>
         </el-card>
       </el-col>
 
+      <!-- 热销商品 -->
       <el-col :span="12" :xs="24" :md="12">
-        <el-card>
+        <el-card class="chart-card">
           <template #header>
             <div class="card-header">
-              <span>热销商品TOP10</span>
+              <div class="card-title-group">
+                <span class="card-title">热销商品 TOP10</span>
+                <span class="card-subtitle">按销量倒序</span>
+              </div>
             </div>
           </template>
-          <div ref="hotProductsChartRef" style="height: 300px;"></div>
+          <!-- 指标小卡片 -->
+          <div class="chart-indicators">
+            <div class="indicator-item">
+              <div class="indicator-value">{{ formatNumber(hotProductsStats.totalSales) }} 件</div>
+              <div class="indicator-label">TOP10 合计销量</div>
+            </div>
+          </div>
+          <!-- 图表或空状态 -->
+          <div v-if="hasHotProductsData" ref="hotProductsChartRef" class="chart-container"></div>
+          <div v-else class="chart-empty">
+            <el-empty description="暂无热销商品数据" :image-size="80" />
+          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -192,6 +226,23 @@ const hotProductsChartRef = ref(null)
 let salesChart = null
 let hotProductsChart = null
 
+// 数据状态
+const hasSalesData = ref(false)
+const hasHotProductsData = ref(false)
+let salesRawData = []
+let hotProductsRawData = []
+
+// 销售趋势统计
+const salesTrendStats = reactive({
+  totalSales: 0,
+  dailyAvg: 0
+})
+
+// 热销商品统计
+const hotProductsStats = reactive({
+  totalSales: 0
+})
+
 const stats = reactive({
   productCount: 0,
   orderCount: 0,
@@ -215,7 +266,7 @@ const formatNumber = (num) => {
 
 // 格式化金额（保留两位小数）
 const formatMoney = (num) => {
-  if (!num) return '0.00'
+  if (!num && num !== 0) return '0.00'
   return parseFloat(num).toFixed(2)
 }
 
@@ -260,7 +311,6 @@ const fetchStats = async () => {
     stats.userCount = res.totalUsers || 0
     stats.productCount = res.totalProducts || 0
     
-    // 更新订单状态统计
     if (res.orderStats) {
       stats.orderStats = res.orderStats
     }
@@ -286,7 +336,19 @@ const fetchRecentOrders = async () => {
 const fetchSalesTrend = async () => {
   try {
     const res = await request.get('/admin/sales-trend')
-    if (res && res.length > 0) {
+    salesRawData = res || []
+    
+    // 计算统计指标
+    const totalSales = res.reduce((sum, item) => sum + (item.amount || 0), 0)
+    const daysWithData = res.filter(item => item.amount > 0).length || 7
+    salesTrendStats.totalSales = totalSales
+    salesTrendStats.dailyAvg = totalSales / daysWithData
+    
+    // 判断是否有数据
+    hasSalesData.value = totalSales > 0
+    
+    if (hasSalesData.value) {
+      await nextTick()
       renderSalesChart(res)
     }
   } catch (error) {
@@ -298,7 +360,17 @@ const fetchSalesTrend = async () => {
 const fetchHotProducts = async () => {
   try {
     const res = await request.get('/admin/hot-products')
-    if (res && res.length > 0) {
+    hotProductsRawData = res || []
+    
+    // 计算统计指标
+    const totalSales = res.reduce((sum, item) => sum + (item.total_sales || 0), 0)
+    hotProductsStats.totalSales = totalSales
+    
+    // 判断是否有数据
+    hasHotProductsData.value = totalSales > 0
+    
+    if (hasHotProductsData.value) {
+      await nextTick()
       renderHotProductsChart(res)
     }
   } catch (error) {
@@ -324,13 +396,14 @@ const renderSalesChart = (data) => {
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#eee',
+      borderColor: '#e8e8e8',
       borderWidth: 1,
-      textStyle: { color: '#333' },
+      textStyle: { color: '#333', fontSize: 13 },
       formatter: (params) => {
         const item = params[0]
-        return `<div style="font-weight:bold;margin-bottom:5px">${item.name}</div>
-                <div>销售额: <span style="color:#409eff;font-weight:bold">¥${item.value.toFixed(2)}</span></div>`
+        const date = data[item.dataIndex].date
+        return `<div style="font-weight:600;margin-bottom:6px;color:#333">${item.name}</div>
+                <div style="color:#666">销售额：<span style="color:#409eff;font-weight:600">¥${item.value.toFixed(2)}</span></div>`
       }
     },
     xAxis: {
@@ -338,14 +411,15 @@ const renderSalesChart = (data) => {
       data: dates,
       boundaryGap: false,
       axisLine: { lineStyle: { color: '#e0e0e0' } },
-      axisLabel: { color: '#666', fontSize: 12 },
+      axisLabel: { color: '#888', fontSize: 12 },
       axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
+      min: 0,
       axisLabel: {
-        formatter: '¥{value}',
-        color: '#666'
+        formatter: (value) => value >= 1000 ? (value / 1000).toFixed(1) + 'k' : value,
+        color: '#888'
       },
       splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } },
       axisLine: { show: false },
@@ -355,57 +429,41 @@ const renderSalesChart = (data) => {
       name: '销售额',
       type: 'line',
       data: amounts,
-      smooth: 0.4,
+      smooth: 0.3,
       symbol: 'circle',
-      symbolSize: 8,
+      symbolSize: 6,
       showSymbol: true,
       emphasis: {
         focus: 'series',
-        itemStyle: { borderWidth: 3, borderColor: '#fff' }
+        itemStyle: { borderWidth: 2, borderColor: '#fff' }
       },
       areaStyle: {
         color: {
           type: 'linear',
           x: 0, y: 0, x2: 0, y2: 1,
           colorStops: [
-            { offset: 0, color: 'rgba(64, 158, 255, 0.25)' },
-            { offset: 1, color: 'rgba(64, 158, 255, 0.02)' }
+            { offset: 0, color: 'rgba(64, 158, 255, 0.15)' },
+            { offset: 1, color: 'rgba(64, 158, 255, 0.01)' }
           ]
         }
       },
       lineStyle: {
         color: '#409eff',
-        width: 3,
-        shadowColor: 'rgba(64, 158, 255, 0.3)',
-        shadowBlur: 8,
-        shadowOffsetY: 4
+        width: 2
       },
       itemStyle: {
         color: '#409eff',
         borderColor: '#fff',
         borderWidth: 2
       },
-      markPoint: {
-        data: [
-          {
-            type: 'max',
-            name: '最高',
-            symbol: 'pin',
-            symbolSize: 50,
-            label: { formatter: '¥{c}', fontSize: 11 },
-            itemStyle: { color: '#409eff' }
-          }
-        ],
-        animation: true
-      },
-      animationDuration: 1000,
+      animationDuration: 800,
       animationEasing: 'cubicOut'
     }],
     grid: {
-      left: '60',
+      left: '50',
       right: '20',
-      bottom: '30',
-      top: '30'
+      bottom: '25',
+      top: '15'
     }
   }
   
@@ -420,47 +478,43 @@ const renderHotProductsChart = (data) => {
     hotProductsChart = echarts.init(hotProductsChartRef.value)
   }
   
-  // 为商品名称添加排名标识
-  const names = data.map((item, index) => {
-    const rank = index + 1
-    const prefix = rank <= 3 ? `🥇🥈🥉`[rank - 1] + ' ' : `${rank}. `
-    const name = item.name.length > 12 ? item.name.substring(0, 12) + '...' : item.name
-    return prefix + name
+  // 商品名称：超过12字截断
+  const names = data.map(item => {
+    return item.name.length > 12 ? item.name.substring(0, 12) + '...' : item.name
   })
   
   const sales = data.map(item => item.total_sales)
+  const maxSales = Math.max(...sales)
   
-  // 根据排名设置不同颜色
-  const colors = data.map((_, index) => {
-    if (index === 0) return { start: '#ff6b6b', end: '#ee5a5a' }      // 金色
-    if (index === 1) return { start: '#ffa94d', end: '#ff922b' }      // 银色
-    if (index === 2) return { start: '#ffd43b', end: '#fcc419' }      // 铜色
-    return { start: '#69db7c', end: '#51cf66' }                       // 绿色
-  })
+  // 单色渐变：TOP1最深，TOP10最浅
+  const getColor = (index, total) => {
+    const ratio = index / Math.max(total - 1, 1)
+    // 从深到浅的渐变（品牌蓝色系）
+    const r = Math.round(64 + ratio * 60)
+    const g = Math.round(158 - ratio * 50)
+    const b = Math.round(255 - ratio * 80)
+    return `rgb(${r}, ${g}, ${b})`
+  }
   
   const option = {
     tooltip: {
       trigger: 'axis',
-      axisPointer: {
-        type: 'shadow'
-      },
+      axisPointer: { type: 'shadow' },
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#eee',
+      borderColor: '#e8e8e8',
       borderWidth: 1,
-      textStyle: { color: '#333' },
+      textStyle: { color: '#333', fontSize: 13 },
       formatter: (params) => {
         const item = params[0]
         const rank = item.dataIndex + 1
-        return `<div style="font-weight:bold;margin-bottom:5px">
-                  ${rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : ''} 第${rank}名
-                </div>
-                <div style="margin-bottom:3px">商品: ${data[item.dataIndex].name}</div>
-                <div>销量: <span style="color:#67c23a;font-weight:bold">${item.value}件</span></div>`
+        return `<div style="font-weight:600;margin-bottom:6px;color:#333">第 ${rank} 名</div>
+                <div style="color:#666;margin-bottom:4px">商品：${data[item.dataIndex].name}</div>
+                <div style="color:#666">销量：<span style="color:#409eff;font-weight:600">${item.value} 件</span></div>`
       }
     },
     xAxis: {
       type: 'value',
-      axisLabel: { color: '#666' },
+      axisLabel: { color: '#888', fontSize: 11 },
       splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } },
       axisLine: { show: false },
       axisTick: { show: false }
@@ -471,42 +525,45 @@ const renderHotProductsChart = (data) => {
       axisLabel: {
         interval: 0,
         color: '#333',
-        fontSize: 12
+        fontSize: 12,
+        width: 110,
+        overflow: 'truncate'
       },
       axisLine: { show: false },
-      axisTick: { show: false }
+      axisTick: { show: false },
+      inverse: true
     },
     series: [{
       name: '销量',
       type: 'bar',
       data: sales.map((value, index) => ({
         value,
+        label: {
+          show: true,
+          position: 'right',
+          formatter: `${value} 件`,
+          color: '#666',
+          fontSize: 12
+        },
         itemStyle: {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 1, y2: 0,
-            colorStops: [
-              { offset: 0, color: colors[index].start },
-              { offset: 1, color: colors[index].end }
-            ]
-          },
+          color: getColor(index, data.length),
           borderRadius: [0, 4, 4, 0]
         }
       })),
-      barWidth: 24,
+      barWidth: 20,
       emphasis: {
         itemStyle: {
-          shadowBlur: 10,
-          shadowColor: 'rgba(0, 0, 0, 0.2)'
+          shadowBlur: 8,
+          shadowColor: 'rgba(0, 0, 0, 0.15)'
         }
       },
-      animationDuration: 1000,
+      animationDuration: 800,
       animationEasing: 'cubicOut'
     }],
     grid: {
-      left: '140',
-      right: '30',
-      bottom: '20',
+      left: '130',
+      right: '60',
+      bottom: '35',
       top: '10'
     }
   }
@@ -532,13 +589,13 @@ const refreshData = async () => {
 // 获取订单状态类型
 const getStatusType = (status) => {
   const map = {
-    1: 'warning',   // 待付款
-    2: 'success',   // 待发货
-    3: 'primary',   // 已发货
-    4: 'info',      // 已完成
-    5: 'info',      // 已完成
-    6: 'danger',    // 已取消
-    7: 'danger'     // 已退款
+    1: 'warning',
+    2: 'success',
+    3: 'primary',
+    4: 'info',
+    5: 'info',
+    6: 'danger',
+    7: 'danger'
   }
   return map[status] || 'info'
 }
@@ -571,7 +628,6 @@ onMounted(async () => {
       fetchRecentOrders()
     ])
     
-    // 等待DOM更新后再渲染图表
     await nextTick()
     await fetchSalesTrend()
     await fetchHotProducts()
@@ -579,12 +635,10 @@ onMounted(async () => {
     loading.value = false
   }
   
-  // 监听窗口大小变化
   window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
-  // 销毁图表实例
   if (salesChart) {
     salesChart.dispose()
     salesChart = null
@@ -668,7 +722,74 @@ onUnmounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-weight: bold;
+  }
+
+  .card-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .card-title {
+    font-weight: 600;
+    font-size: 16px;
+    color: #303133;
+  }
+
+  .card-subtitle {
+    font-size: 12px;
+    color: #909399;
+    font-weight: normal;
+  }
+
+  .chart-card {
+    :deep(.el-card__header) {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    :deep(.el-card__body) {
+      padding: 16px 20px;
+    }
+  }
+
+  .chart-indicators {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+
+    .indicator-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .indicator-value {
+        font-size: 20px;
+        font-weight: 600;
+        color: #303133;
+      }
+
+      .indicator-label {
+        font-size: 12px;
+        color: #909399;
+      }
+    }
+  }
+
+  .chart-container {
+    height: 260px;
+  }
+
+  .chart-empty {
+    height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fafafa;
+    border-radius: 8px;
   }
 }
 </style>

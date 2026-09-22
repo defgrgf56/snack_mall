@@ -50,6 +50,7 @@ const ReviewImage = require('./ReviewImage')(sequelize)
 const Feedback = require('./Feedback')(sequelize)
 const SearchHistory = require('./SearchHistory')(sequelize)
 const SearchHot = require('./SearchHot')(sequelize)
+const AdminNotification = require('./AdminNotification')(sequelize)
 
 // 定义关联关系
 // 用户 - 地址
@@ -193,5 +194,6 @@ module.exports = {
   ReviewImage,
   Feedback,
   SearchHistory,
-  SearchHot
+  SearchHot,
+  AdminNotification
 }

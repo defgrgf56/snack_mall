@@ -111,6 +111,21 @@ router.post('/', authenticateToken, async (req, res) => {
     
     await transaction.commit();
     
+    // 发送管理员通知（异步，不阻塞响应）
+    const { notifyNewReview } = require('../services/adminNotificationService');
+    Promise.all([
+      User.findByPk(req.userId, { attributes: ['id', 'nickname'] }),
+      Product.findByPk(orderItem.product_id, { attributes: ['id', 'name'] })
+    ]).then(([user, product]) => {
+      notifyNewReview(
+        review.id,
+        user?.nickname || '未知用户',
+        product?.name || '未知商品',
+        rating,
+        content || ''
+      );
+    }).catch(() => {});
+
     res.json({
       code: 200,
       message: '评价成功',

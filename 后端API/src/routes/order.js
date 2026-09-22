@@ -267,6 +267,13 @@ router.post('/', authenticateToken, async (req, res) => {
     
     await transaction.commit();
     
+    // 发送管理员通知（异步，不阻塞响应）
+    const { User } = require('../models');
+    const { notifyNewOrder } = require('../services/adminNotificationService');
+    User.findByPk(req.userId, { attributes: ['id', 'nickname'] }).then(user => {
+      notifyNewOrder(order.id, order.order_no, user?.nickname || '未知用户', totalAmount.toFixed(2));
+    }).catch(() => {});
+
     res.json({
       code: 200,
       message: '订单创建成功',

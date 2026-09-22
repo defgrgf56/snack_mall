@@ -567,7 +567,7 @@ onMounted(() => {
 .search-section {
   margin-bottom: 20px;
   padding: 16px;
-  background: #f5f7fa;
+  background: var(--search-bg);
   border-radius: 4px;
 }
 
@@ -614,8 +614,8 @@ onMounted(() => {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #f5f7fa;
-  color: #909399;
+  background: var(--search-bg);
+  color: var(--text-secondary);
   font-size: 24px;
 }
 
@@ -627,7 +627,7 @@ onMounted(() => {
 .product-name {
   font-size: 14px;
   font-weight: 500;
-  color: #303133;
+  color: var(--text-primary);
   margin-bottom: 8px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -655,8 +655,8 @@ onMounted(() => {
 }
 
 :deep(.el-table th) {
-  background-color: #f5f7fa;
-  color: #606266;
+  background-color: var(--search-bg);
+  color: var(--text-regular);
   font-weight: 600;
 }
 
@@ -712,14 +712,14 @@ onMounted(() => {
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #303133;
+  color: var(--text-primary);
   line-height: 1.2;
   margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #909399;
+  color: var(--text-secondary);
   line-height: 1;
 }
 </style>

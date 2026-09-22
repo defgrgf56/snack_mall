@@ -402,7 +402,11 @@ router.get('/sales-trend', adminAuth, async (req, res) => {
     for (let i = 0; i < 7; i++) {
       const date = new Date(sevenDaysAgo)
       date.setDate(date.getDate() + i)
-      const dateStr = date.toISOString().split('T')[0]
+      // 使用本地时间生成日期字符串，避免时区问题
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
       
       const found = salesData.find(item => item.date === dateStr)
       result.push({
@@ -2828,6 +2832,117 @@ router.post('/favorites/batch-delete', adminAuth, async (req, res) => {
     res.json({ code: 200, message: `成功删除 ${ids.length} 条记录` })
   } catch (error) {
     console.error('批量删除收藏失败:', error)
+    res.json({ code: 500, message: '删除失败' })
+  }
+})
+
+// ==================== 管理员通知 ====================
+
+/**
+ * 获取管理员通知列表
+ * GET /api/admin/notifications
+ */
+router.get('/notifications', adminAuth, async (req, res) => {
+  try {
+    const { AdminNotification } = require('../models')
+    const { page = 1, pageSize = 20, type, is_read } = req.query
+
+    const where = {}
+    if (type) where.type = type
+    if (is_read !== undefined && is_read !== '') {
+      where.is_read = parseInt(is_read)
+    }
+
+    const { count, rows } = await AdminNotification.findAndCountAll({
+      where,
+      order: [['created_at', 'DESC']],
+      limit: parseInt(pageSize),
+      offset: (parseInt(page) - 1) * parseInt(pageSize)
+    })
+
+    const unreadCount = await AdminNotification.count({ where: { is_read: 0 } })
+
+    res.json({
+      code: 200,
+      message: '获取成功',
+      data: {
+        list: rows,
+        total: count,
+        unreadCount,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize)
+      }
+    })
+  } catch (error) {
+    console.error('获取管理员通知失败:', error)
+    res.json({ code: 500, message: '获取失败' })
+  }
+})
+
+/**
+ * 获取管理员未读通知数
+ * GET /api/admin/notifications/unread-count
+ */
+router.get('/notifications/unread-count', adminAuth, async (req, res) => {
+  try {
+    const { AdminNotification } = require('../models')
+    const count = await AdminNotification.count({ where: { is_read: 0 } })
+    res.json({ code: 200, data: { count } })
+  } catch (error) {
+    console.error('获取未读通知数失败:', error)
+    res.json({ code: 500, message: '获取失败' })
+  }
+})
+
+/**
+ * 标记通知已读
+ * PUT /api/admin/notifications/:id/read
+ */
+router.put('/notifications/:id/read', adminAuth, async (req, res) => {
+  try {
+    const { AdminNotification } = require('../models')
+    const notification = await AdminNotification.findByPk(req.params.id)
+    if (!notification) {
+      return res.json({ code: 404, message: '通知不存在' })
+    }
+    await notification.update({ is_read: 1 })
+    res.json({ code: 200, message: '标记成功' })
+  } catch (error) {
+    console.error('标记已读失败:', error)
+    res.json({ code: 500, message: '标记失败' })
+  }
+})
+
+/**
+ * 全部标记已读
+ * PUT /api/admin/notifications/read-all
+ */
+router.put('/notifications/read-all', adminAuth, async (req, res) => {
+  try {
+    const { AdminNotification } = require('../models')
+    await AdminNotification.update({ is_read: 1 }, { where: { is_read: 0 } })
+    res.json({ code: 200, message: '全部已读' })
+  } catch (error) {
+    console.error('全部标记已读失败:', error)
+    res.json({ code: 500, message: '操作失败' })
+  }
+})
+
+/**
+ * 删除通知
+ * DELETE /api/admin/notifications/:id
+ */
+router.delete('/notifications/:id', adminAuth, async (req, res) => {
+  try {
+    const { AdminNotification } = require('../models')
+    const notification = await AdminNotification.findByPk(req.params.id)
+    if (!notification) {
+      return res.json({ code: 404, message: '通知不存在' })
+    }
+    await notification.destroy()
+    res.json({ code: 200, message: '删除成功' })
+  } catch (error) {
+    console.error('删除通知失败:', error)
     res.json({ code: 500, message: '删除失败' })
   }
 })

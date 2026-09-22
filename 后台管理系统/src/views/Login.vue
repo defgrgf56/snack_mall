@@ -1,5 +1,6 @@
 <template>
   <div class="login-container">
+    <MeteorShower :enabled="enabled" :max-meteors="20" :star-count="120" />
     <div class="login-box">
       <h2 class="login-title">零食商城后台管理系统</h2>
       <el-form
@@ -51,11 +52,14 @@
 import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useMeteorShower } from '@/composables/useMeteorShower'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'
+import MeteorShower from '@/components/MeteorShower.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { enabled } = useMeteorShower()
 const loginFormRef = ref()
 const loading = ref(false)
 
@@ -91,19 +95,24 @@ const handleLogin = async () => {
 
 <style scoped lang="scss">
 .login-container {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #1a1040 100%);
+  overflow: hidden;
 }
 
 .login-box {
+  position: relative;
+  z-index: 1;
   width: 400px;
   padding: 40px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .login-title {

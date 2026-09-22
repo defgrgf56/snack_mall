@@ -1,5 +1,6 @@
 // src/app.js - 应用入口文件
 require('dotenv').config()
+const http = require('http')
 const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
@@ -8,9 +9,15 @@ const logger = require('./utils/logger')
 const { sequelize } = require('./models')
 const routes = require('./routes')
 const { errorHandler } = require('./middleware/errorHandler')
+const AdminWebSocket = require('./websocket')
 
 const app = express()
+const server = http.createServer(app)
 const PORT = process.env.PORT || 3000
+
+// 创建 WebSocket 服务器
+const wsServer = new AdminWebSocket(server)
+app.set('wsServer', wsServer)
 
 // 中间件
 // 配置 helmet - 放宽对静态资源的限制
@@ -96,8 +103,9 @@ async function startServer() {
     }
 
     // 启动服务器(即使数据库连接失败也启动)
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       logger.info(`服务器运行在 http://localhost:${PORT}`)
+      logger.info(`WebSocket 端点: ws://localhost:${PORT}/ws/admin`)
       logger.info(`API前缀: ${process.env.API_PREFIX || '/api'}`)
       logger.info(`环境: ${process.env.NODE_ENV || 'development'}`)
       logger.info('💡 提示: 当前可以测试API接口,部分功能需要数据库支持')

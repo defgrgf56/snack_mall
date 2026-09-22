@@ -42,6 +42,13 @@ router.post('/', authenticateToken, async (req, res) => {
       product_id
     });
 
+    // 发送管理员通知（异步，不阻塞响应）
+    const { notifyNewFavorite } = require('../services/adminNotificationService');
+    const { User: UserModel } = require('../models');
+    UserModel.findByPk(req.user.id, { attributes: ['id', 'nickname'] }).then(user => {
+      notifyNewFavorite(favorite.id, user?.nickname || '未知用户', product.name);
+    }).catch(() => {});
+
     success(res, { 
       id: favorite.id,
       product_id: favorite.product_id 
