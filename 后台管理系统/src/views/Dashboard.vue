@@ -323,51 +323,89 @@ const renderSalesChart = (data) => {
   const option = {
     tooltip: {
       trigger: 'axis',
-      formatter: '{b}<br/>销售额: ¥{c}'
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#eee',
+      borderWidth: 1,
+      textStyle: { color: '#333' },
+      formatter: (params) => {
+        const item = params[0]
+        return `<div style="font-weight:bold;margin-bottom:5px">${item.name}</div>
+                <div>销售额: <span style="color:#409eff;font-weight:bold">¥${item.value.toFixed(2)}</span></div>`
+      }
     },
     xAxis: {
       type: 'category',
       data: dates,
-      boundaryGap: false
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: '#e0e0e0' } },
+      axisLabel: { color: '#666', fontSize: 12 },
+      axisTick: { show: false }
     },
     yAxis: {
       type: 'value',
       axisLabel: {
-        formatter: '¥{value}'
-      }
+        formatter: '¥{value}',
+        color: '#666'
+      },
+      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } },
+      axisLine: { show: false },
+      axisTick: { show: false }
     },
     series: [{
       name: '销售额',
       type: 'line',
       data: amounts,
-      smooth: true,
+      smooth: 0.4,
+      symbol: 'circle',
+      symbolSize: 8,
+      showSymbol: true,
+      emphasis: {
+        focus: 'series',
+        itemStyle: { borderWidth: 3, borderColor: '#fff' }
+      },
       areaStyle: {
         color: {
           type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 0,
-          y2: 1,
-          colorStops: [{
-            offset: 0, color: 'rgba(64, 158, 255, 0.3)'
-          }, {
-            offset: 1, color: 'rgba(64, 158, 255, 0.05)'
-          }]
+          x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(64, 158, 255, 0.25)' },
+            { offset: 1, color: 'rgba(64, 158, 255, 0.02)' }
+          ]
         }
       },
       lineStyle: {
         color: '#409eff',
-        width: 2
+        width: 3,
+        shadowColor: 'rgba(64, 158, 255, 0.3)',
+        shadowBlur: 8,
+        shadowOffsetY: 4
       },
       itemStyle: {
-        color: '#409eff'
-      }
+        color: '#409eff',
+        borderColor: '#fff',
+        borderWidth: 2
+      },
+      markPoint: {
+        data: [
+          {
+            type: 'max',
+            name: '最高',
+            symbol: 'pin',
+            symbolSize: 50,
+            label: { formatter: '¥{c}', fontSize: 11 },
+            itemStyle: { color: '#409eff' }
+          }
+        ],
+        animation: true
+      },
+      animationDuration: 1000,
+      animationEasing: 'cubicOut'
     }],
     grid: {
-      left: '50',
+      left: '60',
       right: '20',
       bottom: '30',
-      top: '20'
+      top: '30'
     }
   }
   
@@ -382,8 +420,23 @@ const renderHotProductsChart = (data) => {
     hotProductsChart = echarts.init(hotProductsChartRef.value)
   }
   
-  const names = data.map(item => item.name.length > 10 ? item.name.substring(0, 10) + '...' : item.name)
+  // 为商品名称添加排名标识
+  const names = data.map((item, index) => {
+    const rank = index + 1
+    const prefix = rank <= 3 ? `🥇🥈🥉`[rank - 1] + ' ' : `${rank}. `
+    const name = item.name.length > 12 ? item.name.substring(0, 12) + '...' : item.name
+    return prefix + name
+  })
+  
   const sales = data.map(item => item.total_sales)
+  
+  // 根据排名设置不同颜色
+  const colors = data.map((_, index) => {
+    if (index === 0) return { start: '#ff6b6b', end: '#ee5a5a' }      // 金色
+    if (index === 1) return { start: '#ffa94d', end: '#ff922b' }      // 银色
+    if (index === 2) return { start: '#ffd43b', end: '#fcc419' }      // 铜色
+    return { start: '#69db7c', end: '#51cf66' }                       // 绿色
+  })
   
   const option = {
     tooltip: {
@@ -391,41 +444,68 @@ const renderHotProductsChart = (data) => {
       axisPointer: {
         type: 'shadow'
       },
-      formatter: '{b}<br/>销量: {c}件'
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#eee',
+      borderWidth: 1,
+      textStyle: { color: '#333' },
+      formatter: (params) => {
+        const item = params[0]
+        const rank = item.dataIndex + 1
+        return `<div style="font-weight:bold;margin-bottom:5px">
+                  ${rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : ''} 第${rank}名
+                </div>
+                <div style="margin-bottom:3px">商品: ${data[item.dataIndex].name}</div>
+                <div>销量: <span style="color:#67c23a;font-weight:bold">${item.value}件</span></div>`
+      }
     },
     xAxis: {
-      type: 'value'
+      type: 'value',
+      axisLabel: { color: '#666' },
+      splitLine: { lineStyle: { color: '#f5f5f5', type: 'dashed' } },
+      axisLine: { show: false },
+      axisTick: { show: false }
     },
     yAxis: {
       type: 'category',
       data: names,
       axisLabel: {
-        interval: 0
-      }
+        interval: 0,
+        color: '#333',
+        fontSize: 12
+      },
+      axisLine: { show: false },
+      axisTick: { show: false }
     },
     series: [{
       name: '销量',
       type: 'bar',
-      data: sales,
-      itemStyle: {
-        color: {
-          type: 'linear',
-          x: 0,
-          y: 0,
-          x2: 1,
-          y2: 0,
-          colorStops: [{
-            offset: 0, color: '#67c23a'
-          }, {
-            offset: 1, color: '#85ce61'
-          }]
+      data: sales.map((value, index) => ({
+        value,
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 1, y2: 0,
+            colorStops: [
+              { offset: 0, color: colors[index].start },
+              { offset: 1, color: colors[index].end }
+            ]
+          },
+          borderRadius: [0, 4, 4, 0]
+        }
+      })),
+      barWidth: 24,
+      emphasis: {
+        itemStyle: {
+          shadowBlur: 10,
+          shadowColor: 'rgba(0, 0, 0, 0.2)'
         }
       },
-      barWidth: 20
+      animationDuration: 1000,
+      animationEasing: 'cubicOut'
     }],
     grid: {
-      left: '120',
-      right: '20',
+      left: '140',
+      right: '30',
       bottom: '20',
       top: '10'
     }
