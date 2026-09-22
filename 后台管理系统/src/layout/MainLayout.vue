@@ -647,30 +647,32 @@ const handleCommand = (command) => {
   --white: #ffffff;
 }
 
-/* 流星模式：切换为深色主题变量 */
+/* 流星模式：深蓝玻璃质感 */
 .meteor-mode {
-  --page-bg: rgba(15, 23, 42, 0.55);
-  --search-bg: rgba(255, 255, 255, 0.04);
+  --page-bg: rgba(12, 18, 40, 0.82);
+  --search-bg: rgba(20, 30, 65, 0.7);
   --text-primary: #e2e8f0;
   --text-regular: #cbd5e1;
   --text-secondary: #94a3b8;
-  --border-light: rgba(255, 255, 255, 0.08);
-  --white: rgba(15, 23, 42, 0.55);
+  --border-light: rgba(80, 120, 220, 0.18);
+  --white: rgba(12, 18, 40, 0.82);
 
-  // Element Plus 容器：半透明，星空透出
+  // Element Plus 容器：深蓝玻璃底
   .el-aside,
   .el-header,
   .el-main {
-    background: rgba(15, 23, 42, 0.55) !important;
+    background: rgba(12, 18, 40, 0.82) !important;
   }
 
-  // 卡片：半透明，让星空流星透出
+  // 卡片：稍亮于底色 + 蓝色微光边框
   .el-card {
-    background: rgba(15, 23, 42, 0.55) !important;
-    border-color: rgba(255, 255, 255, 0.08) !important;
+    background: rgba(16, 24, 50, 0.85) !important;
+    border: 1px solid rgba(80, 130, 255, 0.15) !important;
+    box-shadow: 0 0 20px rgba(50, 100, 220, 0.08), inset 0 0 1px rgba(100, 160, 255, 0.06);
+    border-radius: 12px;
 
     .el-card__header {
-      border-bottom-color: rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(80, 130, 255, 0.12);
       color: #e2e8f0;
     }
 
@@ -683,11 +685,11 @@ const handleCommand = (command) => {
   .el-table {
     --el-table-bg-color: transparent;
     --el-table-tr-bg-color: transparent;
-    --el-table-header-bg-color: rgba(255, 255, 255, 0.04);
-    --el-table-row-hover-bg-color: rgba(255, 255, 255, 0.06);
+    --el-table-header-bg-color: rgba(20, 30, 65, 0.5);
+    --el-table-row-hover-bg-color: rgba(50, 80, 160, 0.12);
     --el-table-text-color: #e2e8f0;
     --el-table-header-text-color: #94a3b8;
-    --el-table-border-color: rgba(255, 255, 255, 0.06);
+    --el-table-border-color: rgba(80, 130, 255, 0.1);
     --el-table-current-row-bg-color: rgba(59, 130, 246, 0.15);
 
     &::before,

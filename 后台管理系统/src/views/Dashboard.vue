@@ -679,13 +679,13 @@ onUnmounted(() => {
       .stat-value {
         font-size: 28px;
         font-weight: bold;
-        color: #333;
+        color: var(--text-primary);
         margin-bottom: 8px;
       }
 
       .stat-label {
         font-size: 14px;
-        color: #999;
+        color: var(--text-secondary);
       }
     }
   }
@@ -700,7 +700,7 @@ onUnmounted(() => {
 
       .label {
         font-size: 14px;
-        color: #666;
+        color: var(--text-regular);
         margin-bottom: 10px;
       }
 
@@ -733,19 +733,19 @@ onUnmounted(() => {
   .card-title {
     font-weight: 600;
     font-size: 16px;
-    color: #303133;
+    color: var(--text-primary);
   }
 
   .card-subtitle {
     font-size: 12px;
-    color: #909399;
+    color: var(--text-secondary);
     font-weight: normal;
   }
 
   .chart-card {
     :deep(.el-card__header) {
       padding: 16px 20px;
-      border-bottom: 1px solid #f0f0f0;
+      border-bottom: 1px solid var(--border-light);
     }
 
     :deep(.el-card__body) {
@@ -758,7 +758,7 @@ onUnmounted(() => {
     gap: 24px;
     margin-bottom: 16px;
     padding: 12px 16px;
-    background: #f8f9fa;
+    background: var(--search-bg);
     border-radius: 8px;
 
     .indicator-item {
@@ -769,12 +769,12 @@ onUnmounted(() => {
       .indicator-value {
         font-size: 20px;
         font-weight: 600;
-        color: #303133;
+        color: var(--text-primary);
       }
 
       .indicator-label {
         font-size: 12px;
-        color: #909399;
+        color: var(--text-secondary);
       }
     }
   }
@@ -788,7 +788,7 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #fafafa;
+    background: var(--search-bg);
     border-radius: 8px;
   }
 }
